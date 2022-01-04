@@ -184,9 +184,6 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 def config_settings(ui):
     '''
-    
-    TODO: Add preview of joint hierarchy 
-
     '''
 
     try:
