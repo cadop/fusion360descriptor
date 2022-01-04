@@ -55,6 +55,21 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
                 print(f'{save_mesh.value}')
 
+            elif cmdInput.id == 'preview':
+                # Generate Hierarchy and Preview in panel
+                document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
+                                                   inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
+                                                   joint_order.selectedItem.name)
+                
+                # Generate
+                _joints = document_manager.preview()
+
+                joints_text = inputs.itemById('jointlist')
+                _txt = ''
+                for k, j in _joints.items():
+                    _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
+                joints_text.text = _txt
+
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
                 save_dir = file_dialog(self.ui)
@@ -102,6 +117,8 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             btn = inputs.addBoolValueInput('save_dir', 'Set Save Directory', False)
             btn.isFullWidth = True
 
+
+
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
 
@@ -139,9 +156,26 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             di.add('Parent', True, '')
             di.add('Child', False, '')
 
+
+            # Make a button to preview the hierarchy 
+            btn = inputs.addBoolValueInput('preview', 'Preview Links', False)
+            btn.isFullWidth = True
+
+            # Create tab input
+            tab_input = inputs.addTabCommandInput('tab_preview', 'Preview Tabs')
+            tab_input_child = tab_input.children
+            # Create group
+            input_group = tab_input_child.addGroupCommandInput("preview_group", "Preview")
+            textbox_group = input_group.children
+
+            # Create a textbox.
+            txtbox = textbox_group.addTextBoxCommandInput('jointlist', 'Joint List', '', 8, True)
+            txtbox.isFullWidth = True
+
             # Make a button specifically to generate based on current settings 
             btn = inputs.addBoolValueInput('generate', 'Generate', False)
             btn.isFullWidth = True
+
 
         except:
             if self.ui:
@@ -156,9 +190,9 @@ def config_settings(ui):
     '''
 
     try:
-        commandId = 'TestGroupCommandInput'
+        commandId = 'Joint Configuration Descriptor'
         commandDescription = 'Settings to describe a URDF file'
-        commandName = 'URDF Description Appliction'
+        commandName = 'URDF Description App'
 
         cmdDef = ui.commandDefinitions.itemById(commandId)
         if not cmdDef:

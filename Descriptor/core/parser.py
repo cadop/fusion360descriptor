@@ -115,6 +115,12 @@ class Configurator:
         Hierarchy.traverse(self.root.occurrences.asList, root_node)
         self.component_map = root_node.get_all_children()
 
+    def get_joint_preview(self):
+        ''' Get the scenes joint relationships without calculating links '''
+
+        self._joints()
+        return self.joints_dict
+
     def parse(self):
         ''' parse the scene '''
         self._inertia()

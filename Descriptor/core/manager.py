@@ -52,6 +52,18 @@ class Manager:
         try: os.mkdir(self.save_dir)
         except: pass     
 
+    def preview(self):
+        '''
+        Get all joints in the scene for previewing joints
+        '''
+        
+        config = parser.Configurator(Manager.root)
+        config.inertia_accuracy = self.inert_accuracy
+        config.scale = self.scale
+        # Return array of tuples (parent, child)
+        config.get_scene_configuration()
+        return config.get_joint_preview()
+
 
     def run(self):
 
