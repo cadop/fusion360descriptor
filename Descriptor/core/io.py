@@ -116,6 +116,9 @@ class Writer:
 
 
     def write_urdf(self, save_dir, config):
+        save_dir = os.path.join(save_dir,'urdf')
+        try: os.mkdir(save_dir)
+        except: pass
         file_name = os.path.join(save_dir, f'{config.name}.urdf')  # the name of urdf file
 
         with open(file_name, mode='w') as f:
