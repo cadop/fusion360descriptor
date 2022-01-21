@@ -277,12 +277,12 @@ class Configurator:
             if self.joint_order == ('p','c'):
                 joint_dict['child'] = occ_one.name
                 joint_dict['parent'] = occ_two.name
-            elif self.joint_order == ('p','c'):
+            elif self.joint_order == ('c','p'):
                 joint_dict['parent'] = occ_one.name
                 joint_dict['child'] = occ_two.name
             else:
                 raise ValueError(f'Order {self.joint_order} not supported')
-                
+
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
 
             self.joints_dict[joint.name] = joint_dict
