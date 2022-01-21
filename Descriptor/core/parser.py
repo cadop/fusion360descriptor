@@ -101,7 +101,7 @@ class Configurator:
         self.joints_dict = {}
         self.links = {} # Link class
         self.joints = {} # Joint class for writing to file
-
+        self.joint_order = ('p','c') # Order of joints defined by components
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
         self.inertia_scale = 10000.0 # units to convert mass
         self.base_links= set()
@@ -274,8 +274,15 @@ class Configurator:
                 joint_dict['lower_limit'] = joint_limit_min
 
             # Reverses which is parent and child
-            joint_dict['child'] = occ_one.name
-            joint_dict['parent'] = occ_two.name
+            if self.joint_order == ('p','c'):
+                joint_dict['child'] = occ_one.name
+                joint_dict['parent'] = occ_two.name
+            elif self.joint_order == ('p','c'):
+                joint_dict['parent'] = occ_one.name
+                joint_dict['child'] = occ_two.name
+            else:
+                raise ValueError(f'Order {self.joint_order} not supported')
+                
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
 
             self.joints_dict[joint.name] = joint_dict

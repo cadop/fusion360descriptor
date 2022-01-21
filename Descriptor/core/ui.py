@@ -26,6 +26,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
         super().__init__()
 
     def notify(self, args):
+        print("Entered Notify")
         try:
             cmd = args.firingEvent.sender
             inputs = cmd.commandInputs
@@ -60,8 +61,8 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name)
-                
-                # Generate
+                print("PREVIEWING")
+                # # Generate
                 _joints = document_manager.preview()
 
                 joints_text = inputs.itemById('jointlist')
@@ -69,12 +70,13 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 for k, j in _joints.items():
                     _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
                 joints_text.text = _txt
+                print("Finished")
 
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
                 save_dir = file_dialog(self.ui)
                 directory_path.text = save_dir
-
+            print("Returning")
             return True
         except:
             if self.ui:
