@@ -66,7 +66,10 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 _joints = document_manager.preview()
 
                 joints_text = inputs.itemById('jointlist')
+                print(f"Getting Joints text: {joints_text}")
+
                 _txt = ''
+
                 for k, j in _joints.items():
                     _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
                 joints_text.text = _txt
@@ -184,7 +187,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 
-def config_settings(ui):
+def config_settings(ui, ui_handlers):
     '''
     '''
 
@@ -197,11 +200,9 @@ def config_settings(ui):
         if not cmdDef:
             cmdDef = ui.commandDefinitions.addButtonDefinition(commandId, commandName, commandDescription)
 
-        handlers = []
-
-        onCommandCreated = MyCreatedHandler(ui, handlers)
+        onCommandCreated = MyCreatedHandler(ui, ui_handlers)
         cmdDef.commandCreated.add(onCommandCreated)
-        handlers.append(onCommandCreated)
+        ui_handlers.append(onCommandCreated)
 
         cmdDef.execute()
 

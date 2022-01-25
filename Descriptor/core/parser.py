@@ -2,6 +2,7 @@
 module to parse fusion file 
 '''
 
+import copy
 import adsk, adsk.core, adsk.fusion
 from . import transforms
 from . import parts
@@ -37,8 +38,6 @@ class Hierarchy:
             if len(tmp.get_children())> 0:
                 # add them to the parent_stack
                 parent_stack.update(tmp.get_children())
-                if 'Neck' in tmp.name:
-                    print(f'  Has children: {[ x.name for x in tmp.get_children()]} with entityToken ids {[x.component.entityToken for x in tmp.get_children()]}')
 
         return child_map
 
@@ -80,8 +79,7 @@ class Hierarchy:
             else: 
                 parent.add_child(cur)
             if occ.childOccurrences:
-                node = Hierarchy.traverse(occ.childOccurrences, parent=cur)
-
+                Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur
 
 class Configurator:
@@ -110,10 +108,16 @@ class Configurator:
         '''
         Build the graph of how the scene components are related
         '''
-
+        print(f'{self.root}')
         root_node = Hierarchy(self.root)
-        Hierarchy.traverse(self.root.occurrences.asList, root_node)
+        print(f'{self.root}')
+
+        occ_list=self.root.occurrences.asList
+        print(f'{self.root}')
+        Hierarchy.traverse(occ_list, root_node)
+        print(f'{self.root}')
         self.component_map = root_node.get_all_children()
+        return
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links '''

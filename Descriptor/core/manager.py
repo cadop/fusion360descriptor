@@ -1,4 +1,3 @@
-from ntpath import join
 import os 
 from functools import partial
 
@@ -68,7 +67,7 @@ class Manager:
         config.inertia_accuracy = self.inert_accuracy
         config.joint_order = self.joint_order
         config.scale = self.scale
-        # Return array of tuples (parent, child)
+        ## Return array of tuples (parent, child)
         config.get_scene_configuration()
         return config.get_joint_preview()
 
