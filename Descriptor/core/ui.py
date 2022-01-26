@@ -68,7 +68,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 joints_text = inputs.itemById('jointlist')
                 print(f"Getting Joints text: {joints_text}")
 
-                _txt = ''
+                _txt = 'joint name: parent link-> child link\n'
 
                 for k, j in _joints.items():
                     _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 

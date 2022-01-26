@@ -279,11 +279,11 @@ class Configurator:
 
             # Reverses which is parent and child
             if self.joint_order == ('p','c'):
-                joint_dict['child'] = occ_one.name
-                joint_dict['parent'] = occ_two.name
-            elif self.joint_order == ('c','p'):
                 joint_dict['parent'] = occ_one.name
                 joint_dict['child'] = occ_two.name
+            elif self.joint_order == ('c','p'):
+                joint_dict['child'] = occ_one.name
+                joint_dict['parent'] = occ_two.name
             else:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
