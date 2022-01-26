@@ -39,7 +39,13 @@ class Manager:
         elif mesh_resolution == 'High':
             self.mesh_accuracy = adsk.fusion.MeshRefinementSettings.MeshRefinementHigh
 
-
+        if joint_order == 'Parent':
+            self.joint_order = ('p','c')
+        elif joint_order == 'Child':
+            self.joint_order = ('c','p')
+        else:
+            raise ValueError(f'Order method not supported')
+        
         # Set directory 
         self._set_dir(save_dir)
 
@@ -59,8 +65,9 @@ class Manager:
         
         config = parser.Configurator(Manager.root)
         config.inertia_accuracy = self.inert_accuracy
+        config.joint_order = self.joint_order
         config.scale = self.scale
-        # Return array of tuples (parent, child)
+        ## Return array of tuples (parent, child)
         config.get_scene_configuration()
         return config.get_joint_preview()
 
@@ -70,6 +77,7 @@ class Manager:
         config = parser.Configurator(Manager.root)
         config.inertia_accuracy = self.inert_accuracy
         config.scale = self.scale
+        config.joint_order = self.joint_order
         config.get_scene_configuration()
         config.parse()
 
