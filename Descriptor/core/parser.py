@@ -2,6 +2,7 @@
 module to parse fusion file 
 '''
 
+import copy
 import adsk, adsk.core, adsk.fusion
 from . import transforms
 from . import parts
@@ -37,8 +38,6 @@ class Hierarchy:
             if len(tmp.get_children())> 0:
                 # add them to the parent_stack
                 parent_stack.update(tmp.get_children())
-                if 'Neck' in tmp.name:
-                    print(f'  Has children: {[ x.name for x in tmp.get_children()]} with entityToken ids {[x.component.entityToken for x in tmp.get_children()]}')
 
         return child_map
 
@@ -80,8 +79,7 @@ class Hierarchy:
             else: 
                 parent.add_child(cur)
             if occ.childOccurrences:
-                node = Hierarchy.traverse(occ.childOccurrences, parent=cur)
-
+                Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur
 
 class Configurator:
@@ -101,7 +99,7 @@ class Configurator:
         self.joints_dict = {}
         self.links = {} # Link class
         self.joints = {} # Joint class for writing to file
-
+        self.joint_order = ('p','c') # Order of joints defined by components
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
         self.inertia_scale = 10000.0 # units to convert mass
         self.base_links= set()
@@ -110,10 +108,16 @@ class Configurator:
         '''
         Build the graph of how the scene components are related
         '''
-
+        print(f'{self.root}')
         root_node = Hierarchy(self.root)
-        Hierarchy.traverse(self.root.occurrences.asList, root_node)
+        print(f'{self.root}')
+
+        occ_list=self.root.occurrences.asList
+        print(f'{self.root}')
+        Hierarchy.traverse(occ_list, root_node)
+        print(f'{self.root}')
         self.component_map = root_node.get_all_children()
+        return
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links '''
@@ -274,8 +278,15 @@ class Configurator:
                 joint_dict['lower_limit'] = joint_limit_min
 
             # Reverses which is parent and child
-            joint_dict['child'] = occ_one.name
-            joint_dict['parent'] = occ_two.name
+            if self.joint_order == ('p','c'):
+                joint_dict['parent'] = occ_one.name
+                joint_dict['child'] = occ_two.name
+            elif self.joint_order == ('c','p'):
+                joint_dict['child'] = occ_one.name
+                joint_dict['parent'] = occ_two.name
+            else:
+                raise ValueError(f'Order {self.joint_order} not supported')
+
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
 
             self.joints_dict[joint.name] = joint_dict
