@@ -26,7 +26,6 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
         super().__init__()
 
     def notify(self, args):
-        print("Entered Notify")
         try:
             cmd = args.firingEvent.sender
             inputs = cmd.commandInputs
