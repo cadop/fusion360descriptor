@@ -129,6 +129,3 @@ dmypy.json
 .pyre/
 Descriptor/.vscode/launch.json
 Descriptor/.vscode/settings.json
-
-#.vs dir	
-.vs/
