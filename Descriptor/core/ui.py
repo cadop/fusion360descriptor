@@ -26,7 +26,6 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
         super().__init__()
 
     def notify(self, args):
-        print("Entered Notify")
         try:
             cmd = args.firingEvent.sender
             inputs = cmd.commandInputs
@@ -61,25 +60,21 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name)
-                print("PREVIEWING")
-                # # Generate
+                
+                # Generate
                 _joints = document_manager.preview()
 
                 joints_text = inputs.itemById('jointlist')
-                print(f"Getting Joints text: {joints_text}")
-
-                _txt = 'joint name: parent link-> child link\n'
-
+                _txt = ''
                 for k, j in _joints.items():
                     _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
                 joints_text.text = _txt
-                print("Finished")
 
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
                 save_dir = file_dialog(self.ui)
                 directory_path.text = save_dir
-            print("Returning")
+
             return True
         except:
             if self.ui:
@@ -187,7 +182,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 
-def config_settings(ui, ui_handlers):
+def config_settings(ui):
     '''
     '''
 
@@ -200,9 +195,11 @@ def config_settings(ui, ui_handlers):
         if not cmdDef:
             cmdDef = ui.commandDefinitions.addButtonDefinition(commandId, commandName, commandDescription)
 
-        onCommandCreated = MyCreatedHandler(ui, ui_handlers)
+        handlers = []
+
+        onCommandCreated = MyCreatedHandler(ui, handlers)
         cmdDef.commandCreated.add(onCommandCreated)
-        ui_handlers.append(onCommandCreated)
+        handlers.append(onCommandCreated)
 
         cmdDef.execute()
 

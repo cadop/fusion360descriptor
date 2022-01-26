@@ -3,7 +3,6 @@ import adsk.core, adsk.fusion, adsk.cam, traceback
 from .core.ui import config_settings
 from .core import manager
 
-ui_handlers = []
 
 def run(context):
     ui = None
@@ -19,7 +18,7 @@ def run(context):
         manager.Manager.root = root 
         manager.Manager.design = design 
 
-        _ = config_settings(ui, ui_handlers)
+        _ = config_settings(ui)
    
         print('FINISHED')
         return 0
