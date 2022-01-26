@@ -60,21 +60,25 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name)
-                
-                # Generate
+                print("PREVIEWING")
+                # # Generate
                 _joints = document_manager.preview()
 
                 joints_text = inputs.itemById('jointlist')
-                _txt = ''
+                print(f"Getting Joints text: {joints_text}")
+
+                _txt = 'joint name: parent link-> child link\n'
+
                 for k, j in _joints.items():
                     _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
                 joints_text.text = _txt
+                print("Finished")
 
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
                 save_dir = file_dialog(self.ui)
                 directory_path.text = save_dir
-
+            print("Returning")
             return True
         except:
             if self.ui:
@@ -182,7 +186,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 
-def config_settings(ui):
+def config_settings(ui, ui_handlers):
     '''
     '''
 
@@ -195,11 +199,9 @@ def config_settings(ui):
         if not cmdDef:
             cmdDef = ui.commandDefinitions.addButtonDefinition(commandId, commandName, commandDescription)
 
-        handlers = []
-
-        onCommandCreated = MyCreatedHandler(ui, handlers)
+        onCommandCreated = MyCreatedHandler(ui, ui_handlers)
         cmdDef.commandCreated.add(onCommandCreated)
-        handlers.append(onCommandCreated)
+        ui_handlers.append(onCommandCreated)
 
         cmdDef.execute()
 
