@@ -135,6 +135,7 @@ class Writer:
             f.write('</robot>\n')
 
 def write_hello_pybullet(robot_name, save_dir):
+    
     robot_urdf = f'{robot_name}.urdf' ## basename of robot.urdf
     file_name = os.path.join(save_dir,'hello_bullet.py')
     hello_pybullet = """import pybullet as p

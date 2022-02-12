@@ -108,16 +108,11 @@ class Configurator:
         '''
         Build the graph of how the scene components are related
         '''
-        print(f'{self.root}')
-        root_node = Hierarchy(self.root)
-        print(f'{self.root}')
 
+        root_node = Hierarchy(self.root)
         occ_list=self.root.occurrences.asList
-        print(f'{self.root}')
         Hierarchy.traverse(occ_list, root_node)
-        print(f'{self.root}')
         self.component_map = root_node.get_all_children()
-        return
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links '''
@@ -190,50 +185,26 @@ class Configurator:
             geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
             geom_one_third = joint.geometryOrOriginOne.thirdAxisVector.asArray()
 
-            print('')
-            print(joint.name)
-            print(f'Occurence One: {occ_one.name}')
-            print(occ_one.entityToken)
-            print(occ_one.fullPathName)
-
-            print(f'Origin one {geom_one_origin}')
-            print(f'geom_one_primary {geom_one_primary}')
-            print(f'geom_one_secondary {geom_one_secondary}')
-            print(f'geom_one_third {geom_one_third}')
-
             # Check if this is already top level
             # Check if the parent_list only contains one entity
             parent_list = self.component_map[occ_one.entityToken].get_all_parents()
             if len(parent_list) == 1:
-                print(f'   Exists Occurence ONE: {occ_one.entityToken}')
+                pass
             # If it is not, get the mapping and trace it back up
             else: 
                 # the expectation is there is at least two items, the last is the full body
                 # the second to last should be the next top-most component
-                print(f' PARENT: {parent_list}')
                 # reset occurrence one
                 occ_one = self.component_map[parent_list[-2]].component
-                print(f'Occurence One New: {occ_one.name}')
-
-            print(f'Occurence Two: {occ_two.name}')
-            print(f'Occurence Two entity: {occ_two.entityToken}')
-            print(f'Occurence Two full path: {occ_two.fullPathName}')
 
             parent_list = self.component_map[occ_two.entityToken].get_all_parents()
             if len(parent_list) == 1:
-                print(f'   Exists Occurence TWO: {occ_two.entityToken}')
+                pass
             else:
                 # the expectation is there is at least two items, the last is the full body
                 # the second to last should be the next top-most component
-                print(f' PARENT: {parent_list}')
                 # reset occurrence two
                 occ_two = self.component_map[parent_list[-2]].component
-                print(f'Occurence Two New: {occ_two.name}')
-
-            if occ_one.isGrounded:
-                print('--------OCCURRENCE ONE IS GROUNDED -----')
-            if occ_two.isGrounded:
-                print('--------OCCURRENCE TWO IS GROUNDED -----')
 
             ############ JOINT #####################
 
@@ -242,13 +213,7 @@ class Configurator:
             geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
             geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
             
-            print(f'Origin two {geom_two_origin}')
-            print(f'geom_two_primary {geom_two_primary}')
-            print(f'geom_two_secondary {geom_two_secondary}')
-            print(f'geom_two_third {geom_two_third}')
-
             joint_type = joint.jointMotion.objectType # string 
-            print(f'joint_type {joint_type}')
             
             # Only Revolute joints have rotation axis 
             if 'RigidJointMotion' in joint_type:
@@ -266,12 +231,6 @@ class Configurator:
                     joint_limit_max = 180.0
 
                 joint_angle = joint.angle.value 
-
-                print(f'joint_vector {joint_vector}')
-                print(f'joint_rot_val {joint_rot_val}')
-                print(f'joint_limit_max {joint_limit_max}')
-                print(f'joint_limit_min {joint_limit_min}')
-                print(f'joint_angle {joint_angle}')
 
                 joint_dict['axis'] = joint_vector
                 joint_dict['upper_limit'] = joint_limit_max

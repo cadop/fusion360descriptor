@@ -9,6 +9,7 @@ def file_dialog(ui):
     """
     display the dialog to save the file
     """
+    
     # Set styles of folder dialog.
     folderDlg = ui.createFolderDialog()
     folderDlg.title = 'Fusion Folder Dialog' 
@@ -42,9 +43,9 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             if cmdInput.id == 'generate':
                 # User asked to generate using current settings
-                print(f'{directory_path.text}, {save_mesh.value}, {mesh_resolution.selectedItem.name},\
-                        {inertia_precision.selectedItem.name}, {document_units.selectedItem.name},\
-                        {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
+                # print(f'{directory_path.text}, {save_mesh.value}, {mesh_resolution.selectedItem.name},\
+                #         {inertia_precision.selectedItem.name}, {document_units.selectedItem.name},\
+                #         {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
 
                 document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
@@ -53,32 +54,27 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 # Generate
                 document_manager.run()
 
-                print(f'{save_mesh.value}')
-
             elif cmdInput.id == 'preview':
                 # Generate Hierarchy and Preview in panel
                 document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name)
-                print("PREVIEWING")
                 # # Generate
                 _joints = document_manager.preview()
 
                 joints_text = inputs.itemById('jointlist')
-                print(f"Getting Joints text: {joints_text}")
 
                 _txt = 'joint name: parent link-> child link\n'
 
                 for k, j in _joints.items():
                     _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
                 joints_text.text = _txt
-                print("Finished")
 
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
                 save_dir = file_dialog(self.ui)
                 directory_path.text = save_dir
-            print("Returning")
+
             return True
         except:
             if self.ui:
@@ -120,8 +116,6 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Button to set the save directory
             btn = inputs.addBoolValueInput('save_dir', 'Set Save Directory', False)
             btn.isFullWidth = True
-
-
 
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
