@@ -12,7 +12,7 @@ class Manager:
     design = None
 
     def __init__(self, save_dir, save_mesh, mesh_resolution, inertia_precision,
-                document_units, target_units, joint_order) -> None:
+                document_units, target_units, joint_order, target_platform) -> None:
         
         self.save_mesh = save_mesh
         if document_units=='mm': doc_u = 0.001
@@ -46,6 +46,9 @@ class Manager:
         else:
             raise ValueError(f'Order method not supported')
         
+        # set the target platform
+        self.target_platform = target_platform
+
         # Set directory 
         self._set_dir(save_dir)
 
@@ -86,7 +89,8 @@ class Manager:
         writer = io.Writer()
         writer.write_urdf(self.save_dir, config)
 
-        # io.write_hello_pybullet(config.name, self.save_dir)
+        if self.target_platform == 'pyBullet':
+            io.write_hello_pybullet(config.name, self.save_dir)
         
         # Custom STL Export
         if self.save_mesh:

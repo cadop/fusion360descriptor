@@ -40,6 +40,8 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             document_units = inputs.itemById('document_units')
             target_units = inputs.itemById('target_units')
             joint_order = inputs.itemById('joint_order')
+            target_platform = input.itemById('target_platform')
+
 
             if cmdInput.id == 'generate':
                 # User asked to generate using current settings
@@ -47,9 +49,13 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 #         {inertia_precision.selectedItem.name}, {document_units.selectedItem.name},\
                 #         {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
 
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
-                                                   inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
-                                                   joint_order.selectedItem.name)
+                document_manager = manager.Manager(directory_path.text, save_mesh.value, 
+                                                   mesh_resolution.selectedItem.name, 
+                                                   inertia_precision.selectedItem.name, 
+                                                   document_units.selectedItem.name, 
+                                                   target_units.selectedItem.name, 
+                                                   joint_order.selectedItem.name, 
+                                                   target_platform.selectedItem.name)
                 
                 # Generate
                 document_manager.run()
@@ -154,6 +160,12 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             di.add('Parent', True, '')
             di.add('Child', False, '')
 
+            # Set the type of platform to target for building XML
+            di = inputs.addDropDownCommandInput('target_platform', 'Target Platform', adsk.core.DropDownStyles.TextListDropDownStyle)
+            di = di.listItems
+            di.add('None', True, '')
+            di.add('pyBullet', False, '')
+            # di.add('m', False, '') # TODO Add other methods if needed 
 
             # Make a button to preview the hierarchy 
             btn = inputs.addBoolValueInput('preview', 'Preview Links', False)
