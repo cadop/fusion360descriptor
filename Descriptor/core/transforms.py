@@ -1,7 +1,5 @@
 
 
-
-
 def origin2center_of_mass(inertia, center_of_mass, mass):
     """
     convert the moment of the inertia about the world coordinate into 

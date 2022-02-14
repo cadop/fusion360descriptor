@@ -6,13 +6,18 @@ def visible_to_stl(design, save_dir, root, accuracy):
     """
     export top-level components as a single stl file into "save_dir/"
     
-    
     Parameters
     ----------
     design: adsk.fusion.Design.cast(product)
+        []
     save_dir: str
         directory path to save
-    components: design.allComponents
+    root: design.allComponents
+        []
+    accuracy: 
+        []
+    
+    
     """
           
     # create a single exportManager instance
@@ -39,34 +44,9 @@ def visible_to_stl(design, save_dir, root, accuracy):
         # export full body
         # turn back off body
 
-        print(oc.name)
-        print(oc.component.name)
-        print(oc.component.joints)
-
-        coor = oc.transform.getAsCoordinateSystem()
-        print(f'{coor[0].asArray()}')
-        print(f'{coor[1].asArray()}')
-        print(f'{coor[2].asArray()}')
-        print(f'{coor[3].asArray()}')
-        print(f' Matrix 3D: {oc.transform.asArray()}\n')
-
-        # Types of joints that impact position
-        # asBuiltJoints ; # joints ; # rigidGroups
-        # Set the transform to export the body correctly (BUT... this doesn't work)
-        if 'LL_Knee' in oc.name:
-            transform = adsk.core.Matrix3D.create()
-            transform.translation = adsk.core.Vector3D.create(-0.0012649568697555645, 5.849999999999951, -45.04999997926627)
-            oc.transform.translation = transform.translation
-            print(f'New transform = {oc.transform.asArray()}')
-            newmat = list(oc.transform.asArray())
-            newmat[11] = -45
-            result = oc.transform.transformBy(transform)
-            # result = oc.transform.setWithArray(tuple(newmat))
-            print(f'Attempted transform: {result}')
-            print(f'New transform = {oc.transform.asArray()}')
+        # coor = oc.transform.getAsCoordinateSystem()
 
         oc.isLightBulbOn = True
-
         file_name = os.path.join(save_dir, oc.component.name)              
         # create stl exportOptions
         stl_options = exporter.createSTLExportOptions(root, file_name)
@@ -87,14 +67,16 @@ class Writer:
     def __init__(self) -> None:
         pass
 
-
     def write_link(self, config, file_name):
         ''' Write links information into urdf file_name
         
         Parameters
         ----------
+        config: 
+            []
         file_name: str
             urdf full path
+
         '''
 
         with open(file_name, mode='a') as f:
@@ -108,6 +90,9 @@ class Writer:
         ----------
         file_name: str
             urdf full path
+        config: 
+            []
+
         '''
         
         with open(file_name, mode='a') as f:
@@ -116,6 +101,16 @@ class Writer:
 
 
     def write_urdf(self, save_dir, config):
+        '''[summary]
+
+        Parameters
+        ----------
+        save_dir : [type]
+            [description]
+        config : [type]
+            [description]
+        '''        
+
         save_dir = os.path.join(save_dir,'urdf')
         try: os.mkdir(save_dir)
         except: pass
@@ -135,10 +130,20 @@ class Writer:
             f.write('</robot>\n')
 
 def write_hello_pybullet(robot_name, save_dir):
-    
+    '''[summary]
+
+    Parameters
+    ----------
+    robot_name : [type]
+        [description]
+    save_dir : [type]
+        [description]
+    '''    
+
     robot_urdf = f'{robot_name}.urdf' ## basename of robot.urdf
     file_name = os.path.join(save_dir,'hello_bullet.py')
-    hello_pybullet = """import pybullet as p
+    hello_pybullet = """
+import pybullet as p
 import os
 import time
 import pybullet_data

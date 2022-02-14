@@ -8,12 +8,40 @@ from . import io
 
 
 class Manager:
+    ''' Manager class for setting params and generating URDF 
+    '''    
+
     root = None 
     design = None
 
     def __init__(self, save_dir, save_mesh, mesh_resolution, inertia_precision,
                 document_units, target_units, joint_order, target_platform) -> None:
-        
+        '''Initialization of Manager class 
+
+        Parameters
+        ----------
+        save_dir : str
+            path to directory for storing data
+        save_mesh : bool
+            if mesh data should be exported
+        mesh_resolution : str
+            quality of mesh conversion
+        inertia_precision : str
+            quality of inertia calculations
+        document_units : str
+            base units of current file
+        target_units : str
+            target files units
+        joint_order : str
+            if parent or child should be component 1
+        target_platform : str
+            which configuration to use for exporting urdf
+
+        Raises
+        ------
+        ValueError
+            [description]
+        '''        
         self.save_mesh = save_mesh
         if document_units=='mm': doc_u = 0.001
         elif document_units=='cm': doc_u = 0.01
@@ -53,6 +81,13 @@ class Manager:
         self._set_dir(save_dir)
 
     def _set_dir(self, save_dir):
+        '''sets the class instance save directory
+
+        Parameters
+        ----------
+        save_dir : str
+            path to save
+        '''        
         # set the names        
         robot_name = Manager.root.name.split()[0]
         package_name = robot_name + '_description'
@@ -62,9 +97,13 @@ class Manager:
         except: pass     
 
     def preview(self):
-        '''
-        Get all joints in the scene for previewing joints
-        '''
+        ''' Get all joints in the scene for previewing joints
+
+        Returns
+        -------
+        dict
+            mapping of joint names with parent-> child relationship
+        '''        
         
         config = parser.Configurator(Manager.root)
         config.inertia_accuracy = self.inert_accuracy
@@ -76,7 +115,10 @@ class Manager:
 
 
     def run(self):
-
+        ''' process the scene, including writing to directory and
+        exporting mesh, if applicable
+        '''        
+        
         config = parser.Configurator(Manager.root)
         config.inertia_accuracy = self.inert_accuracy
         config.scale = self.scale

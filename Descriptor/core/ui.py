@@ -6,10 +6,19 @@ import adsk.core, adsk.fusion, traceback
 from . import manager
 
 def file_dialog(ui):     
-    """
-    display the dialog to save the file
-    """
-    
+    '''display the dialog to save the file
+
+    Parameters
+    ----------
+    ui : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
+    '''    
+
     # Set styles of folder dialog.
     folderDlg = ui.createFolderDialog()
     folderDlg.title = 'Fusion Folder Dialog' 
@@ -40,8 +49,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             document_units = inputs.itemById('document_units')
             target_units = inputs.itemById('target_units')
             joint_order = inputs.itemById('joint_order')
-            target_platform = input.itemById('target_platform')
-
+            target_platform = inputs.itemById('target_platform')
 
             if cmdInput.id == 'generate':
                 # User asked to generate using current settings
@@ -98,12 +106,35 @@ class MyDestroyHandler(adsk.core.CommandEventHandler):
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
+    '''[summary]
+
+    Parameters
+    ----------
+    adsk : [type]
+        [description]
+    '''    
     def __init__(self, ui, handlers):
+        '''[summary]
+
+        Parameters
+        ----------
+        ui : [type]
+            [description]
+        handlers : [type]
+            [description]
+        '''        
         self.ui = ui
         self.handlers = handlers
         super().__init__()
 
     def notify(self, args):
+        '''[summary]
+
+        Parameters
+        ----------
+        args : [type]
+            [description]
+        '''        
         try:
             cmd = args.command
             onDestroy = MyDestroyHandler(self.ui)
@@ -193,7 +224,19 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 
 def config_settings(ui, ui_handlers):
-    '''
+    '''[summary]
+
+    Parameters
+    ----------
+    ui : [type]
+        [description]
+    ui_handlers : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
     '''
 
     try:

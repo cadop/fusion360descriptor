@@ -105,10 +105,9 @@ class Configurator:
         self.base_links= set()
 
     def get_scene_configuration(self):
-        '''
-        Build the graph of how the scene components are related
-        '''
-
+        '''Build the graph of how the scene components are related
+        '''        
+        
         root_node = Hierarchy(self.root)
         occ_list=self.root.occurrences.asList
         Hierarchy.traverse(occ_list, root_node)
