@@ -100,7 +100,7 @@ class Writer:
 
 
     def write_urdf(self, save_dir, config):
-        '''[summary]
+        ''' Write each component of the xml structure to file
 
         Parameters
         ----------
@@ -129,7 +129,9 @@ class Writer:
             f.write('</robot>\n')
 
 def write_hello_pybullet(robot_name, save_dir):
-    '''[summary]
+    ''' Writes a sample script which loads the URDF in pybullet
+
+    Modified from https://github.com/yanshil/Fusion2PyBullet
 
     Parameters
     ----------
