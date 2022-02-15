@@ -72,7 +72,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 # Generate Hierarchy and Preview in panel
                 document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
-                                                   joint_order.selectedItem.name)
+                                                   joint_order.selectedItem.name, target_platform.selectedItem.name)
                 # # Generate
                 _joints = document_manager.preview()
 
@@ -110,30 +110,30 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
     Parameters
     ----------
-    adsk : [type]
-        [description]
+    adsk : adsk.core.CommandCreatedEventHandler
+        Main handler for callbacks
     '''    
     def __init__(self, ui, handlers):
         '''[summary]
 
         Parameters
         ----------
-        ui : [type]
-            [description]
-        handlers : [type]
-            [description]
+        ui : adsk.core.UserInterface
+            main variable to interact with autodesk
+        handlers : list
+            list to keep reference to UI handler
         '''        
         self.ui = ui
         self.handlers = handlers
         super().__init__()
 
     def notify(self, args):
-        '''[summary]
+        ''' Construct the GUI and set aliases to be referenced later
 
         Parameters
         ----------
-        args : [type]
-            [description]
+        args : adsk.core.CommandCreatedEventArgs
+            UI information
         '''        
         try:
             cmd = args.command
@@ -228,15 +228,15 @@ def config_settings(ui, ui_handlers):
 
     Parameters
     ----------
-    ui : [type]
-        [description]
-    ui_handlers : [type]
-        [description]
+    ui : adsk.core.UserInterface
+        part of the autodesk UI
+    ui_handlers : List
+        empty list to hold reference
 
     Returns
     -------
-    [type]
-        [description]
+    bool
+        success or failure
     '''
 
     try:

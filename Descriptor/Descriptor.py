@@ -10,7 +10,7 @@ def run(context):
 
     Parameters
     ----------
-    context : special
+    context : dict
         built-in requirement for Fusion link
 
     Returns
