@@ -11,12 +11,22 @@ class Hierarchy:
     ''' hierarchy of the design space '''
 
     def __init__(self, component) -> None:
+        ''' Initialize Hierarchy class to parse document and define component relationships.
+        Uses a recursive traversal (based off of fusion example) and provides helper functions
+        to get specific children and parents for nodes. 
+
+        Parameters
+        ----------
+        component : [type]
+            fusions root component to use for traversal
+        '''        
+
         self.children = []
         self.component = component
         self.name = component.name
         self._parent = None
 
-    def add_child(self, c):
+    def _add_child(self, c):
         self.children.append(c)
         c.parent = self 
 
@@ -24,7 +34,8 @@ class Hierarchy:
         return self.children        
 
     def get_all_children(self):
-        ''' get all children and sub children '''
+        ''' get all children and sub children of this instance '''
+
         child_map = {}
         parent_stack = set()
         parent_stack.update(self.get_children())
@@ -42,7 +53,8 @@ class Hierarchy:
         return child_map
 
     def get_all_parents(self):
-        ''' get all the parents of this node '''
+        ''' get all the parents of this instance '''
+
         child_stack = set()
         child_stack.add(self)
         parent_map = []
@@ -67,9 +79,21 @@ class Hierarchy:
 
     @staticmethod
     def traverse(occurrences, parent=None):
-        '''
+        '''Recursively create class instances and define a parent->child structure
         Based on the fusion 360 API docs
-        '''
+        
+        Parameters
+        ----------
+        occurrences : [type]
+            [description]
+        parent : [type], optional
+            [description], by default None
+
+        Returns
+        -------
+        Hierarchy
+            Instance of the class
+        '''        
         
         for i in range(0, occurrences.count):
             occ = occurrences.item(i)
@@ -77,7 +101,7 @@ class Hierarchy:
             if parent is None: 
                 pass
             else: 
-                parent.add_child(cur)
+                parent._add_child(cur)
             if occ.childOccurrences:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur
@@ -88,6 +112,13 @@ class Configurator:
                         'PinSlot', 'Planner', 'Ball']  # these are the names in urdf
 
     def __init__(self, root) -> None:
+        ''' Initializes Configurator class to handle building hierarchy and parsing
+
+        Parameters
+        ----------
+        root : [type]
+            root component of design document
+        '''        
         # Export top-level occurrences
         self.root = root
         self.occ = root.occurrences.asList
@@ -114,13 +145,20 @@ class Configurator:
         self.component_map = root_node.get_all_children()
 
     def get_joint_preview(self):
-        ''' Get the scenes joint relationships without calculating links '''
+        ''' Get the scenes joint relationships without calculating links 
+
+        Returns
+        -------
+        dict
+            joint relationships
+        '''
 
         self._joints()
         return self.joints_dict
 
     def parse(self):
-        ''' parse the scene '''
+        ''' parse the scene by building up inertia and joints'''
+
         self._inertia()
         self._joints()
         self._base()
@@ -142,6 +180,11 @@ class Configurator:
     def _inertia(self):
         '''
         Define inertia values
+        
+        Notes
+        -----
+        Original Authors: @syuntoku, @yanshil
+        Modified by @cadop
         '''
         
         for oc in self.occ:       
@@ -164,6 +207,10 @@ class Configurator:
             self.inertial_dict[oc.name] = occs_dict
 
     def _joints(self):
+        ''' Iterates over joints list and defines properties for each joint
+        (along with its relationship)
+        
+        '''        
 
         for joint in self.root.joints:
             
@@ -204,8 +251,6 @@ class Configurator:
                 # the second to last should be the next top-most component
                 # reset occurrence two
                 occ_two = self.component_map[parent_list[-2]].component
-
-            ############ JOINT #####################
 
             geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
             geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
@@ -282,7 +327,8 @@ class Configurator:
             self.links[link.name] = link
 
     def _build_joints(self):
-        ''' create joints '''
+        ''' create joints by setting parent and child relationships and constructing
+        the XML formats to be exported later '''
 
         for k, j in self.joints_dict.items():
 
