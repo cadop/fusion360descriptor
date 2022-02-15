@@ -8,15 +8,14 @@ def visible_to_stl(design, save_dir, root, accuracy):
     
     Parameters
     ----------
-    design: adsk.fusion.Design.cast(product)
-        []
+    design: adsk.fusion.Design
+        fusion design document
     save_dir: str
         directory path to save
-    root: design.allComponents
-        []
-    accuracy: 
-        []
-    
+    root: adsk.fusion.Component
+        root component of the design
+    accuracy: int
+        accuracy value to use for stl export
     
     """
           
@@ -72,8 +71,8 @@ class Writer:
         
         Parameters
         ----------
-        config: 
-            []
+        config : Configurator
+            root nodes instance of configurator class
         file_name: str
             urdf full path
 
@@ -90,8 +89,8 @@ class Writer:
         ----------
         file_name: str
             urdf full path
-        config: 
-            []
+        config : Configurator
+            root nodes instance of configurator class
 
         '''
         
@@ -105,10 +104,10 @@ class Writer:
 
         Parameters
         ----------
-        save_dir : [type]
-            [description]
-        config : [type]
-            [description]
+        save_dir : str
+            path to save file
+        config : Configurator
+            root nodes instance of configurator class
         '''        
 
         save_dir = os.path.join(save_dir,'urdf')
@@ -134,10 +133,10 @@ def write_hello_pybullet(robot_name, save_dir):
 
     Parameters
     ----------
-    robot_name : [type]
-        [description]
-    save_dir : [type]
-        [description]
+    robot_name : str
+        name to use for directory
+    save_dir : str
+        path to store file
     '''    
 
     robot_urdf = f'{robot_name}.urdf' ## basename of robot.urdf

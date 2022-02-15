@@ -37,10 +37,6 @@ class Manager:
         target_platform : str
             which configuration to use for exporting urdf
 
-        Raises
-        ------
-        ValueError
-            [description]
         '''        
         self.save_mesh = save_mesh
         if document_units=='mm': doc_u = 0.001
