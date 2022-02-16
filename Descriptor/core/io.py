@@ -156,6 +156,7 @@ cubeStartPos = [0,0,0]
 cubeStartOrientation = p.getQuaternionFromEuler([0,0,0])
 dir = os.path.abspath(os.path.dirname(__file__))
 robot_urdf = "TEMPLATE.urdf"
+dir = os.path.join(dir,'urdf')
 robot_urdf=os.path.join(dir,robot_urdf)
 robotId = p.loadURDF(robot_urdf,cubeStartPos, cubeStartOrientation, 
                    # useMaximalCoordinates=1, ## New feature in Pybullet
