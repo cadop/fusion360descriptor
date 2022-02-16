@@ -271,8 +271,8 @@ class Configurator:
                 joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
                 
                 if abs(joint_limit_max - joint_limit_min) == 0:
-                    joint_limit_min = -180.0
-                    joint_limit_max = 180.0
+                    joint_limit_min = -3.14159
+                    joint_limit_max = 3.14159
 
                 joint_angle = joint.angle.value 
 
