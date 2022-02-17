@@ -6,6 +6,19 @@ from .core import manager
 ui_handlers = []
 
 def run(context):
+    ''' Entry point to the codebase for running the descriptor 
+
+    Parameters
+    ----------
+    context : dict
+        built-in requirement for Fusion link
+
+    Returns
+    -------
+    bool
+        sucess code, not really used
+    '''    
+
     ui = None
     try:
         app = adsk.core.Application.get()

@@ -11,12 +11,22 @@ class Hierarchy:
     ''' hierarchy of the design space '''
 
     def __init__(self, component) -> None:
+        ''' Initialize Hierarchy class to parse document and define component relationships.
+        Uses a recursive traversal (based off of fusion example) and provides helper functions
+        to get specific children and parents for nodes. 
+
+        Parameters
+        ----------
+        component : [type]
+            fusions root component to use for traversal
+        '''        
+
         self.children = []
         self.component = component
         self.name = component.name
         self._parent = None
 
-    def add_child(self, c):
+    def _add_child(self, c):
         self.children.append(c)
         c.parent = self 
 
@@ -24,7 +34,8 @@ class Hierarchy:
         return self.children        
 
     def get_all_children(self):
-        ''' get all children and sub children '''
+        ''' get all children and sub children of this instance '''
+
         child_map = {}
         parent_stack = set()
         parent_stack.update(self.get_children())
@@ -42,7 +53,8 @@ class Hierarchy:
         return child_map
 
     def get_all_parents(self):
-        ''' get all the parents of this node '''
+        ''' get all the parents of this instance '''
+
         child_stack = set()
         child_stack.add(self)
         parent_map = []
@@ -67,9 +79,21 @@ class Hierarchy:
 
     @staticmethod
     def traverse(occurrences, parent=None):
-        '''
+        '''Recursively create class instances and define a parent->child structure
         Based on the fusion 360 API docs
-        '''
+        
+        Parameters
+        ----------
+        occurrences : [type]
+            [description]
+        parent : [type], optional
+            [description], by default None
+
+        Returns
+        -------
+        Hierarchy
+            Instance of the class
+        '''        
         
         for i in range(0, occurrences.count):
             occ = occurrences.item(i)
@@ -77,7 +101,7 @@ class Hierarchy:
             if parent is None: 
                 pass
             else: 
-                parent.add_child(cur)
+                parent._add_child(cur)
             if occ.childOccurrences:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur
@@ -88,6 +112,13 @@ class Configurator:
                         'PinSlot', 'Planner', 'Ball']  # these are the names in urdf
 
     def __init__(self, root) -> None:
+        ''' Initializes Configurator class to handle building hierarchy and parsing
+
+        Parameters
+        ----------
+        root : [type]
+            root component of design document
+        '''        
         # Export top-level occurrences
         self.root = root
         self.occ = root.occurrences.asList
@@ -105,28 +136,29 @@ class Configurator:
         self.base_links= set()
 
     def get_scene_configuration(self):
-        '''
-        Build the graph of how the scene components are related
-        '''
-        print(f'{self.root}')
+        '''Build the graph of how the scene components are related
+        '''        
+        
         root_node = Hierarchy(self.root)
-        print(f'{self.root}')
-
         occ_list=self.root.occurrences.asList
-        print(f'{self.root}')
         Hierarchy.traverse(occ_list, root_node)
-        print(f'{self.root}')
         self.component_map = root_node.get_all_children()
-        return
 
     def get_joint_preview(self):
-        ''' Get the scenes joint relationships without calculating links '''
+        ''' Get the scenes joint relationships without calculating links 
+
+        Returns
+        -------
+        dict
+            joint relationships
+        '''
 
         self._joints()
         return self.joints_dict
 
     def parse(self):
-        ''' parse the scene '''
+        ''' parse the scene by building up inertia and joints'''
+
         self._inertia()
         self._joints()
         self._base()
@@ -148,6 +180,11 @@ class Configurator:
     def _inertia(self):
         '''
         Define inertia values
+        
+        Notes
+        -----
+        Original Authors: @syuntoku, @yanshil
+        Modified by @cadop
         '''
         
         for oc in self.occ:       
@@ -170,6 +207,10 @@ class Configurator:
             self.inertial_dict[oc.name] = occs_dict
 
     def _joints(self):
+        ''' Iterates over joints list and defines properties for each joint
+        (along with its relationship)
+        
+        '''        
 
         for joint in self.root.joints:
             
@@ -190,65 +231,33 @@ class Configurator:
             geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
             geom_one_third = joint.geometryOrOriginOne.thirdAxisVector.asArray()
 
-            print('')
-            print(joint.name)
-            print(f'Occurence One: {occ_one.name}')
-            print(occ_one.entityToken)
-            print(occ_one.fullPathName)
-
-            print(f'Origin one {geom_one_origin}')
-            print(f'geom_one_primary {geom_one_primary}')
-            print(f'geom_one_secondary {geom_one_secondary}')
-            print(f'geom_one_third {geom_one_third}')
-
             # Check if this is already top level
             # Check if the parent_list only contains one entity
             parent_list = self.component_map[occ_one.entityToken].get_all_parents()
             if len(parent_list) == 1:
-                print(f'   Exists Occurence ONE: {occ_one.entityToken}')
+                pass
             # If it is not, get the mapping and trace it back up
             else: 
                 # the expectation is there is at least two items, the last is the full body
                 # the second to last should be the next top-most component
-                print(f' PARENT: {parent_list}')
                 # reset occurrence one
                 occ_one = self.component_map[parent_list[-2]].component
-                print(f'Occurence One New: {occ_one.name}')
-
-            print(f'Occurence Two: {occ_two.name}')
-            print(f'Occurence Two entity: {occ_two.entityToken}')
-            print(f'Occurence Two full path: {occ_two.fullPathName}')
 
             parent_list = self.component_map[occ_two.entityToken].get_all_parents()
             if len(parent_list) == 1:
-                print(f'   Exists Occurence TWO: {occ_two.entityToken}')
+                pass
             else:
                 # the expectation is there is at least two items, the last is the full body
                 # the second to last should be the next top-most component
-                print(f' PARENT: {parent_list}')
                 # reset occurrence two
                 occ_two = self.component_map[parent_list[-2]].component
-                print(f'Occurence Two New: {occ_two.name}')
-
-            if occ_one.isGrounded:
-                print('--------OCCURRENCE ONE IS GROUNDED -----')
-            if occ_two.isGrounded:
-                print('--------OCCURRENCE TWO IS GROUNDED -----')
-
-            ############ JOINT #####################
 
             geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
             geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
             geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
             geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
             
-            print(f'Origin two {geom_two_origin}')
-            print(f'geom_two_primary {geom_two_primary}')
-            print(f'geom_two_secondary {geom_two_secondary}')
-            print(f'geom_two_third {geom_two_third}')
-
             joint_type = joint.jointMotion.objectType # string 
-            print(f'joint_type {joint_type}')
             
             # Only Revolute joints have rotation axis 
             if 'RigidJointMotion' in joint_type:
@@ -262,16 +271,10 @@ class Configurator:
                 joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
                 
                 if abs(joint_limit_max - joint_limit_min) == 0:
-                    joint_limit_min = -180.0
-                    joint_limit_max = 180.0
+                    joint_limit_min = -3.14159
+                    joint_limit_max = 3.14159
 
                 joint_angle = joint.angle.value 
-
-                print(f'joint_vector {joint_vector}')
-                print(f'joint_rot_val {joint_rot_val}')
-                print(f'joint_limit_max {joint_limit_max}')
-                print(f'joint_limit_min {joint_limit_min}')
-                print(f'joint_angle {joint_angle}')
 
                 joint_dict['axis'] = joint_vector
                 joint_dict['upper_limit'] = joint_limit_max
@@ -324,7 +327,8 @@ class Configurator:
             self.links[link.name] = link
 
     def _build_joints(self):
-        ''' create joints '''
+        ''' create joints by setting parent and child relationships and constructing
+        the XML formats to be exported later '''
 
         for k, j in self.joints_dict.items():
 

@@ -6,13 +6,17 @@ def visible_to_stl(design, save_dir, root, accuracy):
     """
     export top-level components as a single stl file into "save_dir/"
     
-    
     Parameters
     ----------
-    design: adsk.fusion.Design.cast(product)
+    design: adsk.fusion.Design
+        fusion design document
     save_dir: str
         directory path to save
-    components: design.allComponents
+    root: adsk.fusion.Component
+        root component of the design
+    accuracy: int
+        accuracy value to use for stl export
+    
     """
           
     # create a single exportManager instance
@@ -39,34 +43,9 @@ def visible_to_stl(design, save_dir, root, accuracy):
         # export full body
         # turn back off body
 
-        print(oc.name)
-        print(oc.component.name)
-        print(oc.component.joints)
-
-        coor = oc.transform.getAsCoordinateSystem()
-        print(f'{coor[0].asArray()}')
-        print(f'{coor[1].asArray()}')
-        print(f'{coor[2].asArray()}')
-        print(f'{coor[3].asArray()}')
-        print(f' Matrix 3D: {oc.transform.asArray()}\n')
-
-        # Types of joints that impact position
-        # asBuiltJoints ; # joints ; # rigidGroups
-        # Set the transform to export the body correctly (BUT... this doesn't work)
-        if 'LL_Knee' in oc.name:
-            transform = adsk.core.Matrix3D.create()
-            transform.translation = adsk.core.Vector3D.create(-0.0012649568697555645, 5.849999999999951, -45.04999997926627)
-            oc.transform.translation = transform.translation
-            print(f'New transform = {oc.transform.asArray()}')
-            newmat = list(oc.transform.asArray())
-            newmat[11] = -45
-            result = oc.transform.transformBy(transform)
-            # result = oc.transform.setWithArray(tuple(newmat))
-            print(f'Attempted transform: {result}')
-            print(f'New transform = {oc.transform.asArray()}')
+        # coor = oc.transform.getAsCoordinateSystem()
 
         oc.isLightBulbOn = True
-
         file_name = os.path.join(save_dir, oc.component.name)              
         # create stl exportOptions
         stl_options = exporter.createSTLExportOptions(root, file_name)
@@ -87,14 +66,16 @@ class Writer:
     def __init__(self) -> None:
         pass
 
-
     def write_link(self, config, file_name):
         ''' Write links information into urdf file_name
         
         Parameters
         ----------
+        config : Configurator
+            root nodes instance of configurator class
         file_name: str
             urdf full path
+
         '''
 
         with open(file_name, mode='a') as f:
@@ -108,6 +89,9 @@ class Writer:
         ----------
         file_name: str
             urdf full path
+        config : Configurator
+            root nodes instance of configurator class
+
         '''
         
         with open(file_name, mode='a') as f:
@@ -116,6 +100,16 @@ class Writer:
 
 
     def write_urdf(self, save_dir, config):
+        ''' Write each component of the xml structure to file
+
+        Parameters
+        ----------
+        save_dir : str
+            path to save file
+        config : Configurator
+            root nodes instance of configurator class
+        '''        
+
         save_dir = os.path.join(save_dir,'urdf')
         try: os.mkdir(save_dir)
         except: pass
@@ -135,9 +129,22 @@ class Writer:
             f.write('</robot>\n')
 
 def write_hello_pybullet(robot_name, save_dir):
+    ''' Writes a sample script which loads the URDF in pybullet
+
+    Modified from https://github.com/yanshil/Fusion2PyBullet
+
+    Parameters
+    ----------
+    robot_name : str
+        name to use for directory
+    save_dir : str
+        path to store file
+    '''    
+
     robot_urdf = f'{robot_name}.urdf' ## basename of robot.urdf
     file_name = os.path.join(save_dir,'hello_bullet.py')
-    hello_pybullet = """import pybullet as p
+    hello_pybullet = """
+import pybullet as p
 import os
 import time
 import pybullet_data
@@ -149,6 +156,7 @@ cubeStartPos = [0,0,0]
 cubeStartOrientation = p.getQuaternionFromEuler([0,0,0])
 dir = os.path.abspath(os.path.dirname(__file__))
 robot_urdf = "TEMPLATE.urdf"
+dir = os.path.join(dir,'urdf')
 robot_urdf=os.path.join(dir,robot_urdf)
 robotId = p.loadURDF(robot_urdf,cubeStartPos, cubeStartOrientation, 
                    # useMaximalCoordinates=1, ## New feature in Pybullet

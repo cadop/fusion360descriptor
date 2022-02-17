@@ -6,9 +6,19 @@ import adsk.core, adsk.fusion, traceback
 from . import manager
 
 def file_dialog(ui):     
-    """
-    display the dialog to save the file
-    """
+    '''display the dialog to save the file
+
+    Parameters
+    ----------
+    ui : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
+    '''    
+
     # Set styles of folder dialog.
     folderDlg = ui.createFolderDialog()
     folderDlg.title = 'Fusion Folder Dialog' 
@@ -39,46 +49,46 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             document_units = inputs.itemById('document_units')
             target_units = inputs.itemById('target_units')
             joint_order = inputs.itemById('joint_order')
+            target_platform = inputs.itemById('target_platform')
 
             if cmdInput.id == 'generate':
                 # User asked to generate using current settings
-                print(f'{directory_path.text}, {save_mesh.value}, {mesh_resolution.selectedItem.name},\
-                        {inertia_precision.selectedItem.name}, {document_units.selectedItem.name},\
-                        {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
+                # print(f'{directory_path.text}, {save_mesh.value}, {mesh_resolution.selectedItem.name},\
+                #         {inertia_precision.selectedItem.name}, {document_units.selectedItem.name},\
+                #         {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
 
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
-                                                   inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
-                                                   joint_order.selectedItem.name)
+                document_manager = manager.Manager(directory_path.text, save_mesh.value, 
+                                                   mesh_resolution.selectedItem.name, 
+                                                   inertia_precision.selectedItem.name, 
+                                                   document_units.selectedItem.name, 
+                                                   target_units.selectedItem.name, 
+                                                   joint_order.selectedItem.name, 
+                                                   target_platform.selectedItem.name)
                 
                 # Generate
                 document_manager.run()
-
-                print(f'{save_mesh.value}')
 
             elif cmdInput.id == 'preview':
                 # Generate Hierarchy and Preview in panel
                 document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
-                                                   joint_order.selectedItem.name)
-                print("PREVIEWING")
+                                                   joint_order.selectedItem.name, target_platform.selectedItem.name)
                 # # Generate
                 _joints = document_manager.preview()
 
                 joints_text = inputs.itemById('jointlist')
-                print(f"Getting Joints text: {joints_text}")
 
                 _txt = 'joint name: parent link-> child link\n'
 
                 for k, j in _joints.items():
                     _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
                 joints_text.text = _txt
-                print("Finished")
 
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
                 save_dir = file_dialog(self.ui)
                 directory_path.text = save_dir
-            print("Returning")
+
             return True
         except:
             if self.ui:
@@ -96,12 +106,35 @@ class MyDestroyHandler(adsk.core.CommandEventHandler):
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
+    '''[summary]
+
+    Parameters
+    ----------
+    adsk : adsk.core.CommandCreatedEventHandler
+        Main handler for callbacks
+    '''    
     def __init__(self, ui, handlers):
+        '''[summary]
+
+        Parameters
+        ----------
+        ui : adsk.core.UserInterface
+            main variable to interact with autodesk
+        handlers : list
+            list to keep reference to UI handler
+        '''        
         self.ui = ui
         self.handlers = handlers
         super().__init__()
 
     def notify(self, args):
+        ''' Construct the GUI and set aliases to be referenced later
+
+        Parameters
+        ----------
+        args : adsk.core.CommandCreatedEventArgs
+            UI information
+        '''        
         try:
             cmd = args.command
             onDestroy = MyDestroyHandler(self.ui)
@@ -120,8 +153,6 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Button to set the save directory
             btn = inputs.addBoolValueInput('save_dir', 'Set Save Directory', False)
             btn.isFullWidth = True
-
-
 
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
@@ -160,6 +191,12 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             di.add('Parent', True, '')
             di.add('Child', False, '')
 
+            # Set the type of platform to target for building XML
+            di = inputs.addDropDownCommandInput('target_platform', 'Target Platform', adsk.core.DropDownStyles.TextListDropDownStyle)
+            di = di.listItems
+            di.add('None', True, '')
+            di.add('pyBullet', False, '')
+            # di.add('m', False, '') # TODO Add other methods if needed 
 
             # Make a button to preview the hierarchy 
             btn = inputs.addBoolValueInput('preview', 'Preview Links', False)
@@ -187,7 +224,19 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 
 def config_settings(ui, ui_handlers):
-    '''
+    '''[summary]
+
+    Parameters
+    ----------
+    ui : adsk.core.UserInterface
+        part of the autodesk UI
+    ui_handlers : List
+        empty list to hold reference
+
+    Returns
+    -------
+    bool
+        success or failure
     '''
 
     try:
