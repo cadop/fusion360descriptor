@@ -54,18 +54,19 @@ class Joint:
         """
         Generate the joint_xml and hold it by self.joint_xml
         """
+
         joint = Element('joint')
-        joint.attrib = {'name':self.name, 'type':self.type}
+        joint.attrib = {'name':self.name.replace(':','_').replace(' ',''), 'type':self.type}
 
         origin = SubElement(joint, 'origin')
         origin.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
 
         parent = SubElement(joint, 'parent')
-        self.parent = self.parent.split(':')[0]
+        self.parent = self.parent.replace(':','_').replace(' ','')
         parent.attrib = {'link':self.parent}
 
         child = SubElement(joint, 'child')
-        self.child = self.child.split(':')[0]
+        self.child = self.child.replace(':','_').replace(' ','')
         child.attrib = {'link':self.child}
 
         if self.type == 'revolute' or self.type == 'continuous' or self.type == 'prismatic':        
@@ -96,18 +97,18 @@ class Joint:
         """        
         
         tran = Element('transmission')
-        tran.attrib = {'name':self.name + '_tran'}
+        tran.attrib = {'name':self.name.replace(':','_').replace(' ','') + '_tran'}
         
         joint_type = SubElement(tran, 'type')
         joint_type.text = 'transmission_interface/SimpleTransmission'
         
         joint = SubElement(tran, 'joint')
-        joint.attrib = {'name':self.name}
+        joint.attrib = {'name':self.name.replace(':','_').replace(' ','')}
         hardwareInterface_joint = SubElement(joint, 'hardwareInterface')
         hardwareInterface_joint.text = 'hardware_interface/EffortJointInterface'
         
         actuator = SubElement(tran, 'actuator')
-        actuator.attrib = {'name':self.name + '_actr'}
+        actuator.attrib = {'name':self.name.replace(':','_').replace(' ','') + '_actr'}
         hardwareInterface_actr = SubElement(actuator, 'hardwareInterface')
         hardwareInterface_actr.text = 'hardware_interface/EffortJointInterface'
         mechanicalReduction = SubElement(actuator, 'mechanicalReduction')
@@ -160,7 +161,7 @@ class Link:
         """
         
         link = Element('link')
-        self.name = self.name.split(':')[0]
+        self.name = self.name.replace(':','_').replace(' ','')
         link.attrib = {'name':self.name}
         
         #inertial

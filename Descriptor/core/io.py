@@ -37,6 +37,7 @@ def visible_to_stl(design, save_dir, root, accuracy):
             oc.isLightBulbOn = False
 
     # Go through the visible components, turning on and off
+    # Filename
     for oc in visible_components:
         # hack for correct stl placement
         # Turn on body (all components should have been turned off before)
@@ -44,9 +45,12 @@ def visible_to_stl(design, save_dir, root, accuracy):
         # turn back off body
 
         # coor = oc.transform.getAsCoordinateSystem()
-
+        
         oc.isLightBulbOn = True
-        file_name = os.path.join(save_dir, oc.component.name)              
+        file_name = oc.component.name.replace(':','_').replace(' ','')
+        file_name = oc.name.replace(':','_').replace(' ','')
+        file_name = os.path.join(save_dir, file_name )              
+        print(f'Saving {file_name}')
         # create stl exportOptions
         stl_options = exporter.createSTLExportOptions(root, file_name)
         stl_options.sendToPrintUtility = False

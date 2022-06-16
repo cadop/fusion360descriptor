@@ -52,6 +52,52 @@ class Hierarchy:
 
         return child_map
 
+    def get_flat_body(self):
+        ''' get a flat list of all components and child components '''
+
+        child_list = []
+        body_list = []
+        parent_stack = set()
+
+        child_set = list(self.get_all_children().values())
+
+        child_list = [x.children for x in child_set if len(x.children)>0]
+        childs = []
+        for c in child_list:
+            for _c in c:
+                childs.append(_c)
+
+        parent_stack.update(childs)
+        closed_set = set()
+
+        while len(parent_stack) != 0:
+            # Pop an element form the stack (order shouldn't matter)
+            tmp = parent_stack.pop()
+            closed_set.add(tmp)
+            # Get any bodies directly associated with this component
+            if tmp.component.bRepBodies.count > 0:
+                body_list.append([tmp.component.bRepBodies.item(x) for x in range(0, tmp.component.bRepBodies.count) ])
+
+            # Check if this child has children
+            if len(tmp.children)> 0:
+                # add them to the parent_stack
+                child_set = list(self.get_all_children().values())
+
+                child_list = [x.children for x in child_set if len(x.children)>0]
+                childs = []
+                for c in child_list:
+                    for _c in c:
+                        if _c not in closed_set:
+                            childs.append(_c)
+
+                parent_stack.update(childs)
+
+        flat_bodies = []
+        for body in body_list:
+            flat_bodies.extend(body)
+
+        return flat_bodies
+
     def get_all_parents(self):
         ''' get all the parents of this instance '''
 
@@ -98,6 +144,7 @@ class Hierarchy:
         for i in range(0, occurrences.count):
             occ = occurrences.item(i)
             cur = Hierarchy(occ)
+            # print(cur.name)
             if parent is None: 
                 pass
             else: 
@@ -175,7 +222,8 @@ class Configurator:
         
         for oc in self.occ:
             if oc.isGrounded:
-                self.base_links.add(oc.name)
+                name = oc.name
+                self.base_links.add(name)
 
     def _inertia(self):
         '''
@@ -194,9 +242,24 @@ class Configurator:
             occs_dict['name'] = oc.name
 
             mass = prop.mass  # kg
+
+            # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
+            # body_cnt = oc.bRepBodies.count
+            # mapped_comp =self.component_map[oc.entityToken]
+            body_lst = self.component_map[oc.entityToken].get_flat_body()
+            if len(body_lst) > 0:
+                for body in body_lst:
+                    # Check if this body is hidden
+                    #  
+                    # body = oc.bRepBodies.item(i)
+                    if not body.isLightBulbOn:
+                        mass -= body.physicalProperties.mass
+
+
             occs_dict['mass'] = mass
             center_of_mass = [_/self.scale for _ in prop.centerOfMass.asArray()] ## cm to m
             occs_dict['center_of_mass'] = center_of_mass
+
 
             # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-ce341ee6-4490-11e5-b25b-f8b156d7cd97
             (_, xx, yy, zz, xy, yz, xz) = prop.getXYZMomentsOfInertia()
@@ -205,6 +268,24 @@ class Configurator:
             occs_dict['inertia'] = transforms.origin2center_of_mass(moment_inertia_world, center_of_mass, mass)
 
             self.inertial_dict[oc.name] = occs_dict
+
+    def _is_joint_valid(self, joint):
+        '''_summary_
+
+        Parameters
+        ----------
+        joint : _type_
+            _description_
+        '''
+
+        try: 
+            joint.geometryOrOriginOne.origin.asArray()
+            joint.geometryOrOriginTwo.origin.asArray()
+            return True 
+        
+        except:
+            return False
+
 
     def _joints(self):
         ''' Iterates over joints list and defines properties for each joint
@@ -226,6 +307,11 @@ class Configurator:
             occ_one = joint.occurrenceOne
             occ_two = joint.occurrenceTwo
             
+            # Check that both bodies are valid (e.g. there is no missing reference)
+            if not self._is_joint_valid(joint):
+                # TODO: Handle in a better way (like warning message)
+                continue
+
             geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
             geom_one_primary = joint.geometryOrOriginOne.primaryAxisVector.asArray()
             geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
@@ -335,7 +421,7 @@ class Configurator:
             xyz = []
             for p,c in zip(self.links_xyz_dict[j['parent']], self.links_xyz_dict[j['child']]):
                 xyz.append(p-c)
-                
+            
             joint = parts.Joint(name=k , joint_type=j['type'], 
                                 xyz=xyz, axis=j['axis'], 
                                 parent=j['parent'], child=j['child'], 
