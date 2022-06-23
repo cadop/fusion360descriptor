@@ -1,0 +1,1094 @@
+<?xml version="1.0" ?>
+<robot name="FullBody">
+
+<material name="silver">
+  <color rgba="0.700 0.700 0.700 1.000"/>
+</material>
+
+<link name="L_Pelvisv12_1">
+  <inertial>
+    <origin xyz="-0.00016823298939081687 0.07887151231400673 -0.22549351371810145" rpy="0 0 0"/>
+    <mass value="12.545724119282553"/>
+    <inertia ixx="0.05811" iyy="0.10775" izz="0.13684" ixy="0.000156" iyz="0.005835" ixz="-4.7e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/L_Pelvisv12_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/L_Pelvisv12_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="U_Waist_2v7_1">
+  <inertial>
+    <origin xyz="-0.004047519353284843 0.007888479227158386 0.036853386602079236" rpy="0 0 0"/>
+    <mass value="1.1632112891933326"/>
+    <inertia ixx="0.003335" iyy="0.008947" izz="0.008757" ixy="-3.9e-05" iyz="0.000254" ixz="0.000369"/>
+  </inertial>
+  <visual>
+    <origin xyz="1.1139995182141764e-16 -0.048207423886077155 0.15540725919758283" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Waist_2v7_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="1.1139995182141764e-16 -0.048207423886077155 0.15540725919758283" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Waist_2v7_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="U_Waist_1v3_1">
+  <inertial>
+    <origin xyz="-0.04482890885206921 0.00026594095858323286 4.125846769842401e-06" rpy="0 0 0"/>
+    <mass value="3.8814634771227143"/>
+    <inertia ixx="0.007393" iyy="0.006439" izz="0.007618" ixy="1e-05" iyz="-0.0" ixz="-1e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.05399999999999991 -0.0482074238860769 0.07040725919758277" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Waist_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.05399999999999991 -0.0482074238860769 0.07040725919758277" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Waist_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="U_Body_1v20_1">
+  <inertial>
+    <origin xyz="0.001780653369228313 -0.014982387949150258 0.15598727875001056" rpy="0 0 0"/>
+    <mass value="19.82620737963942"/>
+    <inertia ixx="0.287705" iyy="0.303122" izz="0.21351" ixy="-0.000379" iyz="0.041654" ixz="0.000436"/>
+  </inertial>
+  <visual>
+    <origin xyz="1.1014375420463935e-16 -0.1142074238860769 0.07040725919758255" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Body_1v20_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="1.1014375420463935e-16 -0.1142074238860769 0.07040725919758255" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Body_1v20_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UR_Shoulder_1v3_1">
+  <inertial>
+    <origin xyz="-0.00468989657806354 -4.874877301567007e-05 0.059976047991896014" rpy="0 0 0"/>
+    <mass value="1.6149801443567295"/>
+    <inertia ixx="0.002031" iyy="0.001961" izz="0.001713" ixy="-1e-06" iyz="3e-06" ixz="8.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.15400000000000177 -0.025207423885716364 -0.1570927408024169" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Shoulder_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.15400000000000177 -0.025207423885716364 -0.1570927408024169" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Shoulder_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UR_Shoulder_2v2_1">
+  <inertial>
+    <origin xyz="-0.05641758337486821 0.0011896266413226227 2.070338673562655e-05" rpy="0 0 0"/>
+    <mass value="0.4701009156097225"/>
+    <inertia ixx="0.00077" iyy="0.0013" izz="0.001462" ixy="3.8e-05" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.1881000000000018 -0.02520742388571545 -0.2220927408024168" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Shoulder_2v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.1881000000000018 -0.02520742388571545 -0.2220927408024168" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Shoulder_2v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UR_Shoulder_3v2_1">
+  <inertial>
+    <origin xyz="-0.04860440459138987 0.030310246720035666 -0.00024001246642374463" rpy="0 0 0"/>
+    <mass value="2.834944399295703"/>
+    <inertia ixx="0.002739" iyy="0.008564" izz="0.008365" ixy="0.00034" iyz="4e-06" ixz="2.6e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.3031000000000017 0.0076925761142847375 -0.22209274080241628" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Shoulder_3v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.3031000000000017 0.0076925761142847375 -0.22209274080241628" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Shoulder_3v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UR_Arm_3v3_1">
+  <inertial>
+    <origin xyz="-0.07699779641120263 0.016384028005943813 -0.00010144118513855105" rpy="0 0 0"/>
+    <mass value="0.4103279308573677"/>
+    <inertia ixx="0.000531" iyy="0.001447" izz="0.001699" ixy="0.000194" iyz="-3e-05" ixz="2.6e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.7632000000000028 -0.025207423885715525 -0.22209274080241637" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Arm_3v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.7632000000000028 -0.025207423885715525 -0.22209274080241637" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Arm_3v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UR_Hand_1v3_1">
+  <inertial>
+    <origin xyz="-0.06483603718028319 -0.02002554203355381 -0.04078008753078649" rpy="0 0 0"/>
+    <mass value="0.3159262316423516"/>
+    <inertia ixx="0.000442" iyy="0.001002" izz="0.000684" ixy="1.1e-05" iyz="-3.6e-05" ixz="-0.000103"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.992519893049207 -0.0428850939398995 -0.23956784927280858" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Hand_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.992519893049207 -0.0428850939398995 -0.23956784927280858" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Hand_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="U_Neck_1v4_1">
+  <inertial>
+    <origin xyz="-0.002174703199479219 0.0003721026714713499 0.025762230155281063" rpy="0 0 0"/>
+    <mass value="0.40364564128614283"/>
+    <inertia ixx="0.000129" iyy="0.00023" izz="0.00023" ixy="-0.0" iyz="1e-06" ixz="2e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="5.861977570020827e-16 -0.08420742388571373 -0.3090927408024169" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Neck_1v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="5.861977570020827e-16 -0.08420742388571373 -0.3090927408024169" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Neck_1v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LL_Hip_1v5_1">
+  <inertial>
+    <origin xyz="1.0686348050070738e-06 0.06917669367320818 -0.06802628174919467" rpy="0 0 0"/>
+    <mass value="2.679330855492574"/>
+    <inertia ixx="0.01107" iyy="0.006034" izz="0.008699" ixy="-0.0" iyz="0.002414" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.10249999999999992 -0.04820742388607756 0.2857072591975829" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Hip_1v5_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.10249999999999992 -0.04820742388607756 0.2857072591975829" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Hip_1v5_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LL_Hip_2v4_1">
+  <inertial>
+    <origin xyz="-0.0024544959884548884 -0.04938812120643853 6.441357592040786e-05" rpy="0 0 0"/>
+    <mass value="2.6278046422077392"/>
+    <inertia ixx="0.003653" iyy="0.003176" izz="0.003391" ixy="-1.7e-05" iyz="4e-06" ixz="-5e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.10249999999999998 -0.10020742388607803 0.37070725919758263" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Hip_2v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.10249999999999998 -0.10020742388607803 0.37070725919758263" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Hip_2v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LL_Hip_3v4_1">
+  <inertial>
+    <origin xyz="0.04438762557880846 0.0002619088009209944 -0.25162912024458317" rpy="0 0 0"/>
+    <mass value="5.315832915078473"/>
+    <inertia ixx="0.076884" iyy="0.076646" izz="0.009801" ixy="-3.5e-05" iyz="-0.000621" ixz="-0.001408"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.05849999999999993 -0.04820742388607803 0.37070725919758296" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Hip_3v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.05849999999999993 -0.04820742388607803 0.37070725919758296" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Hip_3v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LL_Ankle_1v4_1">
+  <inertial>
+    <origin xyz="0.04339536276981594 0.0022748541511049963 -5.943449598833084e-05" rpy="0 0 0"/>
+    <mass value="2.8327660907109085"/>
+    <inertia ixx="0.004046" iyy="0.003548" izz="0.00397" ixy="-4e-06" iyz="-2e-06" ixz="5e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.05850000000000763 -0.04821947102592329 1.0707072589902453" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Ankle_1v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.05850000000000763 -0.04821947102592329 1.0707072589902453" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Ankle_1v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_Hip_3v4_1">
+  <inertial>
+    <origin xyz="-0.04508578610452057 0.00026985183741833757 -0.25154408331910394" rpy="0 0 0"/>
+    <mass value="5.320050638385111"/>
+    <inertia ixx="0.077041" iyy="0.076799" izz="0.009801" ixy="-3.8e-05" iyz="-0.000628" ixz="0.001709"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0585 -0.04820742388607786 0.37070725919758296" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Hip_3v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0585 -0.04820742388607786 0.37070725919758296" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Hip_3v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UL_Shoulder_1v3_1">
+  <inertial>
+    <origin xyz="0.004689896578063402 4.8748773013765345e-05 0.05997604799189596" rpy="0 0 0"/>
+    <mass value="1.6149801443567295"/>
+    <inertia ixx="0.002031" iyy="0.001961" izz="0.001713" ixy="-1e-06" iyz="-3e-06" ixz="-8.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.15399999999999855 -0.025207423885715615 -0.15709274080241709" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Shoulder_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.15399999999999855 -0.025207423885715615 -0.15709274080241709" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Shoulder_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UR_Arm_1v2_1">
+  <inertial>
+    <origin xyz="-0.1119645284229866 0.019862841377670932 -0.011872828903105037" rpy="0 0 0"/>
+    <mass value="0.5867447001034503"/>
+    <inertia ixx="0.000938" iyy="0.00381" izz="0.004122" ixy="0.000374" iyz="4.9e-05" ixz="-0.00054"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.4312000000000024 -0.025207423885716226 -0.22209274080241667" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Arm_1v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.4312000000000024 -0.025207423885716226 -0.22209274080241667" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Arm_1v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UR_Arm_2v6_1">
+  <inertial>
+    <origin xyz="-0.05169610810874292 0.03049076949479965 0.017673491273957315" rpy="0 0 0"/>
+    <mass value="1.925249848858931"/>
+    <inertia ixx="0.00192" iyy="0.006136" izz="0.005737" ixy="6e-05" iyz="-2.2e-05" ixz="0.001465"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.6382000000000023 0.005792576114283525 -0.18959274080241578" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Arm_2v6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.6382000000000023 0.005792576114283525 -0.18959274080241578" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Arm_2v6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UL_Shoulder_2v3_1">
+  <inertial>
+    <origin xyz="0.056417583375104774 0.0011896266413228065 2.0703386735543283e-05" rpy="0 0 0"/>
+    <mass value="0.47010091560972134"/>
+    <inertia ixx="0.00077" iyy="0.0013" izz="0.001462" ixy="-3.8e-05" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.18809999999999857 -0.025207423885714876 -0.2220927408024163" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Shoulder_2v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.18809999999999857 -0.025207423885714876 -0.2220927408024163" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Shoulder_2v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UL_Shoulder_3v3_1">
+  <inertial>
+    <origin xyz="0.048604404591389705 0.034710246720035885 0.00024001246642446628" rpy="0 0 0"/>
+    <mass value="2.834944399295703"/>
+    <inertia ixx="0.002739" iyy="0.008564" izz="0.008365" ixy="-0.00034" iyz="-4e-06" ixz="2.6e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.30309999999999876 0.01209257611428462 -0.22209274080241637" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Shoulder_3v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.30309999999999876 0.01209257611428462 -0.22209274080241637" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Shoulder_3v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UL_Arm_1v3_1">
+  <inertial>
+    <origin xyz="0.11195471605184198 0.019860705872170103 -0.011871163938559831" rpy="0 0 0"/>
+    <mass value="0.5866932106262186"/>
+    <inertia ixx="0.000938" iyy="0.003809" izz="0.004121" ixy="-0.000374" iyz="4.9e-05" ixz="0.00054"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.431199999999999 -0.025207423885716573 -0.22209274080241698" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Arm_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.431199999999999 -0.025207423885716573 -0.22209274080241698" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Arm_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UL_Arm_2v2_1">
+  <inertial>
+    <origin xyz="0.051695281587916586 0.030490769494796763 0.017673494854298255" rpy="0 0 0"/>
+    <mass value="1.9252498488611527"/>
+    <inertia ixx="0.00192" iyy="0.006137" izz="0.005738" ixy="-6e-05" iyz="-2.2e-05" ixz="-0.001466"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.6381999999999987 0.005792576114283241 -0.18959274080241711" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Arm_2v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.6381999999999987 0.005792576114283241 -0.18959274080241711" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Arm_2v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UL_Arm_3v2_1">
+  <inertial>
+    <origin xyz="0.07699787617214982 0.016384028005944285 -1.1176049926342468e-05" rpy="0 0 0"/>
+    <mass value="0.4103279308573677"/>
+    <inertia ixx="0.000531" iyy="0.001447" izz="0.001699" ixy="-0.000194" iyz="-3e-05" ixz="-2.7e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.7631999999999957 -0.025207423885717107 -0.22209274080242392" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Arm_3v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.7631999999999957 -0.025207423885717107 -0.22209274080242392" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Arm_3v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UL_Wrist_1v6_1">
+  <inertial>
+    <origin xyz="0.02327221644376798 0.038258503492373724 0.004733107913848622" rpy="0 0 0"/>
+    <mass value="0.7829866998307424"/>
+    <inertia ixx="0.000468" iyy="0.000791" izz="0.000758" ixy="2.3e-05" iyz="5e-06" ixz="-8.8e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.9069999999999958 0.011792575589761468 -0.22209274080242408" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Wrist_1v6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.9069999999999958 0.011792575589761468 -0.22209274080242408" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Wrist_1v6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UR_Wrist_1v6_1">
+  <inertial>
+    <origin xyz="-0.023263815479627414 0.03825850349237308 -0.004774228530308289" rpy="0 0 0"/>
+    <mass value="0.7829866998307424"/>
+    <inertia ixx="0.000469" iyy="0.000791" izz="0.000758" ixy="-2.3e-05" iyz="-5e-06" ixz="-8.9e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.9069998877790839 0.011792575589764027 -0.22196574085199733" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Wrist_1v6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.9069998877790839 0.011792575589764027 -0.22196574085199733" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Wrist_1v6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UR_Wrist_2v3_1">
+  <inertial>
+    <origin xyz="-0.021170872195009238 8.812056986884365e-11 -0.03160245308317053" rpy="0 0 0"/>
+    <mass value="0.12362354927744214"/>
+    <inertia ixx="0.00014" iyy="0.000144" izz="8.1e-05" ixy="-0.0" iyz="0.0" ixz="6e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.9550263779182783 -0.025207424410236937 -0.2519233149345215" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Wrist_2v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.9550263779182783 -0.025207424410236937 -0.2519233149345215" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UR_Wrist_2v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_Hip_1v2_1">
+  <inertial>
+    <origin xyz="1.0686348049654404e-06 0.06917669367320797 -0.068026281749195" rpy="0 0 0"/>
+    <mass value="2.679330855492574"/>
+    <inertia ixx="0.01107" iyy="0.006034" izz="0.008699" ixy="-0.0" iyz="0.002414" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.10250000000000012 -0.04820742388607768 0.28570725919758294" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Hip_1v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.10250000000000012 -0.04820742388607768 0.28570725919758294" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Hip_1v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_Hip_2v3_1">
+  <inertial>
+    <origin xyz="0.0024544959884548606 -0.049388121206438665 -6.44135759206299e-05" rpy="0 0 0"/>
+    <mass value="2.627804642207739"/>
+    <inertia ixx="0.003653" iyy="0.003176" izz="0.003391" ixy="1.7e-05" iyz="-4e-06" ixz="-5e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.10250000000000004 -0.10020742388607788 0.3707072591975829" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Hip_2v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.10250000000000004 -0.10020742388607788 0.3707072591975829" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Hip_2v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_Knee_1v5_1">
+  <inertial>
+    <origin xyz="-0.04614515712995386 -0.007179845337984901 -0.16809081092709433" rpy="0 0 0"/>
+    <mass value="2.393666278581524"/>
+    <inertia ixx="0.027584" iyy="0.028436" izz="0.005192" ixy="9e-06" iyz="0.000199" ixz="0.000274"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.05849999999999975 -0.048220073454775844 0.7207072589902456" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Knee_1v5_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.05849999999999975 -0.048220073454775844 0.7207072589902456" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Knee_1v5_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_Ankle_1v2_1">
+  <inertial>
+    <origin xyz="-0.04339536276981598 0.0022748541512800785 5.8379721975532206e-05" rpy="0 0 0"/>
+    <mass value="2.832766090710908"/>
+    <inertia ixx="0.004046" iyy="0.003548" izz="0.00397" ixy="4e-06" iyz="2e-06" ixz="5e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0584999999999974 -0.0482200734548218 1.0707072589902424" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Ankle_1v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0584999999999974 -0.0482200734548218 1.0707072589902424" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Ankle_1v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LL_Knee_1v3_1">
+  <inertial>
+    <origin xyz="0.047541156819290976 -0.007187793291662574 -0.1678896036347064" rpy="0 0 0"/>
+    <mass value="2.3910210490214303"/>
+    <inertia ixx="0.027493" iyy="0.028371" izz="0.005214" ixy="-3.1e-05" iyz="0.000195" ixz="-0.000259"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.05849999999999724 -0.04821947102591286 0.7207072589902469" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Knee_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.05849999999999724 -0.04821947102591286 0.7207072589902469" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Knee_1v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LL_Ankle_2v7_1">
+  <inertial>
+    <origin xyz="9.914044236644659e-05 0.019098957795306862 -0.009513815344075471" rpy="0 0 0"/>
+    <mass value="2.0994891576983727"/>
+    <inertia ixx="0.008647" iyy="0.003952" izz="0.007228" ixy="-2e-05" iyz="-0.001901" ixz="-5e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.1025000000000078 -0.10371947102592323 1.0707072589902453" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Ankle_2v7_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.1025000000000078 -0.10371947102592323 1.0707072589902453" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Ankle_2v7_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_Ankle_2v3_1">
+  <inertial>
+    <origin xyz="9.967099675141367e-05 0.019046655278616362 -0.00955869579550983" rpy="0 0 0"/>
+    <mass value="2.0896905636222005"/>
+    <inertia ixx="0.008642" iyy="0.003951" izz="0.007223" ixy="-2e-05" iyz="-0.0019" ixz="-5e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.10249999999999754 -0.1037200734548218 1.0707072589902404" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Ankle_2v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.10249999999999754 -0.1037200734548218 1.0707072589902404" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Ankle_2v3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="U_Neck_2_simv4_1">
+  <inertial>
+    <origin xyz="-0.03828779878029343 -0.03717334256701041 0.0707953955789814" rpy="0 0 0"/>
+    <mass value="1.4178184203861357"/>
+    <inertia ixx="0.012069" iyy="0.007912" izz="0.010154" ixy="9.4e-05" iyz="-0.002561" ixz="-1.9e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.03749999999999938 -0.08420742388571345 -0.3365927408024175" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Neck_2_simv4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.03749999999999938 -0.08420742388571345 -0.3365927408024175" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/U_Neck_2_simv4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UL_Wrist_2v7_1">
+  <inertial>
+    <origin xyz="0.021222002680301277 -1.0526812407873898e-10 0.03157442607028743" rpy="0 0 0"/>
+    <mass value="0.1188082072163882"/>
+    <inertia ixx="0.000135" iyy="0.000138" izz="7.8e-05" ixy="-0.0" iyz="0.0" ixz="5e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.9549734723823613 -0.025207424410238485 -0.19205033830897278" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Wrist_2v7_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.9549734723823613 -0.025207424410238485 -0.19205033830897278" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Wrist_2v7_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="UL_Hand_1v6_1">
+  <inertial>
+    <origin xyz="0.06526454306121543 -0.0200114508377446 -0.04081684663239055" rpy="0 0 0"/>
+    <mass value="0.31821737590024823"/>
+    <inertia ixx="0.000442" iyy="0.001019" izz="0.000701" ixy="-1.3e-05" iyz="-3.6e-05" ixz="0.000104"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.9925155871271655 -0.042885093939905285 -0.23969485312723704" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Hand_1v6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.9925155871271655 -0.042885093939905285 -0.23969485312723704" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/UL_Hand_1v6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_Footv2_2">
+  <inertial>
+    <origin xyz="8.110878130750121e-05 -0.014369982408760626 -0.04063409404472851" rpy="0 0 0"/>
+    <mass value="2.350132620082289"/>
+    <inertia ixx="0.012634" iyy="0.003415" izz="0.014323" ixy="1.1e-05" iyz="-0.000535" ixz="2e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.10249999999999586 -0.046520073454825964 1.1507072589902432" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Footv2_2.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.10249999999999586 -0.046520073454825964 1.1507072589902432" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LR_Footv2_2.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LL_Footv1_1">
+  <inertial>
+    <origin xyz="8.110878130743182e-05 -0.014369982408759495 -0.04063409404472873" rpy="0 0 0"/>
+    <mass value="2.350132620082289"/>
+    <inertia ixx="0.012634" iyy="0.003415" izz="0.014323" ixy="1.1e-05" iyz="-0.000535" ixz="2e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.10250000000000803 -0.046519471025927704 1.150707258990245" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Footv1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.10250000000000803 -0.046519471025927704 1.150707258990245" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/LL_Footv1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="Rev48" type="revolute">
+  <origin xyz="-1.1139995182141764e-16 0.048207423886077155 -0.15540725919758283" rpy="0 0 0"/>
+  <parent link="L_Pelvisv12_1"/>
+  <child link="U_Waist_2v7_1"/>
+  <axis xyz="5.982555258742263e-16 2.993250453936626e-15 -1.0000000000000007"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev49" type="revolute">
+  <origin xyz="0.05400000000000002 -2.5673907444456745e-16 0.08500000000000006" rpy="0 0 0"/>
+  <parent link="U_Waist_2v7_1"/>
+  <child link="U_Waist_1v3_1"/>
+  <axis xyz="-1.0000000000000004 -3.8614264826320785e-16 -5.982555258742287e-16"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev51" type="revolute">
+  <origin xyz="-0.05400000000000002 0.066 2.220446049250313e-16" rpy="0 0 0"/>
+  <parent link="U_Waist_1v3_1"/>
+  <child link="U_Body_1v20_1"/>
+  <axis xyz="4.1768307509935763e-16 -1.0 -3.766587207318515e-15"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev53" type="revolute">
+  <origin xyz="-0.15400000000000166 -0.08900000000036053 0.22749999999999942" rpy="0 0 0"/>
+  <parent link="U_Body_1v20_1"/>
+  <child link="UR_Shoulder_1v3_1"/>
+  <axis xyz="6.612364937821182e-16 8.497414425407556e-15 -1.0000000000000002"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev54" type="revolute">
+  <origin xyz="-0.03410000000000002 -9.159339953157541e-16 0.06499999999999992" rpy="0 0 0"/>
+  <parent link="UR_Shoulder_1v3_1"/>
+  <child link="UR_Shoulder_2v2_1"/>
+  <axis xyz="1.0000000000000002 1.787016481636012e-15 6.61236493782145e-16"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev55" type="revolute">
+  <origin xyz="-0.11499999999999991 -0.032900000000000186 -5.273559366969494e-16" rpy="0 0 0"/>
+  <parent link="UR_Shoulder_2v2_1"/>
+  <child link="UR_Shoulder_3v2_1"/>
+  <axis xyz="1.7870164816360212e-15 -1.0000000000000002 -1.3942094684871652e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev58" type="revolute">
+  <origin xyz="-0.12500000000000044 0.03099999999999905 0.032500000000000584" rpy="0 0 0"/>
+  <parent link="UR_Arm_2v6_1"/>
+  <child link="UR_Arm_3v3_1"/>
+  <axis xyz="-1.0 -1.628511197940202e-15 -3.990917286628242e-16"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rigid71" type="fixed">
+  <origin xyz="-0.03749351513092869 0.01767766952966256 -0.012355465661712944" rpy="0 0 0"/>
+  <parent link="UR_Wrist_2v3_1"/>
+  <child link="UR_Hand_1v3_1"/>
+</joint>
+
+<joint name="Rev72" type="revolute">
+  <origin xyz="-4.760540027974433e-16 -0.030000000000363167 0.37949999999999945" rpy="0 0 0"/>
+  <parent link="U_Body_1v20_1"/>
+  <child link="U_Neck_1v4_1"/>
+  <axis xyz="-4.4399673382832374e-15 -8.49909203282999e-15 1.000000000000001"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev74" type="revolute">
+  <origin xyz="0.10249999999999992 0.04820742388607756 -0.2857072591975829" rpy="0 0 0"/>
+  <parent link="L_Pelvisv12_1"/>
+  <child link="LL_Hip_1v5_1"/>
+  <axis xyz="-6.825512482338919e-16 -3.582321622006011e-15 1.0000000000000007"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev76" type="revolute">
+  <origin xyz="5.551115123125783e-17 0.052000000000000476 -0.08499999999999974" rpy="0 0 0"/>
+  <parent link="LL_Hip_1v5_1"/>
+  <child link="LL_Hip_2v4_1"/>
+  <axis xyz="4.996003610813195e-16 1.0 4.2648728702398994e-15"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev77" type="revolute">
+  <origin xyz="-0.04400000000000005 -0.052000000000000005 -3.3306690738754696e-16" rpy="0 0 0"/>
+  <parent link="LL_Hip_2v4_1"/>
+  <child link="LL_Hip_3v4_1"/>
+  <axis xyz="1.0 -4.996003610813223e-16 6.825512482338887e-16"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev79" type="revolute">
+  <origin xyz="1.0387524174149121e-14 1.0429157537572564e-14 -0.3499999999999984" rpy="0 0 0"/>
+  <parent link="LL_Knee_1v3_1"/>
+  <child link="LL_Ankle_1v4_1"/>
+  <axis xyz="0.9999999999999984 8.7551833707009e-16 2.1296788042304644e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev83" type="revolute">
+  <origin xyz="0.04400000000000003 -0.05200000000000002 -5.551115123125783e-17" rpy="0 0 0"/>
+  <parent link="LR_Hip_2v3_1"/>
+  <child link="LR_Hip_3v4_1"/>
+  <axis xyz="-1.0 4.99600361081322e-16 -5.600865683191539e-16"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev87" type="revolute">
+  <origin xyz="0.15399999999999867 -0.08900000000036128 0.22749999999999965" rpy="0 0 0"/>
+  <parent link="U_Body_1v20_1"/>
+  <child link="UL_Shoulder_1v3_1"/>
+  <axis xyz="7.404476114066331e-16 8.497414425407556e-15 -1.0000000000000002"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev88" type="revolute">
+  <origin xyz="-0.1281000000000007 0.03290000000000096 3.885780586188048e-16" rpy="0 0 0"/>
+  <parent link="UR_Shoulder_3v2_1"/>
+  <child link="UR_Arm_1v2_1"/>
+  <axis xyz="1.0000000000000067 1.6285111979402075e-15 6.440210884922999e-16"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev89" type="revolute">
+  <origin xyz="-0.2069999999999999 -0.03099999999999975 -0.03250000000000089" rpy="0 0 0"/>
+  <parent link="UR_Arm_1v2_1"/>
+  <child link="UR_Arm_2v6_1"/>
+  <axis xyz="1.6285111979402115e-15 -1.0000000000000002 -2.2273588194375526e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev90" type="revolute">
+  <origin xyz="0.03410000000000002 -7.389922007661198e-16 0.06499999999999923" rpy="0 0 0"/>
+  <parent link="UL_Shoulder_1v3_1"/>
+  <child link="UL_Shoulder_2v3_1"/>
+  <axis xyz="-1.0000000000000016 -1.7494841080718984e-15 -1.4873587057917673e-15"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev91" type="revolute">
+  <origin xyz="0.11500000000000019 -0.0372999999999995 5.551115123125783e-17" rpy="0 0 0"/>
+  <parent link="UL_Shoulder_2v3_1"/>
+  <child link="UL_Shoulder_3v3_1"/>
+  <axis xyz="-4.013091758170461e-15 1.0 1.128592501456088e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev92" type="revolute">
+  <origin xyz="0.1281000000000002 0.03730000000000119 6.106226635438361e-16" rpy="0 0 0"/>
+  <parent link="UL_Shoulder_3v3_1"/>
+  <child link="UL_Arm_1v3_1"/>
+  <axis xyz="-1.0000000000000064 2.6872731328355884e-17 -1.4856810979557389e-15"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev93" type="revolute">
+  <origin xyz="0.20699999999999968 -0.030999999999999812 -0.03249999999999986" rpy="0 0 0"/>
+  <parent link="UL_Arm_1v3_1"/>
+  <child link="UL_Arm_2v2_1"/>
+  <axis xyz="4.471789263383533e-16 1.0 1.0596906444881355e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev94" type="revolute">
+  <origin xyz="0.124999999999997 0.031000000000000347 0.0325000000000068" rpy="0 0 0"/>
+  <parent link="UL_Arm_2v2_1"/>
+  <child link="UL_Arm_3v2_1"/>
+  <axis xyz="-1.0 -4.862164186244712e-15 -1.4873587057917955e-15"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev96" type="revolute">
+  <origin xyz="0.14380000000000015 -0.03699999947547858 1.6653345369377348e-16" rpy="0 0 0"/>
+  <parent link="UL_Arm_3v2_1"/>
+  <child link="UL_Wrist_1v6_1"/>
+  <axis xyz="4.878965948463796e-15 -0.9999999999999973 3.3024623745729994e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev97" type="revolute">
+  <origin xyz="-0.14379988777908115 -0.03699999947547955 -0.00012699995041903778" rpy="0 0 0"/>
+  <parent link="UR_Arm_3v3_1"/>
+  <child link="UR_Wrist_1v6_1"/>
+  <axis xyz="-1.6068383694794486e-15 0.9999999999999983 -2.1329803082529814e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev99" type="revolute">
+  <origin xyz="-0.048026490139194355 0.03700000000000096 0.029957574082524197" rpy="0 0 0"/>
+  <parent link="UR_Wrist_1v6_1"/>
+  <child link="UR_Wrist_2v3_1"/>
+  <axis xyz="0.0008836292804623219 -1.8425509837283836e-14 -0.9999996095995707"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev100" type="revolute">
+  <origin xyz="-0.10250000000000012 0.04820742388607768 -0.28570725919758294" rpy="0 0 0"/>
+  <parent link="L_Pelvisv12_1"/>
+  <child link="LR_Hip_1v2_1"/>
+  <axis xyz="-6.825512482338909e-16 -2.3756413607872523e-15 1.0000000000000007"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev101" type="revolute">
+  <origin xyz="8.326672684688674e-17 0.0520000000000002 -0.08499999999999996" rpy="0 0 0"/>
+  <parent link="LR_Hip_1v2_1"/>
+  <child link="LR_Hip_2v3_1"/>
+  <axis xyz="4.996003610813207e-16 1.0 1.6930901125533612e-15"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev102" type="revolute">
+  <origin xyz="2.5673907444456745e-16 1.2649568697981062e-05 -0.3499999997926626" rpy="0 0 0"/>
+  <parent link="LR_Hip_3v4_1"/>
+  <child link="LR_Knee_1v5_1"/>
+  <axis xyz="-1.0 4.383680211239547e-16 -7.494005416219802e-16"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev103" type="revolute">
+  <origin xyz="2.345346139520643e-15 4.5956294325577574e-14 -0.34999999999999687" rpy="0 0 0"/>
+  <parent link="LR_Knee_1v5_1"/>
+  <child link="LR_Ankle_1v2_1"/>
+  <axis xyz="0.9999999999999962 -4.1061244550837927e-16 2.1982415887577986e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev104" type="revolute">
+  <origin xyz="-2.6853519408120974e-15 1.2047139834832354e-05 -0.34999999979266394" rpy="0 0 0"/>
+  <parent link="LL_Hip_3v4_1"/>
+  <child link="LL_Knee_1v3_1"/>
+  <axis xyz="0.9999999999999998 8.755183370700908e-16 2.1296788042304672e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev105" type="revolute">
+  <origin xyz="0.044000000000000164 0.05549999999999994 0.0" rpy="0 0 0"/>
+  <parent link="LL_Ankle_1v4_1"/>
+  <child link="LL_Ankle_2v7_1"/>
+  <axis xyz="1.6824981031160313e-15 1.0 1.4064118873753326e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev106" type="revolute">
+  <origin xyz="-0.044000000000000136 0.0555 1.9984014443252818e-15" rpy="0 0 0"/>
+  <parent link="LR_Ankle_1v2_1"/>
+  <child link="LR_Ankle_2v3_1"/>
+  <axis xyz="4.383680211229585e-16 1.0 4.7734503633028324e-14"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev107" type="revolute">
+  <origin xyz="0.037499999999999964 -2.7755575615628914e-16 0.027500000000000635" rpy="0 0 0"/>
+  <parent link="U_Neck_1v4_1"/>
+  <child link="U_Neck_2_simv4_1"/>
+  <axis xyz="-1.0000000000000013 -3.7538624838425076e-16 -1.0149454107501772e-15"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rev108" type="revolute">
+  <origin xyz="0.04797347238236549 0.03699999999999995 -0.030042402493451303" rpy="0 0 0"/>
+  <parent link="UL_Wrist_1v6_1"/>
+  <child link="UL_Wrist_2v7_1"/>
+  <axis xyz="0.0008836292804607975 3.488839304891288e-14 0.9999996095995708"/>
+  <limit upper="3.14159" lower="-3.14159" effort="100" velocity="100"/>
+</joint>
+
+<joint name="Rigid109" type="fixed">
+  <origin xyz="0.03754211474480418 0.0176776695296668 0.04764451481826426" rpy="0 0 0"/>
+  <parent link="UL_Wrist_2v7_1"/>
+  <child link="UL_Hand_1v6_1"/>
+</joint>
+
+<joint name="Rigid111" type="fixed">
+  <origin xyz="1.6792123247455493e-15 -0.05719999999999584 -0.08000000000000274" rpy="0 0 0"/>
+  <parent link="LR_Ankle_2v3_1"/>
+  <child link="LR_Footv2_2"/>
+</joint>
+
+<joint name="Rigid113" type="fixed">
+  <origin xyz="2.3592239273284576e-16 -0.057199999999995525 -0.07999999999999963" rpy="0 0 0"/>
+  <parent link="LL_Ankle_2v7_1"/>
+  <child link="LL_Footv1_1"/>
+</joint>
+
+</robot>
