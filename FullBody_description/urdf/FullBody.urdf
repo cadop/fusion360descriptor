@@ -4,6 +4,9 @@
 <material name="silver">
   <color rgba="0.700 0.700 0.700 1.000"/>
 </material>
+<material name="red">
+  <color rgba="1.0 0.0 0.0 1.000"/>
+</material>
 
 <link name="L_Pelvisv12_1">
   <inertial>
@@ -17,6 +20,20 @@
       <mesh filename="package://meshes/L_Pelvisv12_1.stl" scale="0.001 0.001 0.001"/>
     </geometry>
     <material name="silver"/>
+  </visual>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/L_Pelvisv12_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <visual>
+    <origin xyz="0 0 0.01" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://meshes/L_Pelvisv12_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="red"/>
   </visual>
   <collision>
     <origin xyz="0 0 0" rpy="0 0 0"/>
