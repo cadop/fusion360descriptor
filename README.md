@@ -29,6 +29,7 @@ It provides a simple GUI for running the script and choosing a few different set
 - Export only URDF without Mesh (for fast viewing)
 - Set Component 1 of joint to mean Parent or Child
 
+<img src="imagesforgettingstarted/gui.gif" alt="drawing" width="800"/>
 
 Step-by-Step Guide
 ------------------
