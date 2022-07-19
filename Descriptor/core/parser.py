@@ -6,6 +6,7 @@ import copy
 import adsk, adsk.core, adsk.fusion
 from . import transforms
 from . import parts
+from . import io
 
 class Hierarchy:
     ''' hierarchy of the design space '''
@@ -168,7 +169,7 @@ class Configurator:
         '''        
         # Export top-level occurrences
         self.root = root
-        self.occ = root.occurrences.asList
+        self.occ = root.occurrences.asList #list of occurrences
         self.inertial_dict = {}
         self.inertia_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
 
@@ -180,7 +181,7 @@ class Configurator:
         self.joint_order = ('p','c') # Order of joints defined by components
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
         self.inertia_scale = 10000.0 # units to convert mass
-        self.base_links= set()
+        self.base_links= set() #grounded component
 
     def get_scene_configuration(self):
         '''Build the graph of how the scene components are related
@@ -224,6 +225,26 @@ class Configurator:
             if oc.isGrounded:
                 name = oc.name
                 self.base_links.add(name)
+
+    def get_bodies_per_comp(component):
+        '''Returns a list of # of bodies per component. For example, if the components had the following # of bodies: 4(base link),3,2 then the list generated will be [4,3,2]
+
+        Parameters
+        ----------
+        component
+            component in hierarchy
+        '''
+        bodies = []
+        component_body_number = []
+        for bod in component.bRepBodies:
+            if bod.isLightBulbOn:
+                bodies.append(bod) 
+            component_body_number.append(len(bodies))
+            bodies=[]
+        if component.childOccurrences:
+            Configurator.get_bodies(component.childOccurrences, bodies)
+
+        return component_body_number            
 
     def _inertia(self):
         '''
@@ -380,24 +401,48 @@ class Configurator:
 
             self.joints_dict[joint.name] = joint_dict
 
+    
+
+
     def _build_links(self):
         ''' create links '''
 
         mesh_folder = 'meshes/'
 
+        b_count_list = []
+        for oc in self.occ: #iterates through the components
+            b_count_list += Configurator.get_bodies_per_comp(oc) #generates list of # of bodies per component
+
+
+        #base link
         base_link = self.base_links.pop()
+
+        b_count_base=0
+        for oc in self.occ: #gets body count in base (grounded) link
+            if oc.isGrounded:
+                bodies=[]
+                bodies = io.get_bodies(oc,bodies)
+                for bod in bodies:
+                    if bod.isLightBulbOn:
+                        b_count_base = b_count_base+1
+
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
         link = parts.Link(name=base_link, 
                         xyz=[0,0,0], 
                         center_of_mass=center_of_mass, 
                         sub_folder=mesh_folder,
                         mass=self.inertial_dict[base_link]['mass'],
-                        inertia_tensor=self.inertial_dict[base_link]['inertia'])
+                        inertia_tensor=self.inertial_dict[base_link]['inertia'],
+                        body_count=b_count_base)
 
         self.links_xyz_dict[link.name] = link.xyz
         self.links[link.name] = link
 
+        b_count_list.pop(0) #pop the list entry w/ the base link's component # since that link was generated above
+        
         for k, joint in self.joints_dict.items():
+            
+            b_count_m = b_count_list.pop(0)
             name = joint['child']
 
             center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
@@ -406,7 +451,8 @@ class Configurator:
                             center_of_mass=center_of_mass,
                             sub_folder=mesh_folder, 
                             mass=self.inertial_dict[name]['mass'],
-                            inertia_tensor=self.inertial_dict[name]['inertia'])
+                            inertia_tensor=self.inertial_dict[name]['inertia'],
+                            body_count=b_count_m)
 
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
 

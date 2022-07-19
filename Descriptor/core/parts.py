@@ -124,7 +124,7 @@ class Link:
 
     mesh_scale = '0.001'
 
-    def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor):
+    def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_count):
         """
         Parameters
         ----------
@@ -142,6 +142,9 @@ class Link:
             mass of the link
         inertia_tensor: [ixx, iyy, izz, ixy, iyz, ixz]
             tensor of the inertia
+        body_count: int
+            number of bodies in the link
+        
         """
 
         self.name = name
@@ -153,6 +156,8 @@ class Link:
         self.sub_folder = sub_folder
         self.mass = mass
         self.inertia_tensor = inertia_tensor
+        self.body_count = body_count
+        
         
     @property
     def link_xml(self):
@@ -176,15 +181,16 @@ class Link:
                           'iyz':str(self.inertia_tensor[4]), 'ixz':str(self.inertia_tensor[5])}        
         
         # visual
-        visual = SubElement(link, 'visual')
-        origin_v = SubElement(visual, 'origin')
-        origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
-        geometry_v = SubElement(visual, 'geometry')
-        mesh_v = SubElement(geometry_v, 'mesh')
-        mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
-        # mesh_v.attrib = {'filename':'package://' + self.repo + self.name + '.stl','scale':'0.001 0.001 0.001'}
-        material = SubElement(visual, 'material')
-        material.attrib = {'name':'silver'}
+        for bodyNum in range(self.body_count):
+            visual = SubElement(link, 'visual')
+            origin_v = SubElement(visual, 'origin')
+            origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+            geometry_v = SubElement(visual, 'geometry')
+            mesh_v = SubElement(geometry_v, 'mesh')
+            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}_{bodyNum+1}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
+            # mesh_v.attrib = {'filename':'package://' + self.repo + self.name + '.stl','scale':'0.001 0.001 0.001'}
+            material = SubElement(visual, 'material')
+            material.attrib = {'name':'silver'}
         
         # collision
         collision = SubElement(link, 'collision')
@@ -192,7 +198,7 @@ class Link:
         origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
         geometry_c = SubElement(collision, 'geometry')
         mesh_c = SubElement(geometry_c, 'mesh')
-        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':'0.001 0.001 0.001'}
+        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name +'_1.stl','scale':'0.001 0.001 0.001'}
 
 
         rough_string = ElementTree.tostring(link, 'utf-8')
