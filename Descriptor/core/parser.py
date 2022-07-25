@@ -6,7 +6,6 @@ import copy
 import adsk, adsk.core, adsk.fusion
 from . import transforms
 from . import parts
-from . import io
 
 class Hierarchy:
     ''' hierarchy of the design space '''
@@ -15,7 +14,6 @@ class Hierarchy:
         ''' Initialize Hierarchy class to parse document and define component relationships.
         Uses a recursive traversal (based off of fusion example) and provides helper functions
         to get specific children and parents for nodes. 
-
         Parameters
         ----------
         component : [type]
@@ -62,6 +60,9 @@ class Hierarchy:
 
         child_set = list(self.get_all_children().values())
 
+        if len(child_set) == 0:
+            body_list.append([self.component.bRepBodies.item(x) for x in range(0, self.component.bRepBodies.count) ])
+        
         child_list = [x.children for x in child_set if len(x.children)>0]
         childs = []
         for c in child_list:
@@ -135,7 +136,6 @@ class Hierarchy:
             [description]
         parent : [type], optional
             [description], by default None
-
         Returns
         -------
         Hierarchy
@@ -161,7 +161,6 @@ class Configurator:
 
     def __init__(self, root) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
-
         Parameters
         ----------
         root : [type]
@@ -169,7 +168,7 @@ class Configurator:
         '''        
         # Export top-level occurrences
         self.root = root
-        self.occ = root.occurrences.asList #list of occurrences
+        self.occ = root.occurrences.asList
         self.inertial_dict = {}
         self.inertia_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
 
@@ -181,7 +180,7 @@ class Configurator:
         self.joint_order = ('p','c') # Order of joints defined by components
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
         self.inertia_scale = 10000.0 # units to convert mass
-        self.base_links= set() #grounded component
+        self.base_links= set()
 
     def get_scene_configuration(self):
         '''Build the graph of how the scene components are related
@@ -194,7 +193,6 @@ class Configurator:
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links 
-
         Returns
         -------
         dict
@@ -225,26 +223,6 @@ class Configurator:
             if oc.isGrounded:
                 name = oc.name
                 self.base_links.add(name)
-
-    def get_bodies_per_comp(component):
-        '''Returns a list of # of bodies per component. For example, if the components had the following # of bodies: 4(base link),3,2 then the list generated will be [4,3,2]
-
-        Parameters
-        ----------
-        component
-            component in hierarchy
-        '''
-        bodies = []
-        component_body_number = []
-        for bod in component.bRepBodies:
-            if bod.isLightBulbOn:
-                bodies.append(bod) 
-            component_body_number.append(len(bodies))
-            bodies=[]
-        if component.childOccurrences:
-            Configurator.get_bodies(component.childOccurrences, bodies)
-
-        return component_body_number            
 
     def _inertia(self):
         '''
@@ -292,7 +270,6 @@ class Configurator:
 
     def _is_joint_valid(self, joint):
         '''_summary_
-
         Parameters
         ----------
         joint : _type_
@@ -401,31 +378,23 @@ class Configurator:
 
             self.joints_dict[joint.name] = joint_dict
 
-    
-
-
     def _build_links(self):
         ''' create links '''
 
-        mesh_folder = 'meshes/'
+        mesh_folder = 'meshes/'    
 
-        b_count_list = []
-        for oc in self.occ: #iterates through the components
-            b_count_list += Configurator.get_bodies_per_comp(oc) #generates list of # of bodies per component
+        #creates list of bodies that are visible
 
+        visible_bodies = [] #list of bodies that are visible
+        for oc in self.occ:
+            body_lst = self.component_map[oc.entityToken].get_flat_body()
+            if len(body_lst) > 0:
+                for body in body_lst:
+                    # Check if this body is hidden
+                    if body.isLightBulbOn:
+                        visible_bodies.append(body)
 
-        #base link
         base_link = self.base_links.pop()
-
-        b_count_base=0
-        for oc in self.occ: #gets body count in base (grounded) link
-            if oc.isGrounded:
-                bodies=[]
-                bodies = io.get_bodies(oc,bodies)
-                for bod in bodies:
-                    if bod.isLightBulbOn:
-                        b_count_base = b_count_base+1
-
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
         link = parts.Link(name=base_link, 
                         xyz=[0,0,0], 
@@ -433,16 +402,12 @@ class Configurator:
                         sub_folder=mesh_folder,
                         mass=self.inertial_dict[base_link]['mass'],
                         inertia_tensor=self.inertial_dict[base_link]['inertia'],
-                        body_count=b_count_base)
+                        body_lst = visible_bodies)
 
         self.links_xyz_dict[link.name] = link.xyz
         self.links[link.name] = link
 
-        b_count_list.pop(0) #pop the list entry w/ the base link's component # since that link was generated above
-        
         for k, joint in self.joints_dict.items():
-            
-            b_count_m = b_count_list.pop(0)
             name = joint['child']
 
             center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
@@ -452,7 +417,7 @@ class Configurator:
                             sub_folder=mesh_folder, 
                             mass=self.inertial_dict[name]['mass'],
                             inertia_tensor=self.inertial_dict[name]['inertia'],
-                            body_count=b_count_m)
+                            body_lst=visible_bodies)
 
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
 
@@ -474,4 +439,3 @@ class Configurator:
                                 upper_limit=j['upper_limit'], lower_limit=j['lower_limit'])
 
             self.joints[k] = joint
-

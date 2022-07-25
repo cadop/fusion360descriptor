@@ -1,8 +1,7 @@
 import os
 import adsk, adsk.core, adsk.fusion
 from . import parts
-
-
+from . import parser
 
 def visible_to_stl(design, save_dir, root, accuracy):  
     """
@@ -29,10 +28,9 @@ def visible_to_stl(design, save_dir, root, accuracy):
     try: os.mkdir(save_dir)
     except: pass
 
-    # Export top-level occurrences
-    #get all components below root as a list
-    occ = root.occurrences.asList
 
+    # Export top-level occurrences
+    occ = root.occurrences.asList
     # hack for correct stl placement by turning off all visibility first
     visible_components = []
     for oc in occ:
@@ -54,14 +52,14 @@ def visible_to_stl(design, save_dir, root, accuracy):
 
         oc.isLightBulbOn = True
         bodies = []
-        bodies = get_bodies(oc, bodies)
+        bodies = parser.Configurator.component_map[oc.entityToken].get_flat_body()
+        #bodies = get_bodies(oc, bodies)
         visible_bodies = []
         for bod in bodies:
             if bod.isLightBulbOn:
                 visible_bodies.append(bod)
                 bod.isLightBulbOn = False #turning off all bodies
         
-        counter=1
         for bod in visible_bodies:
             #turn on each body individually
             bod.isLightBulbOn = True
@@ -70,7 +68,7 @@ def visible_to_stl(design, save_dir, root, accuracy):
             file_name = oc.component.name.replace(':','_').replace(' ','')
             file_name = oc.name.replace(':','_').replace(' ','')
             file_name = os.path.join(save_dir, file_name )  
-            file_name = file_name + "_" + str(counter)
+            file_name = file_name + "_" + bod.name
             print(f'Saving {file_name}')
 
             # create stl exportOptions
@@ -81,23 +79,23 @@ def visible_to_stl(design, save_dir, root, accuracy):
             exporter.execute(stl_options)
             bod.isLightBulbOn = False
             # this way, we are able to get the correct stl placement (each body within a component needs its own stl file)
-            counter+=1
 
         # The occurrence back off to not intefere with next export
         oc.isLightBulbOn = False
-        
 
     # Turn back on all the components that were on before
     for oc in visible_components:
         oc.isLightBulbOn = True
-    
+
 def get_bodies(component,bodies): #returns a list of bodies within a component
     for bod in component.bRepBodies:
         bodies.append(bod) 
+        if len(bodies)==0:
+            bodies.append(component)
     if component.childOccurrences:
         get_bodies(component.childOccurrences, bodies)
-    return bodies
 
+    return bodies
 
 class Writer:
 
