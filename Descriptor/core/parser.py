@@ -61,6 +61,9 @@ class Hierarchy:
 
         child_set = list(self.get_all_children().values())
 
+        if len(child_set) == 0:
+            body_list.append([self.component.bRepBodies.item(x) for x in range(0, self.component.bRepBodies.count) ])
+
         child_list = [x.children for x in child_set if len(x.children)>0]
         childs = []
         for c in child_list:
