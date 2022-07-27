@@ -181,6 +181,7 @@ class Configurator:
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
         self.inertia_scale = 10000.0 # units to convert mass
         self.base_links= set()
+        # self.component_map = set()
 
     def get_scene_configuration(self):
         '''Build the graph of how the scene components are related
@@ -190,6 +191,17 @@ class Configurator:
         occ_list=self.root.occurrences.asList
         Hierarchy.traverse(occ_list, root_node)
         self.component_map = root_node.get_all_children()
+        
+
+    def get_scene_configuration_return(self):
+        '''Build the graph of how the scene components are related
+        '''        
+        
+        root_node = Hierarchy(self.root)
+        occ_list=self.root.occurrences.asList
+        Hierarchy.traverse(occ_list, root_node)
+        self.component_map = root_node.get_all_children()
+        return self.component_map
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links 
@@ -386,13 +398,20 @@ class Configurator:
         #creates list of bodies that are visible
 
         visible_bodies = [] #list of bodies that are visible
+        body_dict = {}
+        oc_name = ''
         for oc in self.occ:
-            body_lst = self.component_map[oc.entityToken].get_flat_body()
+            oc_name = oc.name.replace(':','_').replace(' ','')
+            body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
             if len(body_lst) > 0:
                 for body in body_lst:
                     # Check if this body is hidden
                     if body.isLightBulbOn:
                         visible_bodies.append(body)
+                        body_dict[body.entityToken] = oc_name
+
+
+
 
         base_link = self.base_links.pop()
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
@@ -402,7 +421,8 @@ class Configurator:
                         sub_folder=mesh_folder,
                         mass=self.inertial_dict[base_link]['mass'],
                         inertia_tensor=self.inertial_dict[base_link]['inertia'],
-                        body_lst = visible_bodies)
+                        body_lst = visible_bodies,
+                        body_dict = body_dict)
 
         self.links_xyz_dict[link.name] = link.xyz
         self.links[link.name] = link
@@ -417,7 +437,8 @@ class Configurator:
                             sub_folder=mesh_folder, 
                             mass=self.inertial_dict[name]['mass'],
                             inertia_tensor=self.inertial_dict[name]['inertia'],
-                            body_lst=visible_bodies)
+                            body_lst=visible_bodies,
+                            body_dict = body_dict)
 
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
 

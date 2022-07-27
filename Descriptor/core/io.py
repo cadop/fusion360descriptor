@@ -2,8 +2,9 @@ import os
 import adsk, adsk.core, adsk.fusion
 from . import parts
 from . import parser
+from . import manager
 
-def visible_to_stl(design, save_dir, root, accuracy):  
+def visible_to_stl(design, save_dir, root, accuracy,component_map):  
     """
     export top-level components as a single stl file into "save_dir/"
     
@@ -17,7 +18,8 @@ def visible_to_stl(design, save_dir, root, accuracy):
         root component of the design
     accuracy: int
         accuracy value to use for stl export
-    
+    component_map: list
+        list of all bodies to use for stl export
     """
           
     # create a single exportManager instance
@@ -52,8 +54,7 @@ def visible_to_stl(design, save_dir, root, accuracy):
 
         oc.isLightBulbOn = True
         bodies = []
-        bodies = parser.Configurator.component_map[oc.entityToken].get_flat_body()
-        #bodies = get_bodies(oc, bodies)
+        bodies = component_map[oc.entityToken].get_flat_body()
         visible_bodies = []
         for bod in bodies:
             if bod.isLightBulbOn:
@@ -64,11 +65,11 @@ def visible_to_stl(design, save_dir, root, accuracy):
             #turn on each body individually
             bod.isLightBulbOn = True
 
-            #export the component's body
+            #export the component's body              
             file_name = oc.component.name.replace(':','_').replace(' ','')
             file_name = oc.name.replace(':','_').replace(' ','')
             file_name = os.path.join(save_dir, file_name )  
-            file_name = file_name + "_" + bod.name
+            file_name = file_name + "_" + bod.name.replace(':','_').replace(' ','')
             print(f'Saving {file_name}')
 
             # create stl exportOptions
@@ -87,15 +88,6 @@ def visible_to_stl(design, save_dir, root, accuracy):
     for oc in visible_components:
         oc.isLightBulbOn = True
 
-def get_bodies(component,bodies): #returns a list of bodies within a component
-    for bod in component.bRepBodies:
-        bodies.append(bod) 
-        if len(bodies)==0:
-            bodies.append(component)
-    if component.childOccurrences:
-        get_bodies(component.childOccurrences, bodies)
-
-    return bodies
 
 class Writer:
 
