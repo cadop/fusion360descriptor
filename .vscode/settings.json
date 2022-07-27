@@ -1,6 +1,0 @@
-{
-	"python.autoComplete.extraPaths":	["C:/Users/apric/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Python/defs"],
-	"python.analysis.extraPaths":	["C:/Users/apric/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Python/defs"],
-	"python.pythonPath":	"C:/Users/apric/AppData/Local/Autodesk/webdeploy/production/59c8a288d74003935db5128cd3acb5349f9d794a/Python/python.exe",
-	"python.terminal.executeInFileDir":	true
-}
