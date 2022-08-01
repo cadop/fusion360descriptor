@@ -188,14 +188,14 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Add dropdown to define the order that joints were defined (parent as component 1 or component 2)
             di = inputs.addDropDownCommandInput('joint_order', 'Joint Component 1', adsk.core.DropDownStyles.TextListDropDownStyle)
             di = di.listItems
-            di.add('Parent', False, '')
-            di.add('Child', True, '')
+            di.add('Parent', True, '')
+            di.add('Child', False, '')
 
             # Set the type of platform to target for building XML
             di = inputs.addDropDownCommandInput('target_platform', 'Target Platform', adsk.core.DropDownStyles.TextListDropDownStyle)
             di = di.listItems
-            di.add('None', False, '')
-            di.add('pyBullet', True, '')
+            di.add('None', True, '')
+            di.add('pyBullet', False, '')
             # di.add('m', False, '') # TODO Add other methods if needed 
 
             # Make a button to preview the hierarchy 
