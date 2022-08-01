@@ -191,16 +191,6 @@ class Configurator:
         occ_list=self.root.occurrences.asList
         Hierarchy.traverse(occ_list, root_node)
         self.component_map = root_node.get_all_children()
-        
-
-    def get_scene_configuration_return(self):
-        '''Build the graph of how the scene components are related
-        '''        
-        
-        root_node = Hierarchy(self.root)
-        occ_list=self.root.occurrences.asList
-        Hierarchy.traverse(occ_list, root_node)
-        self.component_map = root_node.get_all_children()
         return self.component_map
 
     def get_joint_preview(self):

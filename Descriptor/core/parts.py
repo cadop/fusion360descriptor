@@ -183,7 +183,6 @@ class Link:
                           'iyz':str(self.inertia_tensor[4]), 'ixz':str(self.inertia_tensor[5])}        
         
         # visual
-        cnt=1
         for body in self.body_lst:
             body_n = self.body_dict.get(body.entityToken)
             if  body_n == self.name: 
@@ -197,13 +196,7 @@ class Link:
                 # mesh_v.attrib = {'filename':'package://' + self.repo + self.name + '.stl','scale':'0.001 0.001 0.001'}
                 material = SubElement(visual, 'material')
                 material.attrib = {'name':'silver'}
-                
-                #gets body for collision
-                if cnt<2:
-                    col_name = body.name
-                    cnt+=1
-
-        
+    
         
         # collision
         collision = SubElement(link, 'collision')
@@ -211,7 +204,7 @@ class Link:
         origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
         geometry_c = SubElement(collision, 'geometry')
         mesh_c = SubElement(geometry_c, 'mesh')
-        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '_'+ col_name + '.stl','scale':'0.001 0.001 0.001'}
+        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':'0.001 0.001 0.001'}
 
 
         rough_string = ElementTree.tostring(link, 'utf-8')

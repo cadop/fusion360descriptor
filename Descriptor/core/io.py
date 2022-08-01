@@ -49,10 +49,25 @@ def visible_to_stl(design, save_dir, root, accuracy,component_map):
         # turn back off body
         # coor = oc.transform.getAsCoordinateSystem()
 
-        #for each component, get each body within the component
-        #hack to turn off each body within the component
+        
 
         oc.isLightBulbOn = True
+
+        # creates STL for all bodies within component, used for URDF collision
+        file_name = oc.name.replace(':','_').replace(' ','')
+        file_name = os.path.join(save_dir, file_name )              
+        print(f'Saving {file_name}')
+        # create stl exportOptions
+        stl_options = exporter.createSTLExportOptions(root, file_name)
+        stl_options.sendToPrintUtility = False
+        stl_options.isBinaryFormat = True
+        stl_options.meshRefinement = accuracy
+        exporter.execute(stl_options)
+        
+
+        # for each component, get each body within the component
+        # hack to turn off each body within the component
+        # creates STL for each body
         bodies = []
         bodies = component_map[oc.entityToken].get_flat_body()
         visible_bodies = []
@@ -66,7 +81,6 @@ def visible_to_stl(design, save_dir, root, accuracy,component_map):
             bod.isLightBulbOn = True
 
             #export the component's body              
-            file_name = oc.component.name.replace(':','_').replace(' ','')
             file_name = oc.name.replace(':','_').replace(' ','')
             file_name = os.path.join(save_dir, file_name )  
             file_name = file_name + "_" + bod.name.replace(':','_').replace(' ','')
