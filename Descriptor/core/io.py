@@ -70,6 +70,14 @@ def visible_to_stl(design, save_dir, root, accuracy,component_map):
         # creates STL for each body
         bodies = []
         bodies = component_map[oc.entityToken].get_flat_body()
+        #checks for child component within "oc" component
+        if oc.childOccurrences: 
+                bodies.extend([oc.bRepBodies.item(x) for x in range(0, oc.bRepBodies.count) ])
+                oc_list = oc.childOccurrences
+                for o in oc_list:
+                    body_lst_ext = component_map[o.entityToken].get_flat_body()
+                    bodies.extend(body_lst_ext)
+
         visible_bodies = []
         for bod in bodies:
             if bod.isLightBulbOn:

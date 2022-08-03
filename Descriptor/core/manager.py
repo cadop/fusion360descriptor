@@ -119,8 +119,7 @@ class Manager:
         config.inertia_accuracy = self.inert_accuracy
         config.scale = self.scale
         config.joint_order = self.joint_order
-        config.get_scene_configuration()
-        component_map = config.get_scene_configuration_return()
+        component_map = config.get_scene_configuration()
         config.parse()
 
         # --------------------

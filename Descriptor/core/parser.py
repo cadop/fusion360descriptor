@@ -393,6 +393,14 @@ class Configurator:
         for oc in self.occ:
             oc_name = oc.name.replace(':','_').replace(' ','')
             body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
+            #checks for child component within "oc" component
+            if oc.childOccurrences:
+                body_lst.extend([oc.bRepBodies.item(x) for x in range(0, oc.bRepBodies.count) ])
+                oc_list = oc.childOccurrences
+                for o in oc_list:
+                    body_lst_ext = self.component_map[o.entityToken].get_flat_body()
+                    body_lst.extend(body_lst_ext)
+
             if len(body_lst) > 0:
                 for body in body_lst:
                     # Check if this body is hidden
