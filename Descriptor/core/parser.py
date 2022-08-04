@@ -14,7 +14,6 @@ class Hierarchy:
         ''' Initialize Hierarchy class to parse document and define component relationships.
         Uses a recursive traversal (based off of fusion example) and provides helper functions
         to get specific children and parents for nodes. 
-
         Parameters
         ----------
         component : [type]
@@ -137,7 +136,6 @@ class Hierarchy:
             [description]
         parent : [type], optional
             [description], by default None
-
         Returns
         -------
         Hierarchy
@@ -163,7 +161,6 @@ class Configurator:
 
     def __init__(self, root) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
-
         Parameters
         ----------
         root : [type]
@@ -184,6 +181,7 @@ class Configurator:
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
         self.inertia_scale = 10000.0 # units to convert mass
         self.base_links= set()
+        # self.component_map = set()
 
     def get_scene_configuration(self):
         '''Build the graph of how the scene components are related
@@ -193,10 +191,10 @@ class Configurator:
         occ_list=self.root.occurrences.asList
         Hierarchy.traverse(occ_list, root_node)
         self.component_map = root_node.get_all_children()
+        return self.component_map
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links 
-
         Returns
         -------
         dict
@@ -274,7 +272,6 @@ class Configurator:
 
     def _is_joint_valid(self, joint):
         '''_summary_
-
         Parameters
         ----------
         joint : _type_
@@ -386,7 +383,33 @@ class Configurator:
     def _build_links(self):
         ''' create links '''
 
-        mesh_folder = 'meshes/'
+        mesh_folder = 'meshes/'    
+
+        #creates list of bodies that are visible
+
+        visible_bodies = [] #list of bodies that are visible
+        body_dict = {}
+        oc_name = ''
+        for oc in self.occ:
+            oc_name = oc.name.replace(':','_').replace(' ','')
+            body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
+            #checks for child component within "oc" component
+            if oc.childOccurrences:
+                body_lst.extend([oc.bRepBodies.item(x) for x in range(0, oc.bRepBodies.count) ])
+                oc_list = oc.childOccurrences
+                for o in oc_list:
+                    body_lst_ext = self.component_map[o.entityToken].get_flat_body()
+                    body_lst.extend(body_lst_ext)
+
+            if len(body_lst) > 0:
+                for body in body_lst:
+                    # Check if this body is hidden
+                    if body.isLightBulbOn:
+                        visible_bodies.append(body)
+                        body_dict[body.entityToken] = oc_name
+
+
+
 
         base_link = self.base_links.pop()
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
@@ -395,7 +418,9 @@ class Configurator:
                         center_of_mass=center_of_mass, 
                         sub_folder=mesh_folder,
                         mass=self.inertial_dict[base_link]['mass'],
-                        inertia_tensor=self.inertial_dict[base_link]['inertia'])
+                        inertia_tensor=self.inertial_dict[base_link]['inertia'],
+                        body_lst = visible_bodies,
+                        body_dict = body_dict)
 
         self.links_xyz_dict[link.name] = link.xyz
         self.links[link.name] = link
@@ -409,7 +434,9 @@ class Configurator:
                             center_of_mass=center_of_mass,
                             sub_folder=mesh_folder, 
                             mass=self.inertial_dict[name]['mass'],
-                            inertia_tensor=self.inertial_dict[name]['inertia'])
+                            inertia_tensor=self.inertial_dict[name]['inertia'],
+                            body_lst=visible_bodies,
+                            body_dict = body_dict)
 
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
 
@@ -431,4 +458,3 @@ class Configurator:
                                 upper_limit=j['upper_limit'], lower_limit=j['lower_limit'])
 
             self.joints[k] = joint
-

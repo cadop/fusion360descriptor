@@ -1,8 +1,10 @@
 import os
 import adsk, adsk.core, adsk.fusion
 from . import parts
+from . import parser
+from . import manager
 
-def visible_to_stl(design, save_dir, root, accuracy):  
+def visible_to_stl(design, save_dir, root, accuracy,component_map):  
     """
     export top-level components as a single stl file into "save_dir/"
     
@@ -16,7 +18,8 @@ def visible_to_stl(design, save_dir, root, accuracy):
         root component of the design
     accuracy: int
         accuracy value to use for stl export
-    
+    component_map: list
+        list of all bodies to use for stl export
     """
           
     # create a single exportManager instance
@@ -26,6 +29,7 @@ def visible_to_stl(design, save_dir, root, accuracy):
     save_dir = os.path.join(save_dir,'meshes')
     try: os.mkdir(save_dir)
     except: pass
+
 
     # Export top-level occurrences
     occ = root.occurrences.asList
@@ -43,11 +47,13 @@ def visible_to_stl(design, save_dir, root, accuracy):
         # Turn on body (all components should have been turned off before)
         # export full body
         # turn back off body
-
         # coor = oc.transform.getAsCoordinateSystem()
+
         
+
         oc.isLightBulbOn = True
-        file_name = oc.component.name.replace(':','_').replace(' ','')
+
+        # creates STL for all bodies within component, used for URDF collision
         file_name = oc.name.replace(':','_').replace(' ','')
         file_name = os.path.join(save_dir, file_name )              
         print(f'Saving {file_name}')
@@ -57,6 +63,45 @@ def visible_to_stl(design, save_dir, root, accuracy):
         stl_options.isBinaryFormat = True
         stl_options.meshRefinement = accuracy
         exporter.execute(stl_options)
+        
+
+        # for each component, get each body within the component
+        # hack to turn off each body within the component
+        # creates STL for each body
+        bodies = []
+        bodies = component_map[oc.entityToken].get_flat_body()
+        #checks for child component within "oc" component
+        if oc.childOccurrences: 
+                bodies.extend([oc.bRepBodies.item(x) for x in range(0, oc.bRepBodies.count) ])
+                oc_list = oc.childOccurrences
+                for o in oc_list:
+                    body_lst_ext = component_map[o.entityToken].get_flat_body()
+                    bodies.extend(body_lst_ext)
+
+        visible_bodies = []
+        for bod in bodies:
+            if bod.isLightBulbOn:
+                visible_bodies.append(bod)
+                bod.isLightBulbOn = False #turning off all bodies
+        
+        for bod in visible_bodies:
+            #turn on each body individually
+            bod.isLightBulbOn = True
+
+            #export the component's body              
+            file_name = oc.name.replace(':','_').replace(' ','')
+            file_name = os.path.join(save_dir, file_name )  
+            file_name = file_name + "_" + bod.name.replace(':','_').replace(' ','')
+            print(f'Saving {file_name}')
+
+            # create stl exportOptions
+            stl_options = exporter.createSTLExportOptions(root, file_name)
+            stl_options.sendToPrintUtility = False
+            stl_options.isBinaryFormat = True
+            stl_options.meshRefinement = accuracy
+            exporter.execute(stl_options)
+            bod.isLightBulbOn = False
+            # this way, we are able to get the correct stl placement (each body within a component needs its own stl file)
 
         # The occurrence back off to not intefere with next export
         oc.isLightBulbOn = False
@@ -64,6 +109,7 @@ def visible_to_stl(design, save_dir, root, accuracy):
     # Turn back on all the components that were on before
     for oc in visible_components:
         oc.isLightBulbOn = True
+
 
 class Writer:
 

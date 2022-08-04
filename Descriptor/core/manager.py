@@ -119,7 +119,7 @@ class Manager:
         config.inertia_accuracy = self.inert_accuracy
         config.scale = self.scale
         config.joint_order = self.joint_order
-        config.get_scene_configuration()
+        component_map = config.get_scene_configuration()
         config.parse()
 
         # --------------------
@@ -132,5 +132,5 @@ class Manager:
         
         # Custom STL Export
         if self.save_mesh:
-            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy)
+            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy,component_map)
 
