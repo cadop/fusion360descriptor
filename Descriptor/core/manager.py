@@ -109,6 +109,12 @@ class Manager:
         config.get_scene_configuration()
         return config.get_joint_preview()
 
+    def s_preview(self):
+        '''Preview parent -> child structure by finding which components are connected
+        '''
+        config = parser.Configurator(Manager.root)
+        return config.create_structure()
+
 
     def run(self):
         ''' process the scene, including writing to directory and

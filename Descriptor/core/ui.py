@@ -82,6 +82,12 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
                 for k, j in _joints.items():
                     _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
+                
+                _txt += '\ncreated structure: parent -> child\n'
+                _joints2 = document_manager.s_preview()
+                for j in _joints2:
+                    _txt += f'{j[0].name} -> {j[1].name}\n'
+                
                 joints_text.text = _txt
 
             elif cmdInput.id == 'save_dir':

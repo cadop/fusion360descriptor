@@ -379,6 +379,59 @@ class Configurator:
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
 
             self.joints_dict[joint.name] = joint_dict
+    
+
+    def create_structure(self):
+        '''Define parent -> child structure by finding which components are connected
+        Returns
+        -------
+        Hierarchy
+            List of [parent, child] relationships
+        '''  
+        
+        open_set = set() # Set to test (roots) 
+        closed_set = set() # Set to hold roots that have been accounted for
+        closed_joint_set = set() #Joints that have been accounted for
+
+        # Finds grounded root
+        map = {}
+        for oc in self.occ:
+            if oc.isGrounded:
+                map[oc.name] = oc
+                open_set.add(oc.name)
+        
+        joint_names = [] # List of [parent,child] relationships
+        while len(open_set)!=0:
+            # Pop an element from the stack (order shouldn't matter)
+            root = open_set.pop()
+            root = map[root]
+            # Add this root to the map
+            closed_set.add(root.name)
+
+            # Creates set of joints that are connected to root
+            open_joint_set = set()
+            for j in range(root.joints.count): 
+                _j = root.joints.item(j)
+                map[_j.name] = _j
+                open_joint_set.add(_j.name)
+
+            for joint in open_joint_set:
+                # If joint is not accounted for
+                if joint not in closed_joint_set:
+                    closed_joint_set.add(joint)
+                    parent = root
+
+                    if map[joint].occurrenceOne == root:
+                        child = map[joint].occurrenceTwo
+                    elif map[joint].occurrenceTwo == root:
+                        child = map[joint].occurrenceOne
+                    
+                    joint_names.append([parent,child])
+                    open_set.add(child.name)
+                    map[child.name] = child
+        
+        return joint_names
+
 
     def _build_links(self):
         ''' create links '''
