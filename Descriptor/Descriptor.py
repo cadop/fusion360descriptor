@@ -16,7 +16,7 @@ def run(context):
     Returns
     -------
     bool
-        sucess code, not really used
+        success code, not really used
     '''    
 
     ui = None

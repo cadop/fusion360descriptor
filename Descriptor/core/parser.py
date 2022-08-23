@@ -14,6 +14,7 @@ class Hierarchy:
         ''' Initialize Hierarchy class to parse document and define component relationships.
         Uses a recursive traversal (based off of fusion example) and provides helper functions
         to get specific children and parents for nodes. 
+        
         Parameters
         ----------
         component : [type]
@@ -33,26 +34,26 @@ class Hierarchy:
         return self.children        
 
     def get_all_children(self):
-        ''' get all children and sub children of this instance '''
+        ''' Get all children and sub children of this instance '''
 
         child_map = {}
         parent_stack = set()
         parent_stack.update(self.get_children())
         while len(parent_stack) != 0:
-            # Pop an element form the stack (order shouldn't matter)
+            # Pop an element from the stack (order shouldn't matter)
             tmp = parent_stack.pop()
             # Add this child to the map
-            # use the entity token, more accurate than the name of the component (since there are multiple)
+            # Use the entity token, more accurate than the name of the component (since there are multiple)
             child_map[tmp.component.entityToken] = tmp 
             # Check if this child has children
             if len(tmp.get_children())> 0:
-                # add them to the parent_stack
+                # Add them to the parent_stack
                 parent_stack.update(tmp.get_children())
 
         return child_map
 
     def get_flat_body(self):
-        ''' get a flat list of all components and child components '''
+        ''' Get a flat list of all components and child components '''
 
         child_list = []
         body_list = []
@@ -73,7 +74,7 @@ class Hierarchy:
         closed_set = set()
 
         while len(parent_stack) != 0:
-            # Pop an element form the stack (order shouldn't matter)
+            # Pop an element from the stack (order shouldn't matter)
             tmp = parent_stack.pop()
             closed_set.add(tmp)
             # Get any bodies directly associated with this component
@@ -82,7 +83,7 @@ class Hierarchy:
 
             # Check if this child has children
             if len(tmp.children)> 0:
-                # add them to the parent_stack
+                # Add them to the parent_stack
                 child_set = list(self.get_all_children().values())
 
                 child_list = [x.children for x in child_set if len(x.children)>0]
@@ -101,7 +102,7 @@ class Hierarchy:
         return flat_bodies
 
     def get_all_parents(self):
-        ''' get all the parents of this instance '''
+        ''' Get all the parents of this instance '''
 
         child_stack = set()
         child_stack.add(self)
@@ -127,7 +128,7 @@ class Hierarchy:
 
     @staticmethod
     def traverse(occurrences, parent=None):
-        '''Recursively create class instances and define a parent->child structure
+        ''' Recursively create class instances and define a parent->child structure
         Based on the fusion 360 API docs
         
         Parameters
@@ -161,6 +162,7 @@ class Configurator:
 
     def __init__(self, root) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
+
         Parameters
         ----------
         root : [type]
@@ -173,7 +175,7 @@ class Configurator:
         self.inertia_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
 
         self.links_xyz_dict = {} # needed ?
-
+        self.automatic_joints = False # if joint relationships need to be automatically calculated
         self.joints_dict = {}
         self.links = {} # Link class
         self.joints = {} # Joint class for writing to file
@@ -181,10 +183,9 @@ class Configurator:
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
         self.inertia_scale = 10000.0 # units to convert mass
         self.base_links= set()
-        # self.component_map = set()
 
     def get_scene_configuration(self):
-        '''Build the graph of how the scene components are related
+        ''' Build the graph of how the scene components are related
         '''        
         
         root_node = Hierarchy(self.root)
@@ -195,6 +196,7 @@ class Configurator:
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links 
+
         Returns
         -------
         dict
@@ -202,13 +204,17 @@ class Configurator:
         '''
 
         self._joints()
+        if self.automatic_joints:
+            self._create_structure()
         return self.joints_dict
 
     def parse(self):
-        ''' parse the scene by building up inertia and joints'''
+        ''' Parse the scene by building up inertia and joints'''
 
         self._inertia()
         self._joints()
+        if self.automatic_joints:
+            self._create_structure()
         self._base()
         self._build_links()
         self._build_joints()
@@ -272,6 +278,7 @@ class Configurator:
 
     def _is_joint_valid(self, joint):
         '''_summary_
+
         Parameters
         ----------
         joint : _type_
@@ -290,7 +297,6 @@ class Configurator:
     def _joints(self):
         ''' Iterates over joints list and defines properties for each joint
         (along with its relationship)
-        
         '''        
 
         for joint in self.root.joints:
@@ -324,18 +330,19 @@ class Configurator:
                 pass
             # If it is not, get the mapping and trace it back up
             else: 
-                # the expectation is there is at least two items, the last is the full body
-                # the second to last should be the next top-most component
-                # reset occurrence one
+                # The expectation is there is at least two items, the last is the full body
+                # The second to last should be the next top-most component
+                # Reset occurrence one
                 occ_one = self.component_map[parent_list[-2]].component
 
             parent_list = self.component_map[occ_two.entityToken].get_all_parents()
             if len(parent_list) == 1:
                 pass
             else:
-                # the expectation is there is at least two items, the last is the full body
-                # the second to last should be the next top-most component
-                # reset occurrence two
+                # The expectation is there is at least two items, the last is the full body
+                # The second to last should be the next top-most component
+
+                # Reset occurrence two
                 occ_two = self.component_map[parent_list[-2]].component
 
             geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
@@ -381,17 +388,19 @@ class Configurator:
             self.joints_dict[joint.name] = joint_dict
     
 
-    def create_structure(self):
-        '''Define parent -> child structure by finding which components are connected
+    def _create_structure(self):
+        ''' Define parent -> child structure by finding which components are
+        connected to each other, building off of root component
+
         Returns
         -------
         Hierarchy
-            List of [parent, child] relationships
+            List of [joint, parent, child] relationships
         '''  
         
         open_set = set() # Set to test (roots) 
         closed_set = set() # Set to hold roots that have been accounted for
-        closed_joint_set = set() #Joints that have been accounted for
+        closed_joint_set = set() # Joints that have been accounted for
 
         # Finds grounded root
         map = {}
@@ -400,53 +409,76 @@ class Configurator:
                 map[oc.name] = oc
                 open_set.add(oc.name)
         
-        joint_names = [] # List of [parent,child] relationships
         while len(open_set)!=0:
             # Pop an element from the stack (order shouldn't matter)
             root = open_set.pop()
-            root = map[root]
             # Add this root to the map
+            root = map[root]
+            # Add to the closed set
             closed_set.add(root.name)
 
             # Creates set of joints that are connected to root
             open_joint_set = set()
-            for j in range(root.joints.count): 
-                _j = root.joints.item(j)
-                map[_j.name] = _j
-                open_joint_set.add(_j.name)
+            for joint in root.joints: 
+                map[joint.name] = joint
+                open_joint_set.add(joint.name)
+
+            # If the root has child occurrences, add the joints that are connected to root component 
+            if root.childOccurrences: 
+                for child in root.childOccurrences:
+                    for joint in child.joints:
+                        map[joint.name] = joint
+                        open_joint_set.add(joint.name)
+
+                        key = joint.name
+                        if key not in self.joints_dict.keys(): # Make sure that this joint exists in self.joints_dict
+                            self.joints_dict[joint.name] = {} 
+                    
 
             for joint in open_joint_set:
                 # If joint is not accounted for
                 if joint not in closed_joint_set:
                     closed_joint_set.add(joint)
-                    parent = root
-
+                    parent = root # Make the root the parent
+                    
+                    # Make other occurrence the joint is connected the child
                     if map[joint].occurrenceOne == root:
                         child = map[joint].occurrenceTwo
                     elif map[joint].occurrenceTwo == root:
                         child = map[joint].occurrenceOne
                     
-                    joint_names.append([parent,child])
-                    open_set.add(child.name)
+                    # Add parent child to self.joints_dict 
+                    self.joints_dict[joint]["parent"] = parent.name
+                    self.joints_dict[joint]["child"] = child.name
+                    
+                    open_set.add(child.name) # Add child to open set / map
                     map[child.name] = child
-        
-        return joint_names
+
+                    if parent.childOccurrences: # Adds child occurrences of parent to open set / map
+                        for c in parent.childOccurrences: 
+                            open_set.add(c.name)
+                            map[c.name] = c
+                    
+                    if child.childOccurrences:
+                        for c in child.childOccurrences: # Adds child occurrences of child to open set / map
+                            open_set.add(c.name)
+                            map[c.name] = c
 
 
     def _build_links(self):
-        ''' create links '''
+        ''' Create links '''
 
         mesh_folder = 'meshes/'    
 
-        #creates list of bodies that are visible
+        # Creates list of bodies that are visible
 
-        visible_bodies = [] #list of bodies that are visible
+        visible_bodies = [] # List of bodies that are visible
         body_dict = {}
         oc_name = ''
         for oc in self.occ:
             oc_name = oc.name.replace(':','_').replace(' ','')
-            body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
-            #checks for child component within "oc" component
+            body_lst = self.component_map[oc.entityToken].get_flat_body() # Gets list of all bodies in the occurrence
+            # Checks for child component within "oc" component
             if oc.childOccurrences:
                 body_lst.extend([oc.bRepBodies.item(x) for x in range(0, oc.bRepBodies.count) ])
                 oc_list = oc.childOccurrences
@@ -460,9 +492,6 @@ class Configurator:
                     if body.isLightBulbOn:
                         visible_bodies.append(body)
                         body_dict[body.entityToken] = oc_name
-
-
-
 
         base_link = self.base_links.pop()
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
@@ -496,7 +525,7 @@ class Configurator:
             self.links[link.name] = link
 
     def _build_joints(self):
-        ''' create joints by setting parent and child relationships and constructing
+        ''' Create joints by setting parent and child relationships and constructing
         the XML formats to be exported later '''
 
         for k, j in self.joints_dict.items():

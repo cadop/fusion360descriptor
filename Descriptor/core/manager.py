@@ -14,7 +14,7 @@ class Manager:
     root = None 
     design = None
 
-    def __init__(self, save_dir, save_mesh, mesh_resolution, inertia_precision,
+    def __init__(self, save_dir, save_mesh, automatic_joints, mesh_resolution, inertia_precision,
                 document_units, target_units, joint_order, target_platform) -> None:
         '''Initialization of Manager class 
 
@@ -24,6 +24,8 @@ class Manager:
             path to directory for storing data
         save_mesh : bool
             if mesh data should be exported
+        automatic_joints : bool
+            if joints should be calculated automatically
         mesh_resolution : str
             quality of mesh conversion
         inertia_precision : str
@@ -39,6 +41,7 @@ class Manager:
 
         '''        
         self.save_mesh = save_mesh
+        self.automatic_joints = automatic_joints
         if document_units=='mm': doc_u = 0.001
         elif document_units=='cm': doc_u = 0.01
         elif document_units=='m': doc_u = 1.0
@@ -77,7 +80,7 @@ class Manager:
         self._set_dir(save_dir)
 
     def _set_dir(self, save_dir):
-        '''sets the class instance save directory
+        ''' Sets the class instance save directory
 
         Parameters
         ----------
@@ -105,19 +108,16 @@ class Manager:
         config.inertia_accuracy = self.inert_accuracy
         config.joint_order = self.joint_order
         config.scale = self.scale
+        # config.automatic_joints = self.automatic_joints
+        if self.automatic_joints:
+            config.automatic_joints = True
         ## Return array of tuples (parent, child)
         config.get_scene_configuration()
-        return config.get_joint_preview()
-
-    def s_preview(self):
-        '''Preview parent -> child structure by finding which components are connected
-        '''
-        config = parser.Configurator(Manager.root)
-        return config.create_structure()
+        return config.get_joint_preview() # calculate joints automatically?
 
 
     def run(self):
-        ''' process the scene, including writing to directory and
+        ''' Process the scene, including writing to directory and
         exporting mesh, if applicable
         '''        
         
@@ -125,6 +125,9 @@ class Manager:
         config.inertia_accuracy = self.inert_accuracy
         config.scale = self.scale
         config.joint_order = self.joint_order
+        # config.automatic_joints = self.automatic_joints
+        if self.automatic_joints:
+            config.automatic_joints = True
         component_map = config.get_scene_configuration()
         config.parse()
 

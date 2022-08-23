@@ -6,7 +6,7 @@ import adsk.core, adsk.fusion, traceback
 from . import manager
 
 def file_dialog(ui):     
-    '''display the dialog to save the file
+    ''' Display the dialog to save the file
 
     Parameters
     ----------
@@ -19,7 +19,7 @@ def file_dialog(ui):
         [description]
     '''    
 
-    # Set styles of folder dialog.
+    # Set styles of folder dialog
     folderDlg = ui.createFolderDialog()
     folderDlg.title = 'Fusion Folder Dialog' 
     
@@ -44,6 +44,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             # Get settings of UI
             directory_path = inputs.itemById('directory_path')
             save_mesh = inputs.itemById('save_mesh')
+            automatic_joints = inputs.itemById('build_joints')
             mesh_resolution = inputs.itemById('mesh_resolution')
             inertia_precision = inputs.itemById('inertia_precision')
             document_units = inputs.itemById('document_units')
@@ -57,7 +58,8 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 #         {inertia_precision.selectedItem.name}, {document_units.selectedItem.name},\
                 #         {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
 
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, 
+                document_manager = manager.Manager(directory_path.text, save_mesh.value,
+                                                   automatic_joints.value,
                                                    mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, 
                                                    document_units.selectedItem.name, 
@@ -70,23 +72,18 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             elif cmdInput.id == 'preview':
                 # Generate Hierarchy and Preview in panel
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
+                document_manager = manager.Manager(directory_path.text, save_mesh.value, automatic_joints.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name, target_platform.selectedItem.name)
                 # # Generate
                 _joints = document_manager.preview()
 
                 joints_text = inputs.itemById('jointlist')
-
+                
                 _txt = 'joint name: parent link-> child link\n'
 
                 for k, j in _joints.items():
                     _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
-                
-                _txt += '\ncreated structure: parent -> child\n'
-                _joints2 = document_manager.s_preview()
-                for j in _joints2:
-                    _txt += f'{j[0].name} -> {j[1].name}\n'
                 
                 joints_text.text = _txt
 
@@ -163,6 +160,9 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
 
+            # Add checkbox to ask if user wants to build joints automatically
+            inputs.addBoolValueInput('build_joints', 'Build Joints Automatically', True)
+
             # Add dropdown to determine mesh export resolution
             di = inputs.addDropDownCommandInput('mesh_resolution', 'Mesh Resolution', adsk.core.DropDownStyles.TextListDropDownStyle)
             di = di.listItems
@@ -211,11 +211,12 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Create tab input
             tab_input = inputs.addTabCommandInput('tab_preview', 'Preview Tabs')
             tab_input_child = tab_input.children
+
             # Create group
             input_group = tab_input_child.addGroupCommandInput("preview_group", "Preview")
             textbox_group = input_group.children
 
-            # Create a textbox.
+            # Create a textbox
             txtbox = textbox_group.addTextBoxCommandInput('jointlist', 'Joint List', '', 8, True)
             txtbox.isFullWidth = True
 
