@@ -14,7 +14,7 @@ class Manager:
     root = None 
     design = None
 
-    def __init__(self, save_dir, save_mesh, mesh_resolution, inertia_precision,
+    def __init__(self, save_dir, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
                 document_units, target_units, joint_order, target_platform) -> None:
         '''Initialization of Manager class 
 
@@ -39,6 +39,7 @@ class Manager:
 
         '''        
         self.save_mesh = save_mesh
+        self.sub_mesh = sub_mesh
         if document_units=='mm': doc_u = 0.001
         elif document_units=='cm': doc_u = 0.01
         elif document_units=='m': doc_u = 1.0
@@ -119,6 +120,7 @@ class Manager:
         config.inertia_accuracy = self.inert_accuracy
         config.scale = self.scale
         config.joint_order = self.joint_order
+        config.sub_mesh = self.sub_mesh
         component_map = config.get_scene_configuration()
         config.parse()
 
@@ -132,5 +134,5 @@ class Manager:
         
         # Custom STL Export
         if self.save_mesh:
-            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy,component_map)
+            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, component_map, self.sub_mesh)
 

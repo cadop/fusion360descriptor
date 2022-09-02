@@ -174,6 +174,7 @@ class Configurator:
 
         self.links_xyz_dict = {} # needed ?
 
+        self.sub_mesh = False
         self.joints_dict = {}
         self.links = {} # Link class
         self.joints = {} # Joint class for writing to file
@@ -420,7 +421,8 @@ class Configurator:
                         mass=self.inertial_dict[base_link]['mass'],
                         inertia_tensor=self.inertial_dict[base_link]['inertia'],
                         body_lst = visible_bodies,
-                        body_dict = body_dict)
+                        body_dict = body_dict,
+                        sub_mesh = self.sub_mesh)
 
         self.links_xyz_dict[link.name] = link.xyz
         self.links[link.name] = link
@@ -436,7 +438,8 @@ class Configurator:
                             mass=self.inertial_dict[name]['mass'],
                             inertia_tensor=self.inertial_dict[name]['inertia'],
                             body_lst=visible_bodies,
-                            body_dict = body_dict)
+                            body_dict = body_dict,
+                            sub_mesh = self.sub_mesh)
 
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
 
