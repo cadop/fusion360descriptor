@@ -134,5 +134,5 @@ class Manager:
         
         # Custom STL Export
         if self.save_mesh:
-            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, component_map, self.sub_mesh)
+            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, component_map, config.body_dict, self.sub_mesh)
 

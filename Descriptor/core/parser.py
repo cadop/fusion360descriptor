@@ -176,6 +176,7 @@ class Configurator:
 
         self.sub_mesh = False
         self.joints_dict = {}
+        self.body_dict = {}
         self.links = {} # Link class
         self.joints = {} # Joint class for writing to file
         self.joint_order = ('p','c') # Order of joints defined by components
@@ -389,28 +390,18 @@ class Configurator:
         #creates list of bodies that are visible
 
         visible_bodies = [] #list of bodies that are visible
-        body_dict = {}
+        self.body_dict = {}
         oc_name = ''
         for oc in self.occ:
             oc_name = oc.name.replace(':','_').replace(' ','')
+            self.body_dict[oc_name] = []
             body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
-            #checks for child component within "oc" component
-            if oc.childOccurrences:
-                body_lst.extend([oc.bRepBodies.item(x) for x in range(0, oc.bRepBodies.count) ])
-                oc_list = oc.childOccurrences
-                for o in oc_list:
-                    body_lst_ext = self.component_map[o.entityToken].get_flat_body()
-                    body_lst.extend(body_lst_ext)
 
             if len(body_lst) > 0:
                 for body in body_lst:
                     # Check if this body is hidden
                     if body.isLightBulbOn:
-                        visible_bodies.append(body)
-                        body_dict[body.entityToken] = oc_name
-
-
-
+                        self.body_dict[oc_name].append(body)
 
         base_link = self.base_links.pop()
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
@@ -421,7 +412,7 @@ class Configurator:
                         mass=self.inertial_dict[base_link]['mass'],
                         inertia_tensor=self.inertial_dict[base_link]['inertia'],
                         body_lst = visible_bodies,
-                        body_dict = body_dict,
+                        body_dict = self.body_dict,
                         sub_mesh = self.sub_mesh)
 
         self.links_xyz_dict[link.name] = link.xyz
@@ -438,7 +429,7 @@ class Configurator:
                             mass=self.inertial_dict[name]['mass'],
                             inertia_tensor=self.inertial_dict[name]['inertia'],
                             body_lst=visible_bodies,
-                            body_dict = body_dict,
+                            body_dict = self.body_dict,
                             sub_mesh = self.sub_mesh)
 
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   

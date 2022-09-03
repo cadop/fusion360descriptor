@@ -4,7 +4,7 @@ from . import parts
 from . import parser
 from . import manager
 
-def visible_to_stl(design, save_dir, root, accuracy, component_map, sub_mesh):  
+def visible_to_stl(design, save_dir, root, accuracy, component_map, body_dict, sub_mesh):  
     """
     export top-level components as a single stl file into "save_dir/"
     
@@ -50,7 +50,7 @@ def visible_to_stl(design, save_dir, root, accuracy, component_map, sub_mesh):
         # coor = oc.transform.getAsCoordinateSystem()
 
         oc.isLightBulbOn = True
-
+        oc_name = oc.name.replace(':','_').replace(' ','')
         # creates STL for all bodies within component, used for URDF collision
         file_name = oc.name.replace(':','_').replace(' ','')
         file_name = os.path.join(save_dir, file_name )              
@@ -69,14 +69,7 @@ def visible_to_stl(design, save_dir, root, accuracy, component_map, sub_mesh):
 
         if sub_mesh:
             bodies = []
-            bodies = component_map[oc.entityToken].get_flat_body()
-            #checks for child component within "oc" component
-            if oc.childOccurrences: 
-                    bodies.extend([oc.bRepBodies.item(x) for x in range(0, oc.bRepBodies.count) ])
-                    oc_list = oc.childOccurrences
-                    for o in oc_list:
-                        body_lst_ext = component_map[o.entityToken].get_flat_body()
-                        bodies.extend(body_lst_ext)
+            bodies = body_dict[oc_name] # Gets list of bodies from the component
 
             visible_bodies = []
             for bod in bodies:
@@ -128,7 +121,7 @@ class Writer:
 
         '''
 
-        with open(file_name, mode='a') as f:
+        with open(file_name, mode='a', encoding="utf-8") as f:
             for _, link in config.links.items():  
                 f.write(f'{link.link_xml}\n')
 
@@ -144,7 +137,7 @@ class Writer:
 
         '''
         
-        with open(file_name, mode='a') as f:
+        with open(file_name, mode='a', encoding="utf-8") as f:
             for _, joint in config.joints.items():
                 f.write(f'{joint.joint_xml}\n')
 
@@ -165,7 +158,7 @@ class Writer:
         except: pass
         file_name = os.path.join(save_dir, f'{config.name}.urdf')  # the name of urdf file
 
-        with open(file_name, mode='w') as f:
+        with open(file_name, mode='w', encoding="utf-8") as f:
             f.write('<?xml version="1.0" ?>\n')
             f.write(f'<robot name="{config.name}">\n\n')
             f.write('<material name="silver">\n')
