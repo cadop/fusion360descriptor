@@ -31,6 +31,7 @@ def run(context):
         # Set the global managers root component 
         manager.Manager.root = root 
         manager.Manager.design = design 
+        manager.Manager._app = app
 
         _ = config_settings(ui, ui_handlers)
    

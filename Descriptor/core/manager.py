@@ -13,6 +13,7 @@ class Manager:
 
     root = None 
     design = None
+    _app = None
 
     def __init__(self, save_dir, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
                 document_units, target_units, joint_order, target_platform) -> None:
@@ -134,5 +135,5 @@ class Manager:
         
         # Custom STL Export
         if self.save_mesh:
-            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh)
+            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh, config.body_mapper, Manager._app)
 

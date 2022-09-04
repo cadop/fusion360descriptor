@@ -146,11 +146,18 @@ class Hierarchy:
         for i in range(0, occurrences.count):
             occ = occurrences.item(i)
             cur = Hierarchy(occ)
-            # print(cur.name)
+
+            with open('d://log.txt','a') as f:
+                f.write(f' {occ.name} \n')
+
             if parent is None: 
                 pass
             else: 
+
                 parent._add_child(cur)
+                with open('d://log.txt','a') as f:
+                    f.write(f'\t {parent.name} \n')
+
             if occ.childOccurrences:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur
@@ -186,15 +193,80 @@ class Configurator:
         self.base_links= set()
         # self.component_map = set()
 
+        self.root_node = None
+
     def get_scene_configuration(self):
         '''Build the graph of how the scene components are related
         '''        
         
-        root_node = Hierarchy(self.root)
+        self.root_node = Hierarchy(self.root)
         occ_list=self.root.occurrences.asList
-        Hierarchy.traverse(occ_list, root_node)
-        self.component_map = root_node.get_all_children()
+
+        with open('d://log.txt','w') as f:
+            f.write('Logging \n')
+
+        Hierarchy.traverse(occ_list, self.root_node)
+        self.component_map = self.root_node.get_all_children()
+
+        self.get_sub_bodies()
+
         return self.component_map
+
+
+
+    def get_sub_bodies(self):
+        ''' temp fix for ensuring that a top-level component is associated with bodies'''
+
+        # write the immediate children of root node
+        
+
+        with open('d://component.txt', 'w', encoding='utf-8') as f: f.write('Logging\n')
+
+        self.body_mapper = defaultdict(list)
+
+        # for k,v in self.component_map.items():
+        for v in self.root_node.children:
+            
+            children = set()
+            children.update(v.children)
+
+            with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'\n{v.name}\n')
+            
+            top_level_body = [v.component.bRepBodies.item(x) for x in range(0, v.component.bRepBodies.count) ]
+            top_level_body = [x for x in top_level_body if x.isLightBulbOn]
+            
+            # add to the body mapper
+            self.body_mapper[v.component.entityToken].extend(top_level_body)
+
+            top_body_name = [x.name for x in top_level_body]
+
+            with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'Top level bodies: {top_body_name} \n')
+            
+            while children:
+                cur = children.pop()
+                children.update(cur.children)
+                sub_level_body = [cur.component.bRepBodies.item(x) for x in range(0, cur.component.bRepBodies.count) ]
+                sub_level_body = [x for x in sub_level_body if x.isLightBulbOn ]
+                
+                # add to this body mapper again 
+                self.body_mapper[v.component.entityToken].extend(sub_level_body)
+                
+                sub_body_name = [x.name for x in sub_level_body]
+
+                with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'\t : {cur.name} \n')
+                with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'\t\t Sub Bodies : {sub_body_name} \n')
+
+
+        with open('d://bodies.txt','w', encoding='utf-8') as f:
+
+            for oc in self.occ:       
+                # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
+                # body_cnt = oc.bRepBodies.count
+                # mapped_comp =self.component_map[oc.entityToken]
+                body_lst = self.component_map[oc.entityToken].get_flat_body()
+
+                f.write(f'{oc.name} has bodies: {[x.name for x in body_lst]}]\n')
+
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links 
@@ -251,6 +323,10 @@ class Configurator:
             # body_cnt = oc.bRepBodies.count
             # mapped_comp =self.component_map[oc.entityToken]
             body_lst = self.component_map[oc.entityToken].get_flat_body()
+
+            # with open('d://bodies.txt','w') as f:
+            #     f.write(f'{oc.name} has bodies: {[x.name for x in body_lst]}')
+
             if len(body_lst) > 0:
                 for body in body_lst:
                     # Check if this body is hidden

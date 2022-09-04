@@ -3,10 +3,10 @@ import adsk, adsk.core, adsk.fusion
 from . import parts
 from . import parser
 from . import manager
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 
-def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh):  
+def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_mapper, _app):  
     """
     export top-level components as a single stl file into "save_dir/"
     
@@ -45,10 +45,21 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh):
     # Go through the visible components, turning on and off
     # Filename
     f_name = os.path.join(save_dir,'log.txt')
+
     with open(f_name,'w', encoding="utf-8") as f:
         f.write('Starting Log\n')
 
+    # Make sure no repeated body names
+    body_count = Counter()
+
     for oc in visible_components:
+
+        # Delete history for speed
+        _app.executeTextCommand(u'Fusion.TrimHistoryStream')
+
+        # Create a new exporter in case its a memory thing
+        exporter = design.exportManager
+
         # hack for correct stl placement
         # Turn on body (all components should have been turned off before)
         # export full body
@@ -67,18 +78,61 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh):
         stl_options.isBinaryFormat = True
         stl_options.meshRefinement = accuracy
         exporter.execute(stl_options)
-        with open(f_name,'a', encoding="utf-8") as f:
-            f.write(f'Writing {file_name} of component {oc.name}\n')
-        
 
+        with open(f_name,'a', encoding="utf-8") as f: f.write(f'Writing {file_name} of component {oc.name}\n')
+        
         # for each component, get each body within the component
         # hack to turn off each body within the component
         # creates STL for each body
 
         if sub_mesh:
-            bodies = []
-            bodies = body_dict[oc_name] # Gets list of bodies from the component
+            # bodies = []
+            # bodies = body_dict[oc_name] # Gets list of bodies from the component
 
+            # get the bodies associated with this top-level component (which will contain sub-components)
+            bodies = body_mapper[oc.entityToken]
+
+            # Since we know that these bodies are the only ones visible, we can turn them off and reset later
+            for body in bodies: body.isLightBulbOn = False 
+
+            # Delete history for speed
+            _app.executeTextCommand(u'Fusion.TrimHistoryStream')
+
+            # Next we iterate over each body, turn it to visible, save the scene, and turn it back off
+            with open(f_name,'a', encoding="utf-8") as f: f.write(f'TURNED OFF BODY LIGHTS \n\n')
+
+            for body in bodies:
+                body.isLightBulbOn = True
+
+                # Since there are alot of similar names, we need to store the parent component as well in the filename
+                body_name = body.name.replace(':','_').replace(' ','')
+                body_count[body_name] += 1
+                body_name += f'_{body_count[body_name]}'
+
+                # body_name = body.entityToken.replace('/','_').replace('\\','_').replace('+','_').replace('=','_')
+
+                save_name = file_name + "_" + body_name
+
+                # print(f'Saving {save_name}')
+                with open(f_name,'a', encoding="utf-8") as f: f.write(f'\t\t Writing {save_name} of body {body.name}\n')
+
+                # Now we can save the scene as-is
+                # create stl exportOptions
+                stl_options = exporter.createSTLExportOptions(root, save_name)
+                stl_options.sendToPrintUtility = False
+                stl_options.isBinaryFormat = True
+                stl_options.meshRefinement = accuracy
+                exporter.execute(stl_options)
+
+                # Finally, turn its visibility back off
+                body.isLightBulbOn = False
+
+
+            # Now we saved all the bodies in this component, we turn them back on for the user
+            for body in bodies: 
+                body.isLightBulbOn = True
+
+            '''
             visible_bodies = []
             for bod in bodies:
                 if bod.isLightBulbOn:
@@ -110,6 +164,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh):
                     f.write(f'Writing {file_name} of component {oc_name} for body {bod.name}_{str(duplicate_bodies[bod.name])}\n')
                 bod.isLightBulbOn = False
                 # this way, we are able to get the correct stl placement (each body within a component needs its own stl file)
+            '''
 
             # The occurrence back off to not intefere with next export
             oc.isLightBulbOn = False
