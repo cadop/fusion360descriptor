@@ -78,6 +78,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         stl_options.isBinaryFormat = True
         stl_options.meshRefinement = accuracy
         exporter.execute(stl_options)
+        adsk.doEvents()
 
         with open(f_name,'a', encoding="utf-8") as f: f.write(f'Writing {file_name} of component {oc.name}\n')
         
@@ -89,11 +90,14 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
             # bodies = []
             # bodies = body_dict[oc_name] # Gets list of bodies from the component
 
+
+
             # get the bodies associated with this top-level component (which will contain sub-components)
             bodies = body_mapper[oc.entityToken]
 
             # Since we know that these bodies are the only ones visible, we can turn them off and reset later
             for body in bodies: body.isLightBulbOn = False 
+            adsk.doEvents()
 
             # Delete history for speed
             _app.executeTextCommand(u'Fusion.TrimHistoryStream')
@@ -103,6 +107,8 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
 
             for body in bodies:
                 body.isLightBulbOn = True
+
+                adsk.doEvents()
 
                 # Since there are alot of similar names, we need to store the parent component as well in the filename
                 body_name = body.name.replace(':','_').replace(' ','')
@@ -118,19 +124,24 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
 
                 # Now we can save the scene as-is
                 # create stl exportOptions
+                exporter = design.exportManager
+    
                 stl_options = exporter.createSTLExportOptions(root, save_name)
                 stl_options.sendToPrintUtility = False
                 stl_options.isBinaryFormat = True
                 stl_options.meshRefinement = accuracy
                 exporter.execute(stl_options)
+                adsk.doEvents()
 
                 # Finally, turn its visibility back off
                 body.isLightBulbOn = False
+                adsk.doEvents()
 
 
             # Now we saved all the bodies in this component, we turn them back on for the user
             for body in bodies: 
                 body.isLightBulbOn = True
+                adsk.doEvents()
 
             '''
             visible_bodies = []
@@ -168,6 +179,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
 
             # The occurrence back off to not intefere with next export
             oc.isLightBulbOn = False
+            adsk.doEvents()
 
     # Turn back on all the components that were on before
     for oc in visible_components:
