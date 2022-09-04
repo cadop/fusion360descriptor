@@ -121,7 +121,7 @@ class Manager:
         config.scale = self.scale
         config.joint_order = self.joint_order
         config.sub_mesh = self.sub_mesh
-        component_map = config.get_scene_configuration()
+        config.get_scene_configuration()
         config.parse()
 
         # --------------------
@@ -134,5 +134,5 @@ class Manager:
         
         # Custom STL Export
         if self.save_mesh:
-            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, component_map, config.body_dict, self.sub_mesh)
+            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh)
 

@@ -124,7 +124,7 @@ class Link:
 
     mesh_scale = '0.001'
 
-    def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_lst, body_dict, sub_mesh):
+    def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh):
         """
         Parameters
         ----------
@@ -157,7 +157,6 @@ class Link:
         self.sub_folder = sub_folder
         self.mass = mass
         self.inertia_tensor = inertia_tensor
-        self.body_lst = body_lst
         self.body_dict = body_dict
         self.sub_mesh = sub_mesh # if we want to export each body as a separate mesh
 
@@ -185,14 +184,14 @@ class Link:
         
         # visual
         if self.sub_mesh: # if we want to export each as a separate mesh
-            for body in self.body_dict[self.name]:
-                body.name = body.name.replace(':','_').replace(' ','')
+            for body_name in self.body_dict[self.name]:
+                body_name = body_name.replace(':','_').replace(' ','')
                 visual = SubElement(link, 'visual')
                 origin_v = SubElement(visual, 'origin')
                 origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
                 geometry_v = SubElement(visual, 'geometry')
                 mesh_v = SubElement(geometry_v, 'mesh')
-                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}_{body.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
+                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}_{body_name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
                 # mesh_v.attrib = {'filename':'package://' + self.repo + self.name + '.stl','scale':'0.001 0.001 0.001'}
                 material = SubElement(visual, 'material')
                 material.attrib = {'name':'silver'}

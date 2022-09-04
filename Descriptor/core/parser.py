@@ -6,6 +6,7 @@ import copy
 import adsk, adsk.core, adsk.fusion
 from . import transforms
 from . import parts
+from collections import defaultdict
 
 class Hierarchy:
     ''' hierarchy of the design space '''
@@ -389,19 +390,24 @@ class Configurator:
 
         #creates list of bodies that are visible
 
-        visible_bodies = [] #list of bodies that are visible
-        self.body_dict = {}
+        self.body_dict = defaultdict(list) # key : occurrence name -> value : list of bodies under that occurrence
+        body_dict_urdf = defaultdict(list) # list to send to parts.py
+        duplicate_bodies = defaultdict(int) # key : name -> value : # of instances
         oc_name = ''
         for oc in self.occ:
             oc_name = oc.name.replace(':','_').replace(' ','')
-            self.body_dict[oc_name] = []
+            # self.body_dict[oc_name] = []
             body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
 
             if len(body_lst) > 0:
                 for body in body_lst:
                     # Check if this body is hidden
                     if body.isLightBulbOn:
+                        if body.name in duplicate_bodies:
+                            duplicate_bodies[body.name] +=1
                         self.body_dict[oc_name].append(body)
+                        body_dict_urdf[oc_name].append(body.name + '_' + str(duplicate_bodies[body.name]))
+                    
 
         base_link = self.base_links.pop()
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
@@ -411,8 +417,7 @@ class Configurator:
                         sub_folder=mesh_folder,
                         mass=self.inertial_dict[base_link]['mass'],
                         inertia_tensor=self.inertial_dict[base_link]['inertia'],
-                        body_lst = visible_bodies,
-                        body_dict = self.body_dict,
+                        body_dict = body_dict_urdf,
                         sub_mesh = self.sub_mesh)
 
         self.links_xyz_dict[link.name] = link.xyz
@@ -428,8 +433,7 @@ class Configurator:
                             sub_folder=mesh_folder, 
                             mass=self.inertial_dict[name]['mass'],
                             inertia_tensor=self.inertial_dict[name]['inertia'],
-                            body_lst=visible_bodies,
-                            body_dict = self.body_dict,
+                            body_dict = body_dict_urdf,
                             sub_mesh = self.sub_mesh)
 
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   

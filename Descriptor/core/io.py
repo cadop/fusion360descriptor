@@ -3,8 +3,10 @@ import adsk, adsk.core, adsk.fusion
 from . import parts
 from . import parser
 from . import manager
+from collections import defaultdict
 
-def visible_to_stl(design, save_dir, root, accuracy, component_map, body_dict, sub_mesh):  
+
+def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh):  
     """
     export top-level components as a single stl file into "save_dir/"
     
@@ -42,6 +44,10 @@ def visible_to_stl(design, save_dir, root, accuracy, component_map, body_dict, s
 
     # Go through the visible components, turning on and off
     # Filename
+    f_name = os.path.join(save_dir,'log.txt')
+    with open(f_name,'w', encoding="utf-8") as f:
+        f.write('Starting Log\n')
+
     for oc in visible_components:
         # hack for correct stl placement
         # Turn on body (all components should have been turned off before)
@@ -61,6 +67,8 @@ def visible_to_stl(design, save_dir, root, accuracy, component_map, body_dict, s
         stl_options.isBinaryFormat = True
         stl_options.meshRefinement = accuracy
         exporter.execute(stl_options)
+        with open(f_name,'a', encoding="utf-8") as f:
+            f.write(f'Writing {file_name} of component {oc.name}\n')
         
 
         # for each component, get each body within the component
@@ -77,14 +85,19 @@ def visible_to_stl(design, save_dir, root, accuracy, component_map, body_dict, s
                     visible_bodies.append(bod)
                     bod.isLightBulbOn = False #turning off all bodies
             
+            duplicate_bodies = defaultdict(int) # key : name -> value : # of instances
             for bod in visible_bodies:
                 #turn on each body individually
                 bod.isLightBulbOn = True
 
+                if bod.name in duplicate_bodies:
+                    duplicate_bodies[bod.name] += 1
+
+
                 #export the component's body              
                 file_name = oc.name.replace(':','_').replace(' ','')
                 file_name = os.path.join(save_dir, file_name )  
-                file_name = file_name + "_" + bod.name.replace(':','_').replace(' ','')
+                file_name = file_name + "_" + bod.name.replace(':','_').replace(' ','') + '_' + str(duplicate_bodies[bod.name])
                 print(f'Saving {file_name}')
 
                 # create stl exportOptions
@@ -93,6 +106,8 @@ def visible_to_stl(design, save_dir, root, accuracy, component_map, body_dict, s
                 stl_options.isBinaryFormat = True
                 stl_options.meshRefinement = accuracy
                 exporter.execute(stl_options)
+                with open(f_name,'a', encoding="utf-8") as f:
+                    f.write(f'Writing {file_name} of component {oc_name} for body {bod.name}_{str(duplicate_bodies[bod.name])}\n')
                 bod.isLightBulbOn = False
                 # this way, we are able to get the correct stl placement (each body within a component needs its own stl file)
 
