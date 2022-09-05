@@ -439,7 +439,7 @@ class Configurator:
                     joint_limit_min = -3.14159
                     joint_limit_max = 3.14159
 
-                joint_angle = joint.angle.value 
+                # joint_angle = joint.angle.value 
 
                 joint_dict['axis'] = joint_vector
                 joint_dict['upper_limit'] = joint_limit_max
