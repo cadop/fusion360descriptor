@@ -178,8 +178,8 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Add dropdown to set current document units
             di = inputs.addDropDownCommandInput('document_units', 'Document Units', adsk.core.DropDownStyles.TextListDropDownStyle)
             di = di.listItems
-            di.add('mm', True, '')
-            di.add('cm', False, '')
+            di.add('mm', False, '')
+            di.add('cm', True, '')
             di.add('m', False, '')
 
             # Add dropdown to set target export units
