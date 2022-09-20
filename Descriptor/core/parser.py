@@ -147,16 +147,14 @@ class Hierarchy:
             occ = occurrences.item(i)
             cur = Hierarchy(occ)
 
-            with open('d://log.txt','a') as f:
-                f.write(f' {occ.name} \n')
+            # with open('d://log.txt','a') as f: f.write(f' {occ.name} \n')
 
             if parent is None: 
                 pass
             else: 
 
                 parent._add_child(cur)
-                with open('d://log.txt','a') as f:
-                    f.write(f'\t {parent.name} \n')
+                # with open('d://log.txt','a') as f: f.write(f'\t {parent.name} \n')
 
             if occ.childOccurrences:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
@@ -202,8 +200,7 @@ class Configurator:
         self.root_node = Hierarchy(self.root)
         occ_list=self.root.occurrences.asList
 
-        with open('d://log.txt','w') as f:
-            f.write('Logging \n')
+        # with open('d://log.txt','w') as f: f.write('Logging \n')
 
         Hierarchy.traverse(occ_list, self.root_node)
         self.component_map = self.root_node.get_all_children()
@@ -220,7 +217,7 @@ class Configurator:
         # write the immediate children of root node
         
 
-        with open('d://component.txt', 'w', encoding='utf-8') as f: f.write('Logging\n')
+        # with open('d://component.txt', 'w', encoding='utf-8') as f: f.write('Logging\n')
 
         self.body_mapper = defaultdict(list)
 
@@ -230,7 +227,7 @@ class Configurator:
             children = set()
             children.update(v.children)
 
-            with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'\n{v.name}\n')
+            # with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'\n{v.name}\n')
             
             top_level_body = [v.component.bRepBodies.item(x) for x in range(0, v.component.bRepBodies.count) ]
             top_level_body = [x for x in top_level_body if x.isLightBulbOn]
@@ -240,7 +237,7 @@ class Configurator:
 
             top_body_name = [x.name for x in top_level_body]
 
-            with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'Top level bodies: {top_body_name} \n')
+            # with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'Top level bodies: {top_body_name} \n')
             
             while children:
                 cur = children.pop()
@@ -253,19 +250,19 @@ class Configurator:
                 
                 sub_body_name = [x.name for x in sub_level_body]
 
-                with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'\t : {cur.name} \n')
-                with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'\t\t Sub Bodies : {sub_body_name} \n')
+                # with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'\t : {cur.name} \n')
+                # with open('d://component.txt', 'a', encoding='utf-8') as f: f.write(f'\t\t Sub Bodies : {sub_body_name} \n')
 
 
-        with open('d://bodies.txt','w', encoding='utf-8') as f:
+        # with open('d://bodies.txt','w', encoding='utf-8') as f:
 
-            for oc in self.occ:       
-                # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
-                # body_cnt = oc.bRepBodies.count
-                # mapped_comp =self.component_map[oc.entityToken]
-                body_lst = self.component_map[oc.entityToken].get_flat_body()
+        for oc in self.occ:       
+            # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
+            # body_cnt = oc.bRepBodies.count
+            # mapped_comp =self.component_map[oc.entityToken]
+            body_lst = self.component_map[oc.entityToken].get_flat_body()
 
-                f.write(f'{oc.name} has bodies: {[x.name for x in body_lst]}]\n')
+                # f.write(f'{oc.name} has bodies: {[x.name for x in body_lst]}]\n')
 
 
     def get_joint_preview(self):
