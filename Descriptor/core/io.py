@@ -72,10 +72,10 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
 
                     # Since there are alot of similar names, we need to store the parent component as well in the filename
                     body_name = body.name.replace(':','_').replace(' ','')
+                    body_name_cnt = f'{body_name}_{body_count[body_name]}'
                     body_count[body_name] += 1
-                    body_name += f'_{body_count[body_name]}'
                     # save_name = filename + "_" + body_name
-                    save_name = os.path.join(save_dir,f'{occName}_{body_name}')
+                    save_name = os.path.join(save_dir,f'{occName}_{body_name_cnt}')
 
                     body_exporter(exporter, newRoot, body, save_name)
 
