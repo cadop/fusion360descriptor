@@ -6,7 +6,7 @@ import copy
 import adsk, adsk.core, adsk.fusion
 from . import transforms
 from . import parts
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 class Hierarchy:
     ''' hierarchy of the design space '''
@@ -466,12 +466,18 @@ class Configurator:
         self.body_dict = defaultdict(list) # key : occurrence name -> value : list of bodies under that occurrence
         body_dict_urdf = defaultdict(list) # list to send to parts.py
         duplicate_bodies = defaultdict(int) # key : name -> value : # of instances
+
         oc_name = ''
+        # Make sure no repeated body names
+        body_count = Counter()
+        
         for oc in self.occ:
             oc_name = oc.name.replace(':','_').replace(' ','')
             # self.body_dict[oc_name] = []
-            body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
+            # body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
 
+            body_lst = self.body_mapper[oc.entityToken]
+            
             if len(body_lst) > 0:
                 for body in body_lst:
                     # Check if this body is hidden
@@ -479,12 +485,19 @@ class Configurator:
                         if body.name in duplicate_bodies:
                             duplicate_bodies[body.name] +=1
                         self.body_dict[oc_name].append(body)
-                        body_dict_urdf[oc_name].append(body.name + '_' + str(duplicate_bodies[body.name]))
+
+                        body_name = body.name.replace(':','_').replace(' ','')
+                        body_name_cnt = f'{body_name}_{body_count[body_name]}'
+                        body_count[body_name] += 1
+
+                        unique_bodyname = f'{oc_name}_{body_name_cnt}'
+                        # unique_bodyname = f'{oc_name}_{body.name}_{duplicate_bodies[body.name]}'
+                        body_dict_urdf[oc_name].append(unique_bodyname)
                     
         # Make the actual urdf names accessible
         self.body_dict_urdf = body_dict_urdf
 
-        
+
         base_link = self.base_links.pop()
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
         link = parts.Link(name=base_link, 
