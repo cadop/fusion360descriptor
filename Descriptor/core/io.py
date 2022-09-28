@@ -61,7 +61,8 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         exporter = design.exportManager
 
         occName = oc.name.replace(':', '_').replace(' ','')
-        # component_exporter(exporter, newRoot, body, filename)
+        
+        component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
 
         if sub_mesh:
             # get the bodies associated with this top-level component (which will contain sub-components)
@@ -80,28 +81,54 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
                     body_exporter(exporter, newRoot, body, save_name)
 
 
-def component_exporter(exportMgr, newRoot, comp, filename):
+def component_exporter(exportMgr, newRoot, body_lst, filename):
+
     tBrep = adsk.fusion.TemporaryBRepManager.get()
-    tBody = tBrep.copy(comp)
+    combinedBody  = None
+
+    ###########
     bf = newRoot.features.baseFeatures.add()
     bf.startEdit()
-    newRoot.bRepBodies.add(tBody, bf)
+    ###########
+
+    for body in body_lst:
+        if not body.isLightBulbOn: 
+            continue
+
+        tBody = tBrep.copy(body)
+
+        ###########
+        newRoot.bRepBodies.add(tBody, bf)
+        ###########
+    
+    ###########
     bf.finishEdit()
+    ###########
+
+    #     if combinedBody is None: 
+    #         combinedBody = tBody
+    #     else: 
+    #         try:
+    #             tBrep.booleanOperation(combinedBody, tBody, adsk.fusion.BooleanTypes.UnionBooleanType)                    
+    #         except: 
+    #             pass
+
+    # bf = newRoot.features.baseFeatures.add()
+    # bf.startEdit()
+    # newRoot.bRepBodies.add(combinedBody, bf)
+    # bf.finishEdit()
 
     newBody = newRoot.bRepBodies[0]
-
-    stl_options = exportMgr.createSTLExportOptions(newBody, filename)
-    stl_options.sendToPrintUtility = False
-    stl_options.isBinaryFormat = True
-    # stl_options.meshRefinement = accuracy
-    exportMgr.execute(stl_options)                
+    stlOptions = exportMgr.createSTLExportOptions(newBody, f'{filename}.stl')
+    exportMgr.execute(stlOptions)
 
     bf.deleteMe()
-    return 
 
 def body_exporter(exportMgr, newRoot, body, filename):
     tBrep = adsk.fusion.TemporaryBRepManager.get()
+    
     tBody = tBrep.copy(body)
+
     bf = newRoot.features.baseFeatures.add()
     bf.startEdit()
     newRoot.bRepBodies.add(tBody, bf)

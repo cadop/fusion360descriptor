@@ -481,7 +481,10 @@ class Configurator:
                         self.body_dict[oc_name].append(body)
                         body_dict_urdf[oc_name].append(body.name + '_' + str(duplicate_bodies[body.name]))
                     
+        # Make the actual urdf names accessible
+        self.body_dict_urdf = body_dict_urdf
 
+        
         base_link = self.base_links.pop()
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
         link = parts.Link(name=base_link, 
@@ -512,6 +515,8 @@ class Configurator:
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
 
             self.links[link.name] = link
+
+
 
     def _build_joints(self):
         ''' create joints by setting parent and child relationships and constructing
