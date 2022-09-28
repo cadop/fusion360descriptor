@@ -64,7 +64,6 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         
         component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
 
-        sub_mesh = False
         if sub_mesh:
             # get the bodies associated with this top-level component (which will contain sub-components)
             bodies = body_mapper[oc.entityToken]
