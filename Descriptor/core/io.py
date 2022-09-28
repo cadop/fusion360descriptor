@@ -64,6 +64,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         
         component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
 
+        sub_mesh = False
         if sub_mesh:
             # get the bodies associated with this top-level component (which will contain sub-components)
             bodies = body_mapper[oc.entityToken]
@@ -84,42 +85,17 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
 def component_exporter(exportMgr, newRoot, body_lst, filename):
 
     tBrep = adsk.fusion.TemporaryBRepManager.get()
-    combinedBody  = None
 
-    ###########
     bf = newRoot.features.baseFeatures.add()
     bf.startEdit()
-    ###########
 
     for body in body_lst:
-        if not body.isLightBulbOn: 
-            continue
-
+        if not body.isLightBulbOn: continue
         tBody = tBrep.copy(body)
-
-        ###########
         newRoot.bRepBodies.add(tBody, bf)
-        ###########
-    
-    ###########
+
     bf.finishEdit()
-    ###########
-
-    #     if combinedBody is None: 
-    #         combinedBody = tBody
-    #     else: 
-    #         try:
-    #             tBrep.booleanOperation(combinedBody, tBody, adsk.fusion.BooleanTypes.UnionBooleanType)                    
-    #         except: 
-    #             pass
-
-    # bf = newRoot.features.baseFeatures.add()
-    # bf.startEdit()
-    # newRoot.bRepBodies.add(combinedBody, bf)
-    # bf.finishEdit()
-
-    newBody = newRoot.bRepBodies[0]
-    stlOptions = exportMgr.createSTLExportOptions(newBody, f'{filename}.stl')
+    stlOptions = exportMgr.createSTLExportOptions(newRoot, f'{filename}.stl')
     exportMgr.execute(stlOptions)
 
     bf.deleteMe()
