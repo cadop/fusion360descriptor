@@ -26,9 +26,6 @@ def run(context):
         ui  = app.userInterface
         product = app.activeProduct
         design = adsk.fusion.Design.cast(product)
-        title = 'Fusion360URDF'
-
-        # io.object_export(app)
 
         root = design.rootComponent  
         # Set the global managers root component 

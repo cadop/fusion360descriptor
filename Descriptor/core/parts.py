@@ -192,7 +192,6 @@ class Link:
                 geometry_v = SubElement(visual, 'geometry')
                 mesh_v = SubElement(geometry_v, 'mesh')
                 mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
-                # mesh_v.attrib = {'filename':'package://' + self.repo + self.name + '.stl','scale':'0.001 0.001 0.001'}
                 material = SubElement(visual, 'material')
                 material.attrib = {'name':'silver'}
         else:
@@ -202,7 +201,6 @@ class Link:
             geometry_v = SubElement(visual, 'geometry')
             mesh_v = SubElement(geometry_v, 'mesh')
             mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
-            # mesh_v.attrib = {'filename':'package://' + self.repo + self.name + '.stl','scale':'0.001 0.001 0.001'}
             material = SubElement(visual, 'material')
             material.attrib = {'name':'silver'}
     
@@ -214,7 +212,6 @@ class Link:
         geometry_c = SubElement(collision, 'geometry')
         mesh_c = SubElement(geometry_c, 'mesh')
         mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':'0.001 0.001 0.001'}
-
 
         rough_string = ElementTree.tostring(link, 'utf-8')
         reparsed = minidom.parseString(rough_string)
