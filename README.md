@@ -35,14 +35,22 @@ Installation & Running
 -----------------
 
 - Download the repository as .zip by clicking the green **Code** button above and then **Download Zip**.
+
 <img src="imagesforgettingstarted/19.jpg" alt="drawing" width="200"/>
+
 - Unzip to a permanent folder of your choice.
 - Navigate to the **Utilities** tab in Fusion 360 and click on **Scripts and Add-Ins**.
+
 <img src="imagesforgettingstarted/11.jpg" alt="drawing" width="200"/> 
+
 - Click on the green + to add the script into Fusion 360.
+
 <img src="imagesforgettingstarted/12.jpg" alt="drawing" width="200"/>
+
 - Add the **Descriptor** folder from the extracted files to the scripts. 
+
 <img src="imagesforgettingstarted/20.jpg" alt="drawing" width="200"/>
+
 - Click on **Descriptor** under **My Scripts** then click on **Run**. The GUI will appear.
 
 
