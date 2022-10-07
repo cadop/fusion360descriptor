@@ -44,6 +44,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             # Get settings of UI
             directory_path = inputs.itemById('directory_path')
             save_mesh = inputs.itemById('save_mesh')
+            sub_mesh = inputs.itemById('sub_mesh')
             mesh_resolution = inputs.itemById('mesh_resolution')
             inertia_precision = inputs.itemById('inertia_precision')
             document_units = inputs.itemById('document_units')
@@ -57,7 +58,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 #         {inertia_precision.selectedItem.name}, {document_units.selectedItem.name},\
                 #         {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
 
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, 
+                document_manager = manager.Manager(directory_path.text, save_mesh.value, sub_mesh.value,
                                                    mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, 
                                                    document_units.selectedItem.name, 
@@ -70,7 +71,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             elif cmdInput.id == 'preview':
                 # Generate Hierarchy and Preview in panel
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, mesh_resolution.selectedItem.name, 
+                document_manager = manager.Manager(directory_path.text, save_mesh.value, sub_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name, target_platform.selectedItem.name)
                 # # Generate
@@ -157,6 +158,9 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
 
+            # Add checkbox to generate/export sub meshes or not
+            inputs.addBoolValueInput('sub_mesh', 'Sub Mesh', True)
+
             # Add dropdown to determine mesh export resolution
             di = inputs.addDropDownCommandInput('mesh_resolution', 'Mesh Resolution', adsk.core.DropDownStyles.TextListDropDownStyle)
             di = di.listItems
@@ -174,8 +178,8 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Add dropdown to set current document units
             di = inputs.addDropDownCommandInput('document_units', 'Document Units', adsk.core.DropDownStyles.TextListDropDownStyle)
             di = di.listItems
-            di.add('mm', True, '')
-            di.add('cm', False, '')
+            di.add('mm', False, '')
+            di.add('cm', True, '')
             di.add('m', False, '')
 
             # Add dropdown to set target export units
@@ -188,8 +192,8 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Add dropdown to define the order that joints were defined (parent as component 1 or component 2)
             di = inputs.addDropDownCommandInput('joint_order', 'Joint Component 1', adsk.core.DropDownStyles.TextListDropDownStyle)
             di = di.listItems
-            di.add('Parent', True, '')
-            di.add('Child', False, '')
+            di.add('Parent', False, '')
+            di.add('Child', True, '')
 
             # Set the type of platform to target for building XML
             di = inputs.addDropDownCommandInput('target_platform', 'Target Platform', adsk.core.DropDownStyles.TextListDropDownStyle)

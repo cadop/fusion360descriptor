@@ -6,6 +6,7 @@ import copy
 import adsk, adsk.core, adsk.fusion
 from . import transforms
 from . import parts
+from collections import Counter, defaultdict
 
 class Hierarchy:
     ''' hierarchy of the design space '''
@@ -145,11 +146,13 @@ class Hierarchy:
         for i in range(0, occurrences.count):
             occ = occurrences.item(i)
             cur = Hierarchy(occ)
-            # print(cur.name)
+
             if parent is None: 
                 pass
             else: 
+
                 parent._add_child(cur)
+
             if occ.childOccurrences:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur
@@ -174,7 +177,9 @@ class Configurator:
 
         self.links_xyz_dict = {} # needed ?
 
+        self.sub_mesh = False
         self.joints_dict = {}
+        self.body_dict = {}
         self.links = {} # Link class
         self.joints = {} # Joint class for writing to file
         self.joint_order = ('p','c') # Order of joints defined by components
@@ -183,15 +188,60 @@ class Configurator:
         self.base_links= set()
         # self.component_map = set()
 
+        self.root_node = None
+
     def get_scene_configuration(self):
         '''Build the graph of how the scene components are related
         '''        
         
-        root_node = Hierarchy(self.root)
+        self.root_node = Hierarchy(self.root)
         occ_list=self.root.occurrences.asList
-        Hierarchy.traverse(occ_list, root_node)
-        self.component_map = root_node.get_all_children()
+
+        Hierarchy.traverse(occ_list, self.root_node)
+        self.component_map = self.root_node.get_all_children()
+
+        self.get_sub_bodies()
+
         return self.component_map
+
+
+
+    def get_sub_bodies(self):
+        ''' temp fix for ensuring that a top-level component is associated with bodies'''
+
+        # write the immediate children of root node
+        self.body_mapper = defaultdict(list)
+
+        # for k,v in self.component_map.items():
+        for v in self.root_node.children:
+            
+            children = set()
+            children.update(v.children)
+
+            top_level_body = [v.component.bRepBodies.item(x) for x in range(0, v.component.bRepBodies.count) ]
+            top_level_body = [x for x in top_level_body if x.isLightBulbOn]
+            
+            # add to the body mapper
+            self.body_mapper[v.component.entityToken].extend(top_level_body)
+
+            top_body_name = [x.name for x in top_level_body]
+
+            while children:
+                cur = children.pop()
+                children.update(cur.children)
+                sub_level_body = [cur.component.bRepBodies.item(x) for x in range(0, cur.component.bRepBodies.count) ]
+                sub_level_body = [x for x in sub_level_body if x.isLightBulbOn ]
+                
+                # add to this body mapper again 
+                self.body_mapper[v.component.entityToken].extend(sub_level_body)
+                
+                sub_body_name = [x.name for x in sub_level_body]
+
+        for oc in self.occ:       
+            # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
+            # body_cnt = oc.bRepBodies.count
+            # mapped_comp =self.component_map[oc.entityToken]
+            body_lst = self.component_map[oc.entityToken].get_flat_body()
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links 
@@ -248,6 +298,7 @@ class Configurator:
             # body_cnt = oc.bRepBodies.count
             # mapped_comp =self.component_map[oc.entityToken]
             body_lst = self.component_map[oc.entityToken].get_flat_body()
+
             if len(body_lst) > 0:
                 for body in body_lst:
                     # Check if this body is hidden
@@ -360,7 +411,7 @@ class Configurator:
                     joint_limit_min = -3.14159
                     joint_limit_max = 3.14159
 
-                joint_angle = joint.angle.value 
+                # joint_angle = joint.angle.value 
 
                 joint_dict['axis'] = joint_vector
                 joint_dict['upper_limit'] = joint_limit_max
@@ -387,28 +438,38 @@ class Configurator:
 
         #creates list of bodies that are visible
 
-        visible_bodies = [] #list of bodies that are visible
-        body_dict = {}
+        self.body_dict = defaultdict(list) # key : occurrence name -> value : list of bodies under that occurrence
+        body_dict_urdf = defaultdict(list) # list to send to parts.py
+        duplicate_bodies = defaultdict(int) # key : name -> value : # of instances
+
         oc_name = ''
+        # Make sure no repeated body names
+        body_count = Counter()
+        
         for oc in self.occ:
             oc_name = oc.name.replace(':','_').replace(' ','')
-            body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
-            #checks for child component within "oc" component
-            if oc.childOccurrences:
-                body_lst.extend([oc.bRepBodies.item(x) for x in range(0, oc.bRepBodies.count) ])
-                oc_list = oc.childOccurrences
-                for o in oc_list:
-                    body_lst_ext = self.component_map[o.entityToken].get_flat_body()
-                    body_lst.extend(body_lst_ext)
+            # self.body_dict[oc_name] = []
+            # body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
 
+            body_lst = self.body_mapper[oc.entityToken]
+            
             if len(body_lst) > 0:
                 for body in body_lst:
                     # Check if this body is hidden
                     if body.isLightBulbOn:
-                        visible_bodies.append(body)
-                        body_dict[body.entityToken] = oc_name
+                        if body.name in duplicate_bodies:
+                            duplicate_bodies[body.name] +=1
+                        self.body_dict[oc_name].append(body)
 
+                        body_name = body.name.replace(':','_').replace(' ','')
+                        body_name_cnt = f'{body_name}_{body_count[body_name]}'
+                        body_count[body_name] += 1
 
+                        unique_bodyname = f'{oc_name}_{body_name_cnt}'
+                        body_dict_urdf[oc_name].append(unique_bodyname)
+                    
+        # Make the actual urdf names accessible
+        self.body_dict_urdf = body_dict_urdf
 
 
         base_link = self.base_links.pop()
@@ -419,8 +480,8 @@ class Configurator:
                         sub_folder=mesh_folder,
                         mass=self.inertial_dict[base_link]['mass'],
                         inertia_tensor=self.inertial_dict[base_link]['inertia'],
-                        body_lst = visible_bodies,
-                        body_dict = body_dict)
+                        body_dict = body_dict_urdf,
+                        sub_mesh = self.sub_mesh)
 
         self.links_xyz_dict[link.name] = link.xyz
         self.links[link.name] = link
@@ -435,12 +496,14 @@ class Configurator:
                             sub_folder=mesh_folder, 
                             mass=self.inertial_dict[name]['mass'],
                             inertia_tensor=self.inertial_dict[name]['inertia'],
-                            body_lst=visible_bodies,
-                            body_dict = body_dict)
+                            body_dict = body_dict_urdf,
+                            sub_mesh = self.sub_mesh)
 
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
 
             self.links[link.name] = link
+
+
 
     def _build_joints(self):
         ''' create joints by setting parent and child relationships and constructing

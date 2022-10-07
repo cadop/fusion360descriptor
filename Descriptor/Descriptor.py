@@ -2,6 +2,7 @@ import adsk.core, adsk.fusion, adsk.cam, traceback
 
 from .core.ui import config_settings
 from .core import manager
+from .core import io
 
 ui_handlers = []
 
@@ -25,12 +26,12 @@ def run(context):
         ui  = app.userInterface
         product = app.activeProduct
         design = adsk.fusion.Design.cast(product)
-        title = 'Fusion360URDF'
 
         root = design.rootComponent  
         # Set the global managers root component 
         manager.Manager.root = root 
         manager.Manager.design = design 
+        manager.Manager._app = app
 
         _ = config_settings(ui, ui_handlers)
    

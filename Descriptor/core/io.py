@@ -3,8 +3,9 @@ import adsk, adsk.core, adsk.fusion
 from . import parts
 from . import parser
 from . import manager
+from collections import Counter, defaultdict
 
-def visible_to_stl(design, save_dir, root, accuracy,component_map):  
+def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_mapper, _app):  
     """
     export top-level components as a single stl file into "save_dir/"
     
@@ -25,11 +26,17 @@ def visible_to_stl(design, save_dir, root, accuracy,component_map):
     # create a single exportManager instance
     exporter = design.exportManager
 
+    # Setup new document for saving to
+    des: adsk.fusion.Design = _app.activeProduct
+
+    newDoc: adsk.core.Document = _app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType, True) 
+    newDes: adsk.fusion.Design = newDoc.products.itemByProductType('DesignProductType')
+    newRoot = newDes.rootComponent
+
     # get the script location
     save_dir = os.path.join(save_dir,'meshes')
     try: os.mkdir(save_dir)
     except: pass
-
 
     # Export top-level occurrences
     occ = root.occurrences.asList
@@ -38,78 +45,87 @@ def visible_to_stl(design, save_dir, root, accuracy,component_map):
     for oc in occ:
         if oc.isLightBulbOn:
             visible_components.append(oc)
-            oc.isLightBulbOn = False
 
-    # Go through the visible components, turning on and off
-    # Filename
+    # Make sure no repeated body names
+    body_count = Counter()
+
     for oc in visible_components:
-        # hack for correct stl placement
-        # Turn on body (all components should have been turned off before)
-        # export full body
-        # turn back off body
-        # coor = oc.transform.getAsCoordinateSystem()
+        # Create a new exporter in case its a memory thing
+        exporter = design.exportManager
 
+        occName = oc.name.replace(':', '_').replace(' ','')
         
+        component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
 
-        oc.isLightBulbOn = True
+        if sub_mesh:
+            # get the bodies associated with this top-level component (which will contain sub-components)
+            bodies = body_mapper[oc.entityToken]
 
-        # creates STL for all bodies within component, used for URDF collision
-        file_name = oc.name.replace(':','_').replace(' ','')
-        file_name = os.path.join(save_dir, file_name )              
-        print(f'Saving {file_name}')
-        # create stl exportOptions
-        stl_options = exporter.createSTLExportOptions(root, file_name)
-        stl_options.sendToPrintUtility = False
-        stl_options.isBinaryFormat = True
-        stl_options.meshRefinement = accuracy
-        exporter.execute(stl_options)
-        
+            for body in bodies:
+                if body.isLightBulbOn:
 
-        # for each component, get each body within the component
-        # hack to turn off each body within the component
-        # creates STL for each body
-        bodies = []
-        bodies = component_map[oc.entityToken].get_flat_body()
-        #checks for child component within "oc" component
-        if oc.childOccurrences: 
-                bodies.extend([oc.bRepBodies.item(x) for x in range(0, oc.bRepBodies.count) ])
-                oc_list = oc.childOccurrences
-                for o in oc_list:
-                    body_lst_ext = component_map[o.entityToken].get_flat_body()
-                    bodies.extend(body_lst_ext)
+                    # Since there are alot of similar names, we need to store the parent component as well in the filename
+                    body_name = body.name.replace(':','_').replace(' ','')
+                    body_name_cnt = f'{body_name}_{body_count[body_name]}'
+                    body_count[body_name] += 1
 
-        visible_bodies = []
-        for bod in bodies:
-            if bod.isLightBulbOn:
-                visible_bodies.append(bod)
-                bod.isLightBulbOn = False #turning off all bodies
-        
-        for bod in visible_bodies:
-            #turn on each body individually
-            bod.isLightBulbOn = True
+                    save_name = os.path.join(save_dir,f'{occName}_{body_name_cnt}')
 
-            #export the component's body              
-            file_name = oc.name.replace(':','_').replace(' ','')
-            file_name = os.path.join(save_dir, file_name )  
-            file_name = file_name + "_" + bod.name.replace(':','_').replace(' ','')
-            print(f'Saving {file_name}')
+                    body_exporter(exporter, newRoot, body, save_name)
 
-            # create stl exportOptions
-            stl_options = exporter.createSTLExportOptions(root, file_name)
-            stl_options.sendToPrintUtility = False
-            stl_options.isBinaryFormat = True
-            stl_options.meshRefinement = accuracy
-            exporter.execute(stl_options)
-            bod.isLightBulbOn = False
-            # this way, we are able to get the correct stl placement (each body within a component needs its own stl file)
 
-        # The occurrence back off to not intefere with next export
-        oc.isLightBulbOn = False
+def component_exporter(exportMgr, newRoot, body_lst, filename):
+    ''' Copy a component to a new document, save, then delete. 
 
-    # Turn back on all the components that were on before
-    for oc in visible_components:
-        oc.isLightBulbOn = True
+    Modified from solution proposed by BrianEkins https://EkinsSolutions.com
 
+    Parameters
+    ----------
+    exportMgr : _type_
+        _description_
+    newRoot : _type_
+        _description_
+    body_lst : _type_
+        _description_
+    filename : _type_
+        _description_
+    '''
+
+    tBrep = adsk.fusion.TemporaryBRepManager.get()
+
+    bf = newRoot.features.baseFeatures.add()
+    bf.startEdit()
+
+    for body in body_lst:
+        if not body.isLightBulbOn: continue
+        tBody = tBrep.copy(body)
+        newRoot.bRepBodies.add(tBody, bf)
+
+    bf.finishEdit()
+    stlOptions = exportMgr.createSTLExportOptions(newRoot, f'{filename}.stl')
+    exportMgr.execute(stlOptions)
+
+    bf.deleteMe()
+
+def body_exporter(exportMgr, newRoot, body, filename):
+    tBrep = adsk.fusion.TemporaryBRepManager.get()
+    
+    tBody = tBrep.copy(body)
+
+    bf = newRoot.features.baseFeatures.add()
+    bf.startEdit()
+    newRoot.bRepBodies.add(tBody, bf)
+    bf.finishEdit()
+
+    newBody = newRoot.bRepBodies[0]
+
+    stl_options = exportMgr.createSTLExportOptions(newBody, filename)
+    stl_options.sendToPrintUtility = False
+    stl_options.isBinaryFormat = True
+    # stl_options.meshRefinement = accuracy
+    exportMgr.execute(stl_options)                
+
+    bf.deleteMe()
 
 class Writer:
 
@@ -128,7 +144,7 @@ class Writer:
 
         '''
 
-        with open(file_name, mode='a') as f:
+        with open(file_name, mode='a', encoding="utf-8") as f:
             for _, link in config.links.items():  
                 f.write(f'{link.link_xml}\n')
 
@@ -144,7 +160,7 @@ class Writer:
 
         '''
         
-        with open(file_name, mode='a') as f:
+        with open(file_name, mode='a', encoding="utf-8") as f:
             for _, joint in config.joints.items():
                 f.write(f'{joint.joint_xml}\n')
 
@@ -165,7 +181,7 @@ class Writer:
         except: pass
         file_name = os.path.join(save_dir, f'{config.name}.urdf')  # the name of urdf file
 
-        with open(file_name, mode='w') as f:
+        with open(file_name, mode='w', encoding="utf-8") as f:
             f.write('<?xml version="1.0" ?>\n')
             f.write(f'<robot name="{config.name}">\n\n')
             f.write('<material name="silver">\n')
