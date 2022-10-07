@@ -46,13 +46,6 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         if oc.isLightBulbOn:
             visible_components.append(oc)
 
-    # Go through the visible components, turning on and off
-    # Filename
-    f_name = os.path.join(save_dir,'log.txt')
-
-    with open(f_name,'w', encoding="utf-8") as f:
-        f.write('Starting Log\n')
-
     # Make sure no repeated body names
     body_count = Counter()
 
@@ -75,13 +68,28 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
                     body_name = body.name.replace(':','_').replace(' ','')
                     body_name_cnt = f'{body_name}_{body_count[body_name]}'
                     body_count[body_name] += 1
-                    # save_name = filename + "_" + body_name
+
                     save_name = os.path.join(save_dir,f'{occName}_{body_name_cnt}')
 
                     body_exporter(exporter, newRoot, body, save_name)
 
 
 def component_exporter(exportMgr, newRoot, body_lst, filename):
+    ''' Copy a component to a new document, save, then delete. 
+
+    Modified from solution proposed by BrianEkins https://EkinsSolutions.com
+
+    Parameters
+    ----------
+    exportMgr : _type_
+        _description_
+    newRoot : _type_
+        _description_
+    body_lst : _type_
+        _description_
+    filename : _type_
+        _description_
+    '''
 
     tBrep = adsk.fusion.TemporaryBRepManager.get()
 
