@@ -31,6 +31,16 @@ It provides a simple GUI for running the script and choosing a few different set
 
 <img src="imagesforgettingstarted/gui.gif" alt="drawing" width="800"/>
 
+Installation & Running
+-----------------
+
+- Download the repository as .zip by clicking the green **Code** button above and then **Download Zip**
+- Navigate to the **Utilities** tab in Fusion 360 and click on **Scripts and Add-Ins**.
+- Click on the green + to add the script into Fusion 360.
+- You may have to extract files from the zip after downloading from GitHub. Add the **Descriptor** folder from the extracted files to the scripts. 
+- Click on **Descriptor** under **My Scripts** then click on **Run**. The GUI will appear.
+
+
 Step-by-Step Guide
 ------------------
 
