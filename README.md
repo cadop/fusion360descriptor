@@ -45,13 +45,13 @@ Installation & Running
 
 - Click on the green + to add the script into Fusion 360.
 
-<img src="imagesforgettingstarted/12.jpg" alt="drawing" width="200"/>
-
 - Add the **Descriptor** folder from the extracted files to the scripts. 
 
 <img src="imagesforgettingstarted/20.jpg" alt="drawing" width="200"/>
 
 - Click on **Descriptor** under **My Scripts** then click on **Run**. The GUI will appear.
+
+<img src="imagesforgettingstarted/12.jpg" alt="drawing" width="200"/>
 
 
 Step-by-Step Guide
