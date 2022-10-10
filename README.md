@@ -28,6 +28,7 @@ It provides a simple GUI for running the script and choosing a few different set
 - Preview joint relationship before exporting
 - Export only URDF without Mesh (for fast viewing)
 - Set Component 1 of joint to mean Parent or Child
+- Can export component bodies separately as a visual element of URDF and a combined component as the collision
 
 <img src="imagesforgettingstarted/gui.gif" alt="drawing" width="800"/>
 
