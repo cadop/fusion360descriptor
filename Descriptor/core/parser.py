@@ -403,8 +403,8 @@ class Configurator:
                 # SiderJoint also does not have rotation axis
                 if 'SliderJointMotion' in joint_type:
                     joint_vector=joint.jointMotion.slideDirectionVector.asArray()
-                    joint_limit_max = joint.jointMotion.slideLimits.maximumValue
-                    joint_limit_min = joint.jointMotion.slideLimits.minimumValue
+                    joint_limit_max = joint.jointMotion.slideLimits.maximumValue/100.0
+                    joint_limit_min = joint.jointMotion.slideLimits.minimumValue/100.0
                 else:
                     joint_vector = joint.jointMotion.rotationAxisVector.asArray() 
                     joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
