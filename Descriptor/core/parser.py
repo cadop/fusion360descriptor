@@ -219,7 +219,8 @@ class Configurator:
             children.update(v.children)
 
             top_level_body = [v.component.bRepBodies.item(x) for x in range(0, v.component.bRepBodies.count) ]
-            top_level_body = [x for x in top_level_body if x.isLightBulbOn]
+            # top_level_body = [x for x in top_level_body if x.isLightBulbOn]
+            top_level_body = [x for x in top_level_body if x.isVisible]
             
             # add to the body mapper
             self.body_mapper[v.component.entityToken].extend(top_level_body)
@@ -230,18 +231,21 @@ class Configurator:
                 cur = children.pop()
                 children.update(cur.children)
                 sub_level_body = [cur.component.bRepBodies.item(x) for x in range(0, cur.component.bRepBodies.count) ]
-                sub_level_body = [x for x in sub_level_body if x.isLightBulbOn ]
+                # sub_level_body = [x for x in sub_level_body if x.isLightBulbOn ]
+                sub_level_body = [x for x in sub_level_body if x.isVisible ]
                 
                 # add to this body mapper again 
                 self.body_mapper[v.component.entityToken].extend(sub_level_body)
                 
                 sub_body_name = [x.name for x in sub_level_body]
-
-        for oc in self.occ:       
-            # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
-            # body_cnt = oc.bRepBodies.count
-            # mapped_comp =self.component_map[oc.entityToken]
-            body_lst = self.component_map[oc.entityToken].get_flat_body()
+        # Does getting flat body do anything?
+        # for oc in self.occ:       
+        #     # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
+        #     # body_cnt = oc.bRepBodies.count
+        #     # mapped_comp =self.component_map[oc.entityToken]
+        #     body_lst = self.component_map[oc.entityToken].get_flat_body()
+            
+            
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links 
@@ -304,7 +308,8 @@ class Configurator:
                     # Check if this body is hidden
                     #  
                     # body = oc.bRepBodies.item(i)
-                    if not body.isLightBulbOn:
+                    # if not body.isLightBulbOn:
+                    if not body.isVisible:
                         mass -= body.physicalProperties.mass
 
 
@@ -456,7 +461,8 @@ class Configurator:
             if len(body_lst) > 0:
                 for body in body_lst:
                     # Check if this body is hidden
-                    if body.isLightBulbOn:
+                    # if body.isLightBulbOn:
+                    if body.isVisible:
                         if body.name in duplicate_bodies:
                             duplicate_bodies[body.name] +=1
                         self.body_dict[oc_name].append(body)

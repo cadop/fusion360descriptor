@@ -43,7 +43,8 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
     # hack for correct stl placement by turning off all visibility first
     visible_components = []
     for oc in occ:
-        if oc.isLightBulbOn:
+        # if oc.isLightBulbOn:
+        if oc.isVisible :
             visible_components.append(oc)
 
     # Make sure no repeated body names
@@ -55,14 +56,15 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
 
         occName = oc.name.replace(':', '_').replace(' ','')
         
-        component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
+        component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'), accuracy)
 
         if sub_mesh:
             # get the bodies associated with this top-level component (which will contain sub-components)
             bodies = body_mapper[oc.entityToken]
 
             for body in bodies:
-                if body.isLightBulbOn:
+                # if body.isLightBulbOn:
+                if body.isVisible :
 
                     # Since there are alot of similar names, we need to store the parent component as well in the filename
                     body_name = body.name.replace(':','_').replace(' ','')
@@ -71,10 +73,10 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
 
                     save_name = os.path.join(save_dir,f'{occName}_{body_name_cnt}')
 
-                    body_exporter(exporter, newRoot, body, save_name)
+                    body_exporter(exporter, newRoot, body, save_name, accuracy)
 
 
-def component_exporter(exportMgr, newRoot, body_lst, filename):
+def component_exporter(exportMgr, newRoot, body_lst, filename, accuracy):
     ''' Copy a component to a new document, save, then delete. 
 
     Modified from solution proposed by BrianEkins https://EkinsSolutions.com
@@ -97,17 +99,26 @@ def component_exporter(exportMgr, newRoot, body_lst, filename):
     bf.startEdit()
 
     for body in body_lst:
-        if not body.isLightBulbOn: continue
+        # if not body.isLightBulbOn: continue
+        if not body.isVisible : continue
         tBody = tBrep.copy(body)
         newRoot.bRepBodies.add(tBody, bf)
 
     bf.finishEdit()
     stlOptions = exportMgr.createSTLExportOptions(newRoot, f'{filename}.stl')
+    
+    stlOptions.sendToPrintUtility = False
+    stlOptions.isBinaryFormat = True
+    stlOptions.meshRefinement = accuracy
+    stlOptions.normalDeviation = 41
+    stlOptions.surfaceDeviation = 0.49
+    
+    
     exportMgr.execute(stlOptions)
 
     bf.deleteMe()
 
-def body_exporter(exportMgr, newRoot, body, filename):
+def body_exporter(exportMgr, newRoot, body, filename, accuracy):
     tBrep = adsk.fusion.TemporaryBRepManager.get()
     
     tBody = tBrep.copy(body)
@@ -122,7 +133,7 @@ def body_exporter(exportMgr, newRoot, body, filename):
     stl_options = exportMgr.createSTLExportOptions(newBody, filename)
     stl_options.sendToPrintUtility = False
     stl_options.isBinaryFormat = True
-    # stl_options.meshRefinement = accuracy
+    stl_options.meshRefinement = accuracy
     exportMgr.execute(stl_options)                
 
     bf.deleteMe()
