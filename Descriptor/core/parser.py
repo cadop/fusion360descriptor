@@ -2,10 +2,10 @@
 module to parse fusion file 
 '''
 
-import copy
 import adsk, adsk.core, adsk.fusion
 from . import transforms
 from . import parts
+from . import utils
 from collections import Counter, defaultdict
 
 class Hierarchy:
@@ -447,7 +447,7 @@ class Configurator:
         body_count = Counter()
         
         for oc in self.occ:
-            oc_name = oc.name.replace(':','_').replace(' ','')
+            oc_name = utils.format_name(oc.name)
             # self.body_dict[oc_name] = []
             # body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
 
@@ -461,7 +461,7 @@ class Configurator:
                             duplicate_bodies[body.name] +=1
                         self.body_dict[oc_name].append(body)
 
-                        body_name = body.name.replace(':','_').replace(' ','')
+                        body_name = utils.format_name(body.name)
                         body_name_cnt = f'{body_name}_{body_count[body_name]}'
                         body_count[body_name] += 1
 

@@ -2,7 +2,6 @@ import adsk.core, adsk.fusion, adsk.cam, traceback
 
 from .core.ui import config_settings
 from .core import manager
-from .core import io
 
 ui_handlers = []
 

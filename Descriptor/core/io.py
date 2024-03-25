@@ -1,9 +1,7 @@
 import os
 import adsk, adsk.core, adsk.fusion
-from . import parts
-from . import parser
-from . import manager
-from collections import Counter, defaultdict
+from . import utils
+from collections import Counter
 
 def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_mapper, _app):  
     """
@@ -53,7 +51,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         # Create a new exporter in case its a memory thing
         exporter = design.exportManager
 
-        occName = oc.name.replace(':', '_').replace(' ','')
+        occName = utils.format_name(oc.name)
         
         component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
 
@@ -65,7 +63,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
                 if body.isLightBulbOn:
 
                     # Since there are alot of similar names, we need to store the parent component as well in the filename
-                    body_name = body.name.replace(':','_').replace(' ','')
+                    body_name = utils.format_name(body.name)
                     body_name_cnt = f'{body_name}_{body_count[body_name]}'
                     body_count[body_name] += 1
 
