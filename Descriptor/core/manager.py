@@ -131,6 +131,8 @@ class Manager:
 
         if self.target_platform == 'pyBullet':
             io.write_hello_pybullet(config.name, self.save_dir)
+        elif self.target_platform == 'Gazebo':
+            io.copy_ros2(self.save_dir, config.name)
         
         # Custom STL Export
         if self.save_mesh:

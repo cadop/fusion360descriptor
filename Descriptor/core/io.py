@@ -1,7 +1,8 @@
-import os
+import os, sys, fileinput
 import adsk, adsk.core, adsk.fusion
 from . import utils
 from collections import Counter
+from distutils.dir_util import copy_tree
 
 def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_mapper, _app):  
     """
@@ -237,3 +238,52 @@ p.disconnect()
     with open(file_name, mode='w') as f:
         f.write(hello_pybullet)
         f.write('\n')
+
+def copy_ros2(save_dir, package_name):
+    # Use current directory to find `package_ros2`
+    package_ros2_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__))) + '/package_ros2/'
+    copy_package(save_dir, package_ros2_path)
+    update_cmakelists(save_dir, package_name)
+    update_package_xml(save_dir, package_name)
+    update_ros2_launchfile(save_dir, package_name)
+
+def copy_package(save_dir, package_dir):
+    try:
+        os.mkdir(save_dir + '/launch')
+    except:
+        pass
+    try:
+        os.mkdir(save_dir + '/urdf')
+    except:
+        pass
+    copy_tree(package_dir, save_dir)
+
+def update_cmakelists(save_dir, package_name):
+    file_name = save_dir + '/CMakeLists.txt'
+
+    for line in fileinput.input(file_name, inplace=True):
+        if 'project(fusion2urdf)' in line:
+            sys.stdout.write("project(" + package_name + ")\n")
+        else:
+            sys.stdout.write(line)
+
+def update_ros2_launchfile(save_dir, package_name):
+    file_name = save_dir + '/launch/robot_description.launch.py'
+
+    for line in fileinput.input(file_name, inplace=True):
+        if 'fusion2urdf' in line:
+            sys.stdout.write(line.replace('fusion2urdf', package_name))
+        else:
+            sys.stdout.write(line)
+
+def update_package_xml(save_dir, package_name):
+    file_name = save_dir + '/package.xml'
+
+    for line in fileinput.input(file_name, inplace=True):
+        if '<name>' in line:
+            sys.stdout.write("  <name>" + package_name + "</name>\n")
+        elif '<description>' in line:
+            sys.stdout.write("<description>The " +
+                             package_name + " package</description>\n")
+        else:
+            sys.stdout.write(line)
