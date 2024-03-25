@@ -70,6 +70,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
                     save_name = os.path.join(save_dir,f'{occName}_{body_name_cnt}')
 
                     body_exporter(exporter, newRoot, body, save_name)
+    newDoc.close(False)
 
 
 def component_exporter(exportMgr, newRoot, body_lst, filename):
