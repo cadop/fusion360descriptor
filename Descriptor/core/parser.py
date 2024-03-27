@@ -355,92 +355,94 @@ class Configurator:
         '''        
 
         # TODO: Iterate over nested joints as well
-        for joint in self.root.joints:
-            
-            joint_dict = {}
-            joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
-            joint_dict['type'] = joint_type
+        components = self.root.parentDesign.allComponents
+        for component in components:
+            component_joint_dict = {}
+            for joint in component.joints:
+                joint_dict = {}
+                joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
+                joint_dict['type'] = joint_type
 
-            # switch by the type of the joint
-            joint_dict['axis'] = [0, 0, 0]
-            joint_dict['upper_limit'] = 0.0
-            joint_dict['lower_limit'] = 0.0
+                # switch by the type of the joint
+                joint_dict['axis'] = [0, 0, 0]
+                joint_dict['upper_limit'] = 0.0
+                joint_dict['lower_limit'] = 0.0
 
-            occ_one = joint.occurrenceOne
-            occ_two = joint.occurrenceTwo
-            
-            # Check that both bodies are valid (e.g. there is no missing reference)
-            if not self._is_joint_valid(joint):
-                # TODO: Handle in a better way (like warning message)
-                continue
-
-            geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
-            geom_one_primary = joint.geometryOrOriginOne.primaryAxisVector.asArray()
-            geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
-            geom_one_third = joint.geometryOrOriginOne.thirdAxisVector.asArray()
-
-            # Check if this is already top level
-            # Check if the parent_list only contains one entity
-            parent_list = self.component_map[occ_one.entityToken].get_all_parents()
-            if len(parent_list) == 1:
-                pass
-            # If it is not, get the mapping and trace it back up
-            else: 
-                # the expectation is there is at least two items, the last is the full body
-                # the second to last should be the next top-most component
-                # reset occurrence one
-                occ_one = self.component_map[parent_list[-2]].component
-
-            parent_list = self.component_map[occ_two.entityToken].get_all_parents()
-            if len(parent_list) == 1:
-                pass
-            else:
-                # the expectation is there is at least two items, the last is the full body
-                # the second to last should be the next top-most component
-                # reset occurrence two
-                occ_two = self.component_map[parent_list[-2]].component
-
-            geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
-            geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
-            geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
-            geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
-            
-            joint_type = joint.jointMotion.objectType # string 
-            
-            # Only Revolute joints have rotation axis 
-            if 'RigidJointMotion' in joint_type:
-                pass
-            else:
+                occ_one = joint.occurrenceOne
+                occ_two = joint.occurrenceTwo
                 
-                joint_vector = joint.jointMotion.rotationAxisVector.asArray() 
+                # Check that both bodies are valid (e.g. there is no missing reference)
+                if not self._is_joint_valid(joint):
+                    # TODO: Handle in a better way (like warning message)
+                    continue
 
-                joint_rot_val = joint.jointMotion.rotationValue
-                joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
-                joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
+                geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
+                geom_one_primary = joint.geometryOrOriginOne.primaryAxisVector.asArray()
+                geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
+                geom_one_third = joint.geometryOrOriginOne.thirdAxisVector.asArray()
+
+                # Check if this is already top level
+                # Check if the parent_list only contains one entity
+                parent_list = self.component_map[occ_one.entityToken].get_all_parents()
+                if len(parent_list) == 1:
+                    pass
+                # If it is not, get the mapping and trace it back up
+                else: 
+                    # the expectation is there is at least two items, the last is the full body
+                    # the second to last should be the next top-most component
+                    # reset occurrence one
+                    occ_one = self.component_map[parent_list[-2]].component
+
+                parent_list = self.component_map[occ_two.entityToken].get_all_parents()
+                if len(parent_list) == 1:
+                    pass
+                else:
+                    # the expectation is there is at least two items, the last is the full body
+                    # the second to last should be the next top-most component
+                    # reset occurrence two
+                    occ_two = self.component_map[parent_list[-2]].component
+
+                geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
+                geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
+                geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
+                geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
                 
-                if abs(joint_limit_max - joint_limit_min) == 0:
-                    joint_limit_min = -3.14159
-                    joint_limit_max = 3.14159
+                joint_type = joint.jointMotion.objectType # string 
+                
+                # Only Revolute joints have rotation axis 
+                if 'RigidJointMotion' in joint_type:
+                    pass
+                else:
+                    
+                    joint_vector = joint.jointMotion.rotationAxisVector.asArray() 
 
-                # joint_angle = joint.angle.value 
+                    joint_rot_val = joint.jointMotion.rotationValue
+                    joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
+                    joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
+                    
+                    if abs(joint_limit_max - joint_limit_min) == 0:
+                        joint_limit_min = -3.14159
+                        joint_limit_max = 3.14159
 
-                joint_dict['axis'] = joint_vector
-                joint_dict['upper_limit'] = joint_limit_max
-                joint_dict['lower_limit'] = joint_limit_min
+                    # joint_angle = joint.angle.value 
 
-            # Reverses which is parent and child
-            if self.joint_order == ('p','c'):
-                joint_dict['parent'] = occ_one.name
-                joint_dict['child'] = occ_two.name
-            elif self.joint_order == ('c','p'):
-                joint_dict['child'] = occ_one.name
-                joint_dict['parent'] = occ_two.name
-            else:
-                raise ValueError(f'Order {self.joint_order} not supported')
+                    joint_dict['axis'] = joint_vector
+                    joint_dict['upper_limit'] = joint_limit_max
+                    joint_dict['lower_limit'] = joint_limit_min
 
-            joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
+                # Reverses which is parent and child
+                if self.joint_order == ('p','c'):
+                    joint_dict['parent'] = occ_one.name
+                    joint_dict['child'] = occ_two.name
+                elif self.joint_order == ('c','p'):
+                    joint_dict['child'] = occ_one.name
+                    joint_dict['parent'] = occ_two.name
+                else:
+                    raise ValueError(f'Order {self.joint_order} not supported')
 
-            self.joints_dict[joint.name] = joint_dict
+                joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
+                component_joint_dict[joint.name] = joint_dict
+            self.joints_dict[component.name] = component_joint_dict
 
     def _build_links(self):
         ''' create links '''
