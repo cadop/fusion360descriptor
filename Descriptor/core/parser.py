@@ -22,18 +22,18 @@ class Hierarchy:
         '''        
 
         self.children = []
-        self.component = component
-        self.name = component.name
+        self.component: adsk.fusion.Occurrence = component
+        self.name: str = component.name
         self._parent = None
 
-    def _add_child(self, c):
+    def _add_child(self, c) -> None:
         self.children.append(c)
         c.parent = self 
 
-    def get_children(self):
+    def get_children(self) -> list:
         return self.children        
 
-    def get_all_children(self):
+    def get_all_children(self) -> dict[str]:
         ''' get all children and sub children of this instance '''
 
         child_map = {}
@@ -49,10 +49,9 @@ class Hierarchy:
             if len(tmp.get_children())> 0:
                 # add them to the parent_stack
                 parent_stack.update(tmp.get_children())
-
         return child_map
 
-    def get_flat_body(self):
+    def get_flat_body(self) -> list:
         ''' get a flat list of all components and child components '''
 
         child_list = []
@@ -101,7 +100,7 @@ class Hierarchy:
 
         return flat_bodies
 
-    def get_all_parents(self):
+    def get_all_parents(self) -> list:
         ''' get all the parents of this instance '''
 
         child_stack = set()
@@ -186,7 +185,7 @@ class Configurator:
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
         self.inertia_scale = 10000.0 # units to convert mass
         self.base_links= set()
-        # self.component_map = set()
+        self.component_map: dict[str, Hierarchy] = dict() # Entity tokens for each component
 
         self.root_node = None
 
@@ -275,6 +274,39 @@ class Configurator:
             if oc.isGrounded:
                 name = oc.name
                 self.base_links.add(name)
+    
+    def _get_inertia(self, oc: adsk.fusion.Occurrence):
+        occs_dict = {}
+
+        prop = oc.getPhysicalProperties(self.inertia_accuracy)
+        
+        occs_dict['name'] = oc.name
+
+        mass = prop.mass  # kg
+
+        # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
+        # body_cnt = oc.bRepBodies.count
+        body_lst = self.component_map[oc.entityToken].get_flat_body()
+
+        if len(body_lst) > 0:
+            for body in body_lst:
+                # Check if this body is hidden
+                #  
+                # body = oc.bRepBodies.item(i)
+                if not body.isLightBulbOn:
+                    mass -= body.physicalProperties.mass
+
+        occs_dict['mass'] = mass
+        center_of_mass = [_/self.scale for _ in prop.centerOfMass.asArray()] ## cm to m
+        occs_dict['center_of_mass'] = center_of_mass
+
+        # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-ce341ee6-4490-11e5-b25b-f8b156d7cd97
+        (_, xx, yy, zz, xy, yz, xz) = prop.getXYZMomentsOfInertia()
+        moment_inertia_world = [_ / self.inertia_scale for _ in [xx, yy, zz, xy, yz, xz] ] ## kg / cm^2 -> kg/m^2
+
+        occs_dict['inertia'] = transforms.origin2center_of_mass(moment_inertia_world, center_of_mass, mass)
+
+        return occs_dict
 
     def _inertia(self):
         '''
@@ -286,40 +318,18 @@ class Configurator:
         Modified by @cadop
         '''
         
-        for oc in self.occ:       
-            occs_dict = {}
-            prop = oc.getPhysicalProperties(self.inertia_accuracy)
-            
-            occs_dict['name'] = oc.name
+        for oc in self.occ:
+            children_inertial_dict = {}
+            mapped_comp = self.component_map[oc.entityToken]
 
-            mass = prop.mass  # kg
-
-            # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
-            # body_cnt = oc.bRepBodies.count
-            # mapped_comp =self.component_map[oc.entityToken]
-            body_lst = self.component_map[oc.entityToken].get_flat_body()
-
-            if len(body_lst) > 0:
-                for body in body_lst:
-                    # Check if this body is hidden
-                    #  
-                    # body = oc.bRepBodies.item(i)
-                    if not body.isLightBulbOn:
-                        mass -= body.physicalProperties.mass
-
-
-            occs_dict['mass'] = mass
-            center_of_mass = [_/self.scale for _ in prop.centerOfMass.asArray()] ## cm to m
-            occs_dict['center_of_mass'] = center_of_mass
-
-
-            # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-ce341ee6-4490-11e5-b25b-f8b156d7cd97
-            (_, xx, yy, zz, xy, yz, xz) = prop.getXYZMomentsOfInertia()
-            moment_inertia_world = [_ / self.inertia_scale for _ in [xx, yy, zz, xy, yz, xz] ] ## kg / cm^2 -> kg/m^2
-
-            occs_dict['inertia'] = transforms.origin2center_of_mass(moment_inertia_world, center_of_mass, mass)
-
-            self.inertial_dict[oc.name] = occs_dict
+            # Get inertia for children too
+            children = mapped_comp.get_all_children()
+            if len(children) > 0:
+                for child_token in children:
+                    fusion_component = mapped_comp.component.component
+                    child_occurrence = fusion_component.parentDesign.findEntityByToken(child_token)[0]
+                    children_inertial_dict[child_token] = self._get_inertia(child_occurrence)
+            self.inertial_dict[oc.name] = children_inertial_dict
 
     def _is_joint_valid(self, joint):
         '''_summary_
@@ -344,6 +354,7 @@ class Configurator:
         
         '''        
 
+        # TODO: Iterate over nested joints as well
         for joint in self.root.joints:
             
             joint_dict = {}
@@ -470,7 +481,6 @@ class Configurator:
                     
         # Make the actual urdf names accessible
         self.body_dict_urdf = body_dict_urdf
-
 
         base_link = self.base_links.pop()
         center_of_mass = self.inertial_dict[base_link]['center_of_mass']
