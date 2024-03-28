@@ -258,7 +258,6 @@ class Configurator:
 
         self._inertia()
         self._joints()
-        print(f"Built joints {self.joints_dict}")
         self._base()
         self._build_links()
         self._build_joints()
@@ -319,6 +318,7 @@ class Configurator:
                     fusion_component = mapped_comp.component.component
                     child_occurrence = fusion_component.parentDesign.findEntityByToken(child_token)[0]
                     yield child_occurrence
+            yield oc
 
     def _inertia(self):
         '''
@@ -361,6 +361,7 @@ class Configurator:
             # Rename if the joint already exists in our dictionary
             if self.joints_dict.get(joint.name) is not None:
                 joint.name += "_0"
+            joint_dict['name'] = joint.name
 
             joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
             joint_dict['type'] = joint_type
@@ -376,7 +377,6 @@ class Configurator:
             # Check that both bodies are valid (e.g. there is no missing reference)
             if not self._is_joint_valid(joint):
                 # TODO: Handle in a better way (like warning message)
-                print(f"Joint is not valid: {joint.name}")
                 return joint_dict
 
             geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
@@ -438,39 +438,45 @@ class Configurator:
             if self.joint_order == ('p','c'):
                 joint_dict['parent'] = occ_one.name
                 joint_dict['child'] = occ_two.name
+                joint_dict['parent_token'] = occ_one.entityToken
+                joint_dict['child_token'] = occ_two.entityToken
             elif self.joint_order == ('c','p'):
                 joint_dict['child'] = occ_one.name
                 joint_dict['parent'] = occ_two.name
+                joint_dict['child_token'] = occ_one.entityToken
+                joint_dict['parent_token'] = occ_two.entityToken
             else:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
-            self.joints_dict[joint.name] = joint_dict
+            self.joints_dict[joint.entityToken] = joint_dict
 
-    def __add_recursive_links(self, joints):
+    def __add_recursive_links(self, joints, mesh_folder):
         for k, joint in joints.items():
-            print(f"{k}, {joint}")
-            if isinstance(joint, dict):
+            if isinstance(joint, dict) and len(joint) == 1:
                 result = self.__add_recursive_links(joint)
+                if isinstance(result, dict):
+                    return result
             else:
-                name = joint['child']
+                token = joint['child_token']
+                inertia = self.inertial_dict[token]
 
-                center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
-                link = parts.Link(name = name, 
+                center_of_mass = [ i-j for i, j in zip(inertia['center_of_mass'], joint['xyz'])]
+                link = parts.Link(name = inertia['name'], 
                                 xyz = (joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
                                 center_of_mass = center_of_mass,
-                                sub_folder = self.mesh_folder, 
-                                mass = self.inertial_dict[name]['mass'],
-                                inertia_tensor = self.inertial_dict[name]['inertia'],
+                                sub_folder = mesh_folder, 
+                                mass = inertia['mass'],
+                                inertia_tensor = inertia['inertia'],
                                 body_dict = self.body_dict_urdf,
                                 sub_mesh = self.sub_mesh)
-
-                self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
+                self.links_xyz_dict[token] = (link.xyz[0], link.xyz[1], link.xyz[2])   
                 self.links[link.name] = link
 
     def _build_links(self):
         ''' create links '''
-        # TODO: Use components for this to get the bodies, not joints
+
+        mesh_folder = 'meshes/'
 
         #creates list of bodies that are visible
 
@@ -507,7 +513,7 @@ class Configurator:
         # Make the actual urdf names accessible
         self.body_dict_urdf = body_dict_urdf
         
-        self.__add_recursive_links(self.joints_dict)
+        self.__add_recursive_links(self.joints_dict, mesh_folder)
 
 
     def _build_joints(self):
@@ -515,12 +521,10 @@ class Configurator:
         the XML formats to be exported later '''
 
         for k, j in self.joints_dict.items():
-
             xyz = []
-            for p,c in zip(self.links_xyz_dict[j['parent']], self.links_xyz_dict[j['child']]):
+            for p,c in zip(self.links_xyz_dict[j['parent_token']], self.links_xyz_dict[j['child_token']]):
                 xyz.append(p-c)
-            
-            joint = parts.Joint(name=k , joint_type=j['type'], 
+            joint = parts.Joint(name=j['name'] , joint_type=j['type'], 
                                 xyz=xyz, axis=j['axis'], 
                                 parent=j['parent'], child=j['child'], 
                                 upper_limit=j['upper_limit'], lower_limit=j['lower_limit'])
