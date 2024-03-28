@@ -357,6 +357,11 @@ class Configurator:
         '''        
         for joint in self.root.allJoints:
             joint_dict = {}
+
+            # Rename if the joint already exists in our dictionary
+            if self.joints_dict.get(joint.name) is not None:
+                joint.name += "_0"
+
             joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
             joint_dict['type'] = joint_type
 
