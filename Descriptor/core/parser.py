@@ -361,7 +361,7 @@ class Configurator:
             # Rename if the joint already exists in our dictionary
             if self.joints_dict.get(joint.name) is not None:
                 joint.name += "_0"
-            joint_dict['name'] = joint.name
+            joint_dict['token'] = joint.entityToken
 
             joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
             joint_dict['type'] = joint_type
@@ -428,7 +428,7 @@ class Configurator:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
-            self.joints_dict[joint.entityToken] = joint_dict
+            self.joints_dict[joint.name] = joint_dict
 
     def __add_recursive_links(self, inertia_occurrence, mesh_folder):
         for k, inertia in inertia_occurrence.items():
@@ -437,11 +437,17 @@ class Configurator:
                 if isinstance(result, dict):
                     return result
             else:
-                center_of_mass = [ i-j for i, j in zip(inertia['center_of_mass'], self.joints_dict[k]['xyz'])]
+                for jk, joint in self.joints_dict.items():
+                    if joint['child_token'] == k or joint['parent_token'] == k:
+                        center_of_mass = [ i-j for i, j in zip(inertia['center_of_mass'], joint['xyz'])]
+                        xyz = joint['xyz']
+                    else:
+                        # Defaulting to just the center of mass alone
+                        center_of_mass = inertia['center_of_mass']
                 link = parts.Link(name = inertia['name'],
-                                xyz = (inertia['xyz'][0], inertia['xyz'][1], inertia['xyz'][2]),
+                                xyz = (xyz[0], xyz[1], xyz[2]),
                                 center_of_mass = center_of_mass,
-                                sub_folder = mesh_folder, 
+                                sub_folder = mesh_folder,
                                 mass = inertia['mass'],
                                 inertia_tensor = inertia['inertia'],
                                 body_dict = self.body_dict_urdf,
@@ -500,7 +506,7 @@ class Configurator:
             xyz = []
             for p,c in zip(self.links_xyz_dict[j['parent_token']], self.links_xyz_dict[j['child_token']]):
                 xyz.append(p-c)
-            joint = parts.Joint(name=j['name'] , joint_type=j['type'], 
+            joint = parts.Joint(name=k , joint_type=j['type'], 
                                 xyz=xyz, axis=j['axis'], 
                                 parent=j['parent'], child=j['child'], 
                                 upper_limit=j['upper_limit'], lower_limit=j['lower_limit'])
