@@ -258,6 +258,7 @@ class Configurator:
 
         self._inertia()
         self._joints()
+        print(f"Built joints {self.joints_dict}")
         self._base()
         self._build_links()
         self._build_joints()
@@ -308,6 +309,17 @@ class Configurator:
 
         return occs_dict
 
+    def _iterate_through_occurrences(self):
+        # This is the root level occurrences
+        for oc in self.occ:
+            mapped_comp = self.component_map[oc.entityToken]
+            children = mapped_comp.get_all_children()
+            if len(children) > 0:
+                for child_token in children:
+                    fusion_component = mapped_comp.component.component
+                    child_occurrence = fusion_component.parentDesign.findEntityByToken(child_token)[0]
+                    yield child_occurrence
+
     def _inertia(self):
         '''
         Define inertia values
@@ -317,19 +329,9 @@ class Configurator:
         Original Authors: @syuntoku, @yanshil
         Modified by @cadop
         '''
-        
-        for oc in self.occ:
-            children_inertial_dict = {}
-            mapped_comp = self.component_map[oc.entityToken]
-
-            # Get inertia for children too
-            children = mapped_comp.get_all_children()
-            if len(children) > 0:
-                for child_token in children:
-                    fusion_component = mapped_comp.component.component
-                    child_occurrence = fusion_component.parentDesign.findEntityByToken(child_token)[0]
-                    children_inertial_dict[child_token] = self._get_inertia(child_occurrence)
-            self.inertial_dict[oc.name] = children_inertial_dict
+        # Build a flat inertial dict
+        for occ in self._iterate_through_occurrences():
+            self.inertial_dict[occ.entityToken] = self._get_inertia(occ)
 
     def _is_joint_valid(self, joint):
         '''_summary_
@@ -353,102 +355,117 @@ class Configurator:
         (along with its relationship)
         
         '''        
+        for joint in self.root.allJoints:
+            joint_dict = {}
+            joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
+            joint_dict['type'] = joint_type
 
-        # TODO: Iterate over nested joints as well
-        components = self.root.parentDesign.allComponents
-        for component in components:
-            component_joint_dict = {}
-            for joint in component.joints:
-                joint_dict = {}
-                joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
-                joint_dict['type'] = joint_type
+            # switch by the type of the joint
+            joint_dict['axis'] = [0, 0, 0]
+            joint_dict['upper_limit'] = 0.0
+            joint_dict['lower_limit'] = 0.0
 
-                # switch by the type of the joint
-                joint_dict['axis'] = [0, 0, 0]
-                joint_dict['upper_limit'] = 0.0
-                joint_dict['lower_limit'] = 0.0
+            occ_one = joint.occurrenceOne
+            occ_two = joint.occurrenceTwo
+            
+            # Check that both bodies are valid (e.g. there is no missing reference)
+            if not self._is_joint_valid(joint):
+                # TODO: Handle in a better way (like warning message)
+                print(f"Joint is not valid: {joint.name}")
+                return joint_dict
 
-                occ_one = joint.occurrenceOne
-                occ_two = joint.occurrenceTwo
+            geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
+            geom_one_primary = joint.geometryOrOriginOne.primaryAxisVector.asArray()
+            geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
+            geom_one_third = joint.geometryOrOriginOne.thirdAxisVector.asArray()
+
+            # Check if this is already top level
+            # Check if the parent_list only contains one entity
+            parent_list = self.component_map[occ_one.entityToken].get_all_parents()
+            if len(parent_list) == 1:
+                pass
+            # If it is not, get the mapping and trace it back up
+            else: 
+                # the expectation is there is at least two items, the last is the full body
+                # the second to last should be the next top-most component
+                # reset occurrence one
+                occ_one = self.component_map[parent_list[-2]].component
+
+            parent_list = self.component_map[occ_two.entityToken].get_all_parents()
+            if len(parent_list) == 1:
+                pass
+            else:
+                # the expectation is there is at least two items, the last is the full body
+                # the second to last should be the next top-most component
+                # reset occurrence two
+                occ_two = self.component_map[parent_list[-2]].component
+
+            geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
+            geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
+            geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
+            geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
+            
+            joint_type = joint.jointMotion.objectType # string 
+            
+            # Only Revolute joints have rotation axis 
+            if 'RigidJointMotion' in joint_type:
+                pass
+            elif 'SliderJointMotion' in joint_type:
+                joint_vector=joint.jointMotion.slideDirectionVector.asArray()
+                joint_limit_max = joint.jointMotion.slideLimits.maximumValue/100.0
+                joint_limit_min = joint.jointMotion.slideLimits.minimumValue/100.0
+            else:
+                joint_vector = joint.jointMotion.rotationAxisVector.asArray() 
+                joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
+                joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
                 
-                # Check that both bodies are valid (e.g. there is no missing reference)
-                if not self._is_joint_valid(joint):
-                    # TODO: Handle in a better way (like warning message)
-                    continue
+                if abs(joint_limit_max - joint_limit_min) == 0:
+                    joint_limit_min = -3.14159
+                    joint_limit_max = 3.14159
 
-                geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
-                geom_one_primary = joint.geometryOrOriginOne.primaryAxisVector.asArray()
-                geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
-                geom_one_third = joint.geometryOrOriginOne.thirdAxisVector.asArray()
+                # joint_angle = joint.angle.value 
 
-                # Check if this is already top level
-                # Check if the parent_list only contains one entity
-                parent_list = self.component_map[occ_one.entityToken].get_all_parents()
-                if len(parent_list) == 1:
-                    pass
-                # If it is not, get the mapping and trace it back up
-                else: 
-                    # the expectation is there is at least two items, the last is the full body
-                    # the second to last should be the next top-most component
-                    # reset occurrence one
-                    occ_one = self.component_map[parent_list[-2]].component
+                joint_dict['axis'] = joint_vector
+                joint_dict['upper_limit'] = joint_limit_max
+                joint_dict['lower_limit'] = joint_limit_min
 
-                parent_list = self.component_map[occ_two.entityToken].get_all_parents()
-                if len(parent_list) == 1:
-                    pass
-                else:
-                    # the expectation is there is at least two items, the last is the full body
-                    # the second to last should be the next top-most component
-                    # reset occurrence two
-                    occ_two = self.component_map[parent_list[-2]].component
+            # Reverses which is parent and child
+            if self.joint_order == ('p','c'):
+                joint_dict['parent'] = occ_one.name
+                joint_dict['child'] = occ_two.name
+            elif self.joint_order == ('c','p'):
+                joint_dict['child'] = occ_one.name
+                joint_dict['parent'] = occ_two.name
+            else:
+                raise ValueError(f'Order {self.joint_order} not supported')
 
-                geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
-                geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
-                geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
-                geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
-                
-                joint_type = joint.jointMotion.objectType # string 
-                
-                # Only Revolute joints have rotation axis 
-                if 'RigidJointMotion' in joint_type:
-                    pass
-                elif 'SliderJointMotion' in joint_type:
-                    joint_vector=joint.jointMotion.slideDirectionVector.asArray()
-                    joint_limit_max = joint.jointMotion.slideLimits.maximumValue/100.0
-                    joint_limit_min = joint.jointMotion.slideLimits.minimumValue/100.0
-                else:
-                    joint_vector = joint.jointMotion.rotationAxisVector.asArray() 
-                    joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
-                    joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
-                    
-                    if abs(joint_limit_max - joint_limit_min) == 0:
-                        joint_limit_min = -3.14159
-                        joint_limit_max = 3.14159
+            joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
+            self.joints_dict[joint.name] = joint_dict
 
-                    # joint_angle = joint.angle.value 
+    def __add_recursive_links(self, joints):
+        for k, joint in joints.items():
+            print(f"{k}, {joint}")
+            if isinstance(joint, dict):
+                result = self.__add_recursive_links(joint)
+            else:
+                name = joint['child']
 
-                    joint_dict['axis'] = joint_vector
-                    joint_dict['upper_limit'] = joint_limit_max
-                    joint_dict['lower_limit'] = joint_limit_min
+                center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
+                link = parts.Link(name = name, 
+                                xyz = (joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
+                                center_of_mass = center_of_mass,
+                                sub_folder = self.mesh_folder, 
+                                mass = self.inertial_dict[name]['mass'],
+                                inertia_tensor = self.inertial_dict[name]['inertia'],
+                                body_dict = self.body_dict_urdf,
+                                sub_mesh = self.sub_mesh)
 
-                # Reverses which is parent and child
-                if self.joint_order == ('p','c'):
-                    joint_dict['parent'] = occ_one.name
-                    joint_dict['child'] = occ_two.name
-                elif self.joint_order == ('c','p'):
-                    joint_dict['child'] = occ_one.name
-                    joint_dict['parent'] = occ_two.name
-                else:
-                    raise ValueError(f'Order {self.joint_order} not supported')
-
-                joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
-                component_joint_dict[joint.name] = joint_dict
-            self.joints_dict[component.name] = component_joint_dict
+                self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
+                self.links[link.name] = link
 
     def _build_links(self):
         ''' create links '''
-
-        mesh_folder = 'meshes/'    
+        # TODO: Use components for this to get the bodies, not joints
 
         #creates list of bodies that are visible
 
@@ -484,38 +501,8 @@ class Configurator:
                     
         # Make the actual urdf names accessible
         self.body_dict_urdf = body_dict_urdf
-
-        base_link = self.base_links.pop()
-        center_of_mass = self.inertial_dict[base_link]['center_of_mass']
-        link = parts.Link(name=base_link, 
-                        xyz=[0,0,0], 
-                        center_of_mass=center_of_mass, 
-                        sub_folder=mesh_folder,
-                        mass=self.inertial_dict[base_link]['mass'],
-                        inertia_tensor=self.inertial_dict[base_link]['inertia'],
-                        body_dict = body_dict_urdf,
-                        sub_mesh = self.sub_mesh)
-
-        self.links_xyz_dict[link.name] = link.xyz
-        self.links[link.name] = link
-
-        for k, joint in self.joints_dict.items():
-            name = joint['child']
-
-            center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
-            link = parts.Link(name=name, 
-                            xyz=(joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
-                            center_of_mass=center_of_mass,
-                            sub_folder=mesh_folder, 
-                            mass=self.inertial_dict[name]['mass'],
-                            inertia_tensor=self.inertial_dict[name]['inertia'],
-                            body_dict = body_dict_urdf,
-                            sub_mesh = self.sub_mesh)
-
-            self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
-
-            self.links[link.name] = link
-
+        
+        self.__add_recursive_links(self.joints_dict)
 
 
     def _build_joints(self):
