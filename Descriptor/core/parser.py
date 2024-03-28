@@ -221,9 +221,8 @@ class Configurator:
             top_level_body = [x for x in top_level_body if x.isLightBulbOn]
             
             # add to the body mapper
-            self.body_mapper[v.component.entityToken].extend(top_level_body)
-
-            top_body_name = [x.name for x in top_level_body]
+            if top_level_body != []:
+                self.body_mapper[v.component.entityToken].extend(top_level_body)
 
             while children:
                 cur = children.pop()
@@ -232,15 +231,7 @@ class Configurator:
                 sub_level_body = [x for x in sub_level_body if x.isLightBulbOn ]
                 
                 # add to this body mapper again 
-                self.body_mapper[v.component.entityToken].extend(sub_level_body)
-                
-                sub_body_name = [x.name for x in sub_level_body]
-
-        for oc in self.occ:       
-            # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
-            # body_cnt = oc.bRepBodies.count
-            # mapped_comp =self.component_map[oc.entityToken]
-            body_lst = self.component_map[oc.entityToken].get_flat_body()
+                self.body_mapper[cur.component.entityToken].extend(sub_level_body)
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links 
