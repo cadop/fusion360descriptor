@@ -449,28 +449,26 @@ class Configurator:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
+            print(f"Adding joint {joint.name} with parent {joint_dict['parent']} and child {joint_dict['child']}")
             self.joints_dict[joint.entityToken] = joint_dict
 
-    def __add_recursive_links(self, joints, mesh_folder):
-        for k, joint in joints.items():
-            if isinstance(joint, dict) and len(joint) == 1:
-                result = self.__add_recursive_links(joint)
+    def __add_recursive_links(self, inertia_occurrence, mesh_folder):
+        for k, inertia in inertia_occurrence.items():
+            if isinstance(inertia, dict) and len(inertia) == 1:
+                result = self.__add_recursive_links(inertia)
                 if isinstance(result, dict):
                     return result
             else:
-                token = joint['child_token']
-                inertia = self.inertial_dict[token]
-
-                center_of_mass = [ i-j for i, j in zip(inertia['center_of_mass'], joint['xyz'])]
-                link = parts.Link(name = inertia['name'], 
-                                xyz = (joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
+                center_of_mass = [ i-j for i, j in zip(inertia['center_of_mass'], self.joints_dict[k]['xyz'])]
+                link = parts.Link(name = inertia['name'],
+                                xyz = (inertia['xyz'][0], inertia['xyz'][1], inertia['xyz'][2]),
                                 center_of_mass = center_of_mass,
                                 sub_folder = mesh_folder, 
                                 mass = inertia['mass'],
                                 inertia_tensor = inertia['inertia'],
                                 body_dict = self.body_dict_urdf,
                                 sub_mesh = self.sub_mesh)
-                self.links_xyz_dict[token] = (link.xyz[0], link.xyz[1], link.xyz[2])   
+                self.links_xyz_dict[k] = (link.xyz[0], link.xyz[1], link.xyz[2])   
                 self.links[link.name] = link
 
     def _build_links(self):
@@ -488,7 +486,7 @@ class Configurator:
         # Make sure no repeated body names
         body_count = Counter()
         
-        for oc in self.occ:
+        for oc in self._iterate_through_occurrences():
             oc_name = utils.format_name(oc.name)
             # self.body_dict[oc_name] = []
             # body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
@@ -513,7 +511,7 @@ class Configurator:
         # Make the actual urdf names accessible
         self.body_dict_urdf = body_dict_urdf
         
-        self.__add_recursive_links(self.joints_dict, mesh_folder)
+        self.__add_recursive_links(self.inertial_dict, mesh_folder)
 
 
     def _build_joints(self):
