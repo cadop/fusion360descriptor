@@ -258,7 +258,6 @@ class Configurator:
 
         self._inertia()
         self._joints()
-        print(f"Built joints {self.joints_dict}")
         self._base()
         self._build_links()
         self._build_joints()
@@ -319,6 +318,7 @@ class Configurator:
                     fusion_component = mapped_comp.component.component
                     child_occurrence = fusion_component.parentDesign.findEntityByToken(child_token)[0]
                     yield child_occurrence
+            yield oc
 
     def _inertia(self):
         '''
@@ -361,6 +361,7 @@ class Configurator:
             # Rename if the joint already exists in our dictionary
             if self.joints_dict.get(joint.name) is not None:
                 joint.name += "_0"
+            joint_dict['name'] = joint.name
 
             joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
             joint_dict['type'] = joint_type
@@ -376,7 +377,6 @@ class Configurator:
             # Check that both bodies are valid (e.g. there is no missing reference)
             if not self._is_joint_valid(joint):
                 # TODO: Handle in a better way (like warning message)
-                print(f"Joint is not valid: {joint.name}")
                 return joint_dict
 
             geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
@@ -436,25 +436,25 @@ class Configurator:
 
             # Reverses which is parent and child
             if self.joint_order == ('p','c'):
-                joint_dict['parent'] = occ_one.name
-                joint_dict['child'] = occ_two.name
+                joint_dict['parent'] = occ_one.entityToken
+                joint_dict['child'] = occ_two.entityToken
             elif self.joint_order == ('c','p'):
-                joint_dict['child'] = occ_one.name
-                joint_dict['parent'] = occ_two.name
+                joint_dict['child'] = occ_one.entityToken
+                joint_dict['parent'] = occ_two.entityToken
             else:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
-            self.joints_dict[joint.name] = joint_dict
+            self.joints_dict[joint.entityToken] = joint_dict
 
     def __add_recursive_links(self, joints):
         for k, joint in joints.items():
-            print(f"{k}, {joint}")
-            if isinstance(joint, dict):
+            if isinstance(joint, dict) and len(joint) == 1:
                 result = self.__add_recursive_links(joint)
+                if isinstance(result, dict):
+                    return result
             else:
                 name = joint['child']
-
                 center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
                 link = parts.Link(name = name, 
                                 xyz = (joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
