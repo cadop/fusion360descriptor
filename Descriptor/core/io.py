@@ -38,7 +38,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
     except: pass
 
     # Export top-level occurrences
-    occ = root.occurrences.asList
+    occ = root.allOccurrences
     # hack for correct stl placement by turning off all visibility first
     visible_components = []
     for oc in occ:
@@ -53,6 +53,9 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         exporter = design.exportManager
 
         occName = utils.format_name(oc.name)
+        
+        if body_mapper[oc.entityToken] == []:
+            continue
         
         component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
 
