@@ -436,11 +436,15 @@ class Configurator:
 
             # Reverses which is parent and child
             if self.joint_order == ('p','c'):
-                joint_dict['parent'] = occ_one.entityToken
-                joint_dict['child'] = occ_two.entityToken
+                joint_dict['parent'] = occ_one.name
+                joint_dict['child'] = occ_two.name
+                joint_dict['parent_token'] = occ_one.entityToken
+                joint_dict['child_token'] = occ_two.entityToken
             elif self.joint_order == ('c','p'):
-                joint_dict['child'] = occ_one.entityToken
-                joint_dict['parent'] = occ_two.entityToken
+                joint_dict['child'] = occ_one.name
+                joint_dict['parent'] = occ_two.name
+                joint_dict['child_token'] = occ_one.entityToken
+                joint_dict['parent_token'] = occ_two.entityToken
             else:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
@@ -454,18 +458,19 @@ class Configurator:
                 if isinstance(result, dict):
                     return result
             else:
-                token = joint['child']
-                center_of_mass = [ i-j for i, j in zip(self.inertial_dict[token]['center_of_mass'], joint['xyz'])]
-                link = parts.Link(name = token, 
+                token = joint['child_token']
+                inertia = self.inertial_dict[token]
+
+                center_of_mass = [ i-j for i, j in zip(inertia['center_of_mass'], joint['xyz'])]
+                link = parts.Link(name = inertia['name'], 
                                 xyz = (joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
                                 center_of_mass = center_of_mass,
                                 sub_folder = mesh_folder, 
-                                mass = self.inertial_dict[token]['mass'],
-                                inertia_tensor = self.inertial_dict[token]['inertia'],
+                                mass = inertia['mass'],
+                                inertia_tensor = inertia['inertia'],
                                 body_dict = self.body_dict_urdf,
                                 sub_mesh = self.sub_mesh)
-
-                self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
+                self.links_xyz_dict[token] = (link.xyz[0], link.xyz[1], link.xyz[2])   
                 self.links[link.name] = link
 
     def _build_links(self):
@@ -516,12 +521,10 @@ class Configurator:
         the XML formats to be exported later '''
 
         for k, j in self.joints_dict.items():
-
             xyz = []
-            for p,c in zip(self.links_xyz_dict[j['parent']], self.links_xyz_dict[j['child']]):
+            for p,c in zip(self.links_xyz_dict[j['parent_token']], self.links_xyz_dict[j['child_token']]):
                 xyz.append(p-c)
-            
-            joint = parts.Joint(name=k , joint_type=j['type'], 
+            joint = parts.Joint(name=j['name'] , joint_type=j['type'], 
                                 xyz=xyz, axis=j['axis'], 
                                 parent=j['parent'], child=j['child'], 
                                 upper_limit=j['upper_limit'], lower_limit=j['lower_limit'])
