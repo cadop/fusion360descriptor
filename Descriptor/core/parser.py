@@ -353,8 +353,8 @@ class Configurator:
     def _joints(self):
         ''' Iterates over joints list and defines properties for each joint
         (along with its relationship)
-        
-        '''        
+        '''
+
         for joint in self.root.allJoints:
             joint_dict = {}
 
@@ -383,27 +383,6 @@ class Configurator:
             geom_one_primary = joint.geometryOrOriginOne.primaryAxisVector.asArray()
             geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
             geom_one_third = joint.geometryOrOriginOne.thirdAxisVector.asArray()
-
-            # Check if this is already top level
-            # Check if the parent_list only contains one entity
-            parent_list = self.component_map[occ_one.entityToken].get_all_parents()
-            if len(parent_list) == 1:
-                pass
-            # If it is not, get the mapping and trace it back up
-            else: 
-                # the expectation is there is at least two items, the last is the full body
-                # the second to last should be the next top-most component
-                # reset occurrence one
-                occ_one = self.component_map[parent_list[-2]].component
-
-            parent_list = self.component_map[occ_two.entityToken].get_all_parents()
-            if len(parent_list) == 1:
-                pass
-            else:
-                # the expectation is there is at least two items, the last is the full body
-                # the second to last should be the next top-most component
-                # reset occurrence two
-                occ_two = self.component_map[parent_list[-2]].component
 
             geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
             geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
@@ -449,7 +428,6 @@ class Configurator:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
-            print(f"Adding joint {joint.name} with parent {joint_dict['parent']} and child {joint_dict['child']}")
             self.joints_dict[joint.entityToken] = joint_dict
 
     def __add_recursive_links(self, inertia_occurrence, mesh_folder):
