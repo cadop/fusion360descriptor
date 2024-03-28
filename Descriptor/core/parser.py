@@ -447,21 +447,21 @@ class Configurator:
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
             self.joints_dict[joint.entityToken] = joint_dict
 
-    def __add_recursive_links(self, joints):
+    def __add_recursive_links(self, joints, mesh_folder):
         for k, joint in joints.items():
             if isinstance(joint, dict) and len(joint) == 1:
                 result = self.__add_recursive_links(joint)
                 if isinstance(result, dict):
                     return result
             else:
-                name = joint['child']
-                center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
-                link = parts.Link(name = name, 
+                token = joint['child']
+                center_of_mass = [ i-j for i, j in zip(self.inertial_dict[token]['center_of_mass'], joint['xyz'])]
+                link = parts.Link(name = token, 
                                 xyz = (joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
                                 center_of_mass = center_of_mass,
-                                sub_folder = self.mesh_folder, 
-                                mass = self.inertial_dict[name]['mass'],
-                                inertia_tensor = self.inertial_dict[name]['inertia'],
+                                sub_folder = mesh_folder, 
+                                mass = self.inertial_dict[token]['mass'],
+                                inertia_tensor = self.inertial_dict[token]['inertia'],
                                 body_dict = self.body_dict_urdf,
                                 sub_mesh = self.sub_mesh)
 
@@ -470,7 +470,8 @@ class Configurator:
 
     def _build_links(self):
         ''' create links '''
-        # TODO: Use components for this to get the bodies, not joints
+
+        mesh_folder = 'meshes/'
 
         #creates list of bodies that are visible
 
@@ -507,7 +508,7 @@ class Configurator:
         # Make the actual urdf names accessible
         self.body_dict_urdf = body_dict_urdf
         
-        self.__add_recursive_links(self.joints_dict)
+        self.__add_recursive_links(self.joints_dict, mesh_folder)
 
 
     def _build_joints(self):
