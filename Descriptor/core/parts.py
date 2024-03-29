@@ -207,13 +207,21 @@ class Link:
     
         
         # collision
-        for collision_body in self.body_dict[self.name]:
+        if self.sub_mesh:
+            for collision_body in self.body_dict[self.name]:
+                collision = SubElement(link, 'collision')
+                origin_c = SubElement(collision, 'origin')
+                origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+                geometry_c = SubElement(collision, 'geometry')
+                mesh_c = SubElement(geometry_c, 'mesh')
+                mesh_c.attrib = {'filename':f'package://{self.sub_folder}{collision_body}.stl','scale':'0.001 0.001 0.001'}
+        else:
             collision = SubElement(link, 'collision')
             origin_c = SubElement(collision, 'origin')
             origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
             geometry_c = SubElement(collision, 'geometry')
             mesh_c = SubElement(geometry_c, 'mesh')
-            mesh_c.attrib = {'filename':f'package://{self.sub_folder}{collision_body}.stl','scale':'0.001 0.001 0.001'}
+            mesh_c.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':'0.001 0.001 0.001'}
 
         rough_string = ElementTree.tostring(link, 'utf-8')
         reparsed = minidom.parseString(rough_string)
