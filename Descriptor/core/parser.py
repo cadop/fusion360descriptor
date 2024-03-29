@@ -276,7 +276,6 @@ class Configurator:
         mass = prop.mass  # kg
 
         # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
-        # body_cnt = oc.bRepBodies.count
         body_lst = self.component_map[oc.entityToken].get_flat_body()
 
         if len(body_lst) > 0:
@@ -300,16 +299,8 @@ class Configurator:
         return occs_dict
 
     def _iterate_through_occurrences(self):
-        # This is the root level occurrences
-        for oc in self.occ:
-            mapped_comp = self.component_map[oc.entityToken]
-            children = mapped_comp.get_all_children()
-            if len(children) > 0:
-                for child_token in children:
-                    fusion_component = mapped_comp.component.component
-                    child_occurrence = fusion_component.parentDesign.findEntityByToken(child_token)[0]
-                    yield child_occurrence
-            yield oc
+        for key, token in self.component_map.items():
+            yield token.component
 
     def _inertia(self):
         '''
@@ -350,8 +341,7 @@ class Configurator:
             joint_dict = {}
 
             # Rename if the joint already exists in our dictionary
-            if self.joints_dict.get(joint.name) is not None:
-                joint.name += "_0"
+            joint.name = utils.rename_if_duplicate(joint.name, self.joints_dict)
             joint_dict['token'] = joint.entityToken
 
             joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
@@ -399,7 +389,6 @@ class Configurator:
                     joint_limit_max = 3.14159
 
                 # joint_angle = joint.angle.value 
-
                 joint_dict['axis'] = joint_vector
                 joint_dict['upper_limit'] = joint_limit_max
                 joint_dict['lower_limit'] = joint_limit_min
@@ -421,6 +410,33 @@ class Configurator:
             joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
             self.joints_dict[joint.name] = joint_dict
 
+        # Add RigidGroups as fixed joints
+        for group in self.root.allRigidGroups:
+            original_group_name = group.name
+            for i, occ in enumerate(group.occurrences):
+                # Assumes that the first occurrence will be the parent
+                if i == 0:
+                    parent_occ = occ
+                    continue
+                joint_dict = {}
+                group.name = utils.rename_if_duplicate(original_group_name, self.joints_dict)
+                joint_dict['token'] = occ.entityToken
+                joint_dict['type'] = 'fixed'
+
+                # Unneeded for fixed joints
+                joint_dict['axis'] = [0, 0, 0]
+                joint_dict['upper_limit'] = 0
+                joint_dict['lower_limit'] = 0
+
+                joint_dict['parent'] = parent_occ.name
+                joint_dict['child'] = occ.name
+                joint_dict['parent_token'] = parent_occ.entityToken
+                joint_dict['child_token'] = occ.entityToken
+
+                joint_dict['xyz'] = [0,0,0] # Not sure if this will always work
+                self.joints_dict[group.name] = joint_dict
+
+
     def __add_recursive_links(self, inertia_occurrence, mesh_folder):
         for k, inertia in inertia_occurrence.items():
             if isinstance(inertia, dict) and len(inertia) == 1:
@@ -435,6 +451,7 @@ class Configurator:
                     else:
                         # Defaulting to just the center of mass alone
                         center_of_mass = inertia['center_of_mass']
+                        xyz = [0,0,0]
                 link = parts.Link(name = inertia['name'],
                                 xyz = (xyz[0], xyz[1], xyz[2]),
                                 center_of_mass = center_of_mass,
