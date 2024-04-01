@@ -352,11 +352,6 @@ class Configurator:
             joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
             joint_dict['type'] = joint_type
 
-            # switch by the type of the joint
-            joint_dict['axis'] = [0, 0, 0]
-            joint_dict['upper_limit'] = 0.0
-            joint_dict['lower_limit'] = 0.0
-
             occ_one = joint.occurrenceOne
             occ_two = joint.occurrenceTwo
             
@@ -378,13 +373,7 @@ class Configurator:
             joint_type = joint.jointMotion.objectType # string 
             
             # Only Revolute joints have rotation axis 
-            if 'RigidJointMotion' in joint_type:
-                pass
-            elif 'SliderJointMotion' in joint_type:
-                joint_vector=joint.jointMotion.slideDirectionVector.asArray()
-                joint_limit_max = joint.jointMotion.slideLimits.maximumValue/100.0
-                joint_limit_min = joint.jointMotion.slideLimits.minimumValue/100.0
-            else:
+            if 'RevoluteJointMotion' in joint_type:
                 joint_vector = joint.jointMotion.rotationAxisVector.asArray() 
                 joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
                 joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
@@ -392,11 +381,19 @@ class Configurator:
                 if abs(joint_limit_max - joint_limit_min) == 0:
                     joint_limit_min = -3.14159
                     joint_limit_max = 3.14159
+            elif 'SliderJointMotion' in joint_type:
+                joint_vector=joint.jointMotion.slideDirectionVector.asArray()
+                joint_limit_max = joint.jointMotion.slideLimits.maximumValue/100.0
+                joint_limit_min = joint.jointMotion.slideLimits.minimumValue/100.0
+            else:
+                # Keep default limits for 'RigidJointMotion' or others
+                joint_vector = [0, 0, 0]
+                joint_limit_max = 0.0
+                joint_limit_min = 0.0
 
-                # joint_angle = joint.angle.value 
-                joint_dict['axis'] = joint_vector
-                joint_dict['upper_limit'] = joint_limit_max
-                joint_dict['lower_limit'] = joint_limit_min
+            joint_dict['axis'] = joint_vector
+            joint_dict['upper_limit'] = joint_limit_max
+            joint_dict['lower_limit'] = joint_limit_min
 
             # Reverses which is parent and child
             if self.joint_order == ('p','c'):
