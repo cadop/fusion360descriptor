@@ -144,6 +144,11 @@ class Hierarchy:
         
         for i in range(0, occurrences.count):
             occ = occurrences.item(i)
+
+            # Break links to avoid unwanted changes
+            if occ.isReferencedComponent:
+                occ.breakLink()
+
             cur = Hierarchy(occ)
 
             if parent is None: 
@@ -271,7 +276,7 @@ class Configurator:
 
         prop = oc.getPhysicalProperties(self.inertia_accuracy)
         
-        occs_dict['name'] = oc.name
+        occs_dict['name'] = utils.rename_if_duplicate(oc.name, self.inertial_dict)
 
         mass = prop.mass  # kg
 
