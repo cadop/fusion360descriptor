@@ -174,7 +174,7 @@ class Configurator:
             root component of design document
         '''        
         # Export top-level occurrences
-        self.root = root
+        self.root: adsk.fusion.Component = root
         self.occ = root.occurrences.asList
         self.inertial_dict = {}
         self.inertia_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
@@ -189,7 +189,7 @@ class Configurator:
         self.joint_order = ('p','c') # Order of joints defined by components
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
         self.inertia_scale = 10000.0 # units to convert mass
-        self.base_links= set()
+        self.base_link: adsk.fusion.Occurrence = None
         self.component_map: dict[str, Hierarchy] = dict() # Entity tokens for each component
 
         self.root_node = None
@@ -252,9 +252,9 @@ class Configurator:
     def parse(self):
         ''' parse the scene by building up inertia and joints'''
 
+        self._base()
         self._inertia()
         self._joints()
-        self._base()
         self._build_links()
         self._build_joints()
 
@@ -264,19 +264,24 @@ class Configurator:
         return self.root.name.split()[0]
 
     def _base(self):
-        ''' Get the base link(s) '''
-        
-        for oc in self.occ:
+        ''' Get the base link '''
+        # TODO: Handle if there is no base_link
+        for oc in self._iterate_through_occurrences():
+            # Get only the first grounded link
             if oc.isGrounded:
-                name = oc.name
-                self.base_links.add(name)
+                self.base_link = oc
+                break
     
     def _get_inertia(self, oc: adsk.fusion.Occurrence):
         occs_dict = {}
 
         prop = oc.getPhysicalProperties(self.inertia_accuracy)
         
-        occs_dict['name'] = utils.rename_if_duplicate(oc.name, self.inertial_dict)
+        if oc.entityToken == self.base_link.entityToken:
+            occ_name = "base_link"
+        else:
+            occ_name = oc.name
+        occs_dict['name'] = utils.rename_if_duplicate(occ_name, self.inertial_dict)
 
         mass = prop.mass  # kg
 
@@ -396,14 +401,23 @@ class Configurator:
             joint_dict['lower_limit'] = joint_limit_min
 
             # Reverses which is parent and child
+            if occ_one.entityToken == self.base_link.entityToken:
+                occ_one_name = "base_link"
+                occ_two_name = occ_two.name
+            elif occ_two.entityToken == self.base_link.entityToken:
+                occ_one_name = occ_one.name
+                occ_two_name = "base_link"
+            else:
+                occ_one_name = occ_one.name
+                occ_two_name = occ_two.name
             if self.joint_order == ('p','c'):
-                joint_dict['parent'] = occ_one.name
-                joint_dict['child'] = occ_two.name
+                joint_dict['parent'] = occ_one_name
+                joint_dict['child'] = occ_two_name
                 joint_dict['parent_token'] = occ_one.entityToken
                 joint_dict['child_token'] = occ_two.entityToken
             elif self.joint_order == ('c','p'):
-                joint_dict['child'] = occ_one.name
-                joint_dict['parent'] = occ_two.name
+                joint_dict['child'] = occ_one_name
+                joint_dict['parent'] = occ_two_name
                 joint_dict['child_token'] = occ_one.entityToken
                 joint_dict['parent_token'] = occ_two.entityToken
             else:
@@ -454,6 +468,7 @@ class Configurator:
                         center_of_mass = [ i-j for i, j in zip(inertia['center_of_mass'], joint['xyz'])]
                         xyz = joint['xyz']
                         break
+
                 link = parts.Link(name = inertia['name'],
                                 xyz = (xyz[0], xyz[1], xyz[2]),
                                 center_of_mass = center_of_mass,
@@ -462,7 +477,7 @@ class Configurator:
                                 inertia_tensor = inertia['inertia'],
                                 body_dict = self.body_dict_urdf,
                                 sub_mesh = self.sub_mesh)
-                self.links_xyz_dict[k] = (link.xyz[0], link.xyz[1], link.xyz[2])   
+                self.links_xyz_dict[k] = (link.xyz[0], link.xyz[1], link.xyz[2])
                 self.links[link.name] = link
 
     def _build_links(self):
@@ -481,7 +496,11 @@ class Configurator:
         body_count = Counter()
         
         for oc in self._iterate_through_occurrences():
-            oc_name = utils.format_name(oc.name)
+            if oc.entityToken == self.base_link.entityToken:
+                occ_name = "base_link"
+            else:
+                occ_name = oc.name
+            oc_name = utils.format_name(occ_name)
             # self.body_dict[oc_name] = []
             # body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
 
