@@ -273,8 +273,8 @@ class Configurator:
                 break
         if self.base_link is None:
             # TODO: Improve handling if there is no grounded occurrence
-            print("ERROR: Failed to find a grounded component for base_link")
-            exit("Failed to find a grounded component for base_link")
+            print("ERROR: Failed to find a grounded occurrence for base_link")
+            exit("Failed to find a grounded occurrence for base_link")
     
     def _get_inertia(self, oc: adsk.fusion.Occurrence):
         occs_dict = {}
