@@ -167,62 +167,65 @@ class Link:
         """
         Generate the link_xml and hold it by self.link_xml
         """
-        
-        link = Element('link')
         self.name = utils.format_name(self.name)
+
+        # Only generate a link if there is an associated body
+        if self.body_dict.get(self.name) is None:
+            return ""
+
+        link = Element('link')
         link.attrib = {'name':self.name}
+
+        #inertial
+        inertial = SubElement(link, 'inertial')
+        origin_i = SubElement(inertial, 'origin')
+        origin_i.attrib = {'xyz':' '.join([str(_) for _ in self.center_of_mass]), 'rpy':'0 0 0'}       
+        mass = SubElement(inertial, 'mass')
+        mass.attrib = {'value':str(self.mass)}
+        inertia = SubElement(inertial, 'inertia')
+        inertia.attrib = {'ixx':str(self.inertia_tensor[0]), 'iyy':str(self.inertia_tensor[1]),
+                        'izz':str(self.inertia_tensor[2]), 'ixy':str(self.inertia_tensor[3]),
+                        'iyz':str(self.inertia_tensor[4]), 'ixz':str(self.inertia_tensor[5])}        
         
-        if self.body_dict.get(self.name) is not None:
-            #inertial
-            inertial = SubElement(link, 'inertial')
-            origin_i = SubElement(inertial, 'origin')
-            origin_i.attrib = {'xyz':' '.join([str(_) for _ in self.center_of_mass]), 'rpy':'0 0 0'}       
-            mass = SubElement(inertial, 'mass')
-            mass.attrib = {'value':str(self.mass)}
-            inertia = SubElement(inertial, 'inertia')
-            inertia.attrib = {'ixx':str(self.inertia_tensor[0]), 'iyy':str(self.inertia_tensor[1]),
-                            'izz':str(self.inertia_tensor[2]), 'ixy':str(self.inertia_tensor[3]),
-                            'iyz':str(self.inertia_tensor[4]), 'ixz':str(self.inertia_tensor[5])}        
-            
-            # visual
-            if self.sub_mesh: # if we want to export each as a separate mesh
-                for body_name in self.body_dict[self.name]:
-                    # body_name = utils.format_name(body_name)
-                    visual = SubElement(link, 'visual')
-                    origin_v = SubElement(visual, 'origin')
-                    origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
-                    geometry_v = SubElement(visual, 'geometry')
-                    mesh_v = SubElement(geometry_v, 'mesh')
-                    mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
-                    material = SubElement(visual, 'material')
-                    material.attrib = {'name':'silver'}
-            else:
+        # visual
+        if self.sub_mesh: # if we want to export each as a separate mesh
+            for body_name in self.body_dict[self.name]:
+                # body_name = utils.format_name(body_name)
                 visual = SubElement(link, 'visual')
                 origin_v = SubElement(visual, 'origin')
                 origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
                 geometry_v = SubElement(visual, 'geometry')
                 mesh_v = SubElement(geometry_v, 'mesh')
-                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
+                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
                 material = SubElement(visual, 'material')
                 material.attrib = {'name':'silver'}
+        else:
+            visual = SubElement(link, 'visual')
+            origin_v = SubElement(visual, 'origin')
+            origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+            geometry_v = SubElement(visual, 'geometry')
+            mesh_v = SubElement(geometry_v, 'mesh')
+            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
+            material = SubElement(visual, 'material')
+            material.attrib = {'name':'silver'}
+    
         
-            
-            # collision
-            if self.sub_mesh:
-                for collision_body in self.body_dict[self.name]:
-                    collision = SubElement(link, 'collision')
-                    origin_c = SubElement(collision, 'origin')
-                    origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
-                    geometry_c = SubElement(collision, 'geometry')
-                    mesh_c = SubElement(geometry_c, 'mesh')
-                    mesh_c.attrib = {'filename':f'package://{self.sub_folder}{collision_body}.stl','scale':'0.001 0.001 0.001'}
-            else:
+        # collision
+        if self.sub_mesh:
+            for collision_body in self.body_dict[self.name]:
                 collision = SubElement(link, 'collision')
                 origin_c = SubElement(collision, 'origin')
                 origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
                 geometry_c = SubElement(collision, 'geometry')
                 mesh_c = SubElement(geometry_c, 'mesh')
-                mesh_c.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':'0.001 0.001 0.001'}
+                mesh_c.attrib = {'filename':f'package://{self.sub_folder}{collision_body}.stl','scale':'0.001 0.001 0.001'}
+        else:
+            collision = SubElement(link, 'collision')
+            origin_c = SubElement(collision, 'origin')
+            origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+            geometry_c = SubElement(collision, 'geometry')
+            mesh_c = SubElement(geometry_c, 'mesh')
+            mesh_c.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':'0.001 0.001 0.001'}
 
         rough_string = ElementTree.tostring(link, 'utf-8')
         reparsed = minidom.parseString(rough_string)
