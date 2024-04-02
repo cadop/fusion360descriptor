@@ -52,7 +52,10 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         # Create a new exporter in case its a memory thing
         exporter = design.exportManager
 
-        occName = utils.format_name(oc.name)
+        if oc.isGrounded:
+            occName = utils.format_name("base_link")
+        else:
+            occName = utils.format_name(oc.name)
         
         if body_mapper[oc.entityToken] == []:
             continue
