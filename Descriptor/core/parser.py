@@ -421,7 +421,7 @@ class Configurator:
                     parent_occ = occ
                     continue
                 joint_dict = {}
-                group.name = utils.rename_if_duplicate(original_group_name, self.joints_dict)
+                rigid_group_occ_name = utils.rename_if_duplicate(original_group_name, self.joints_dict)
                 joint_dict['token'] = occ.entityToken
                 joint_dict['type'] = 'fixed'
 
@@ -436,7 +436,7 @@ class Configurator:
                 joint_dict['child_token'] = occ.entityToken
 
                 joint_dict['xyz'] = [0,0,0] # Not sure if this will always work
-                self.joints_dict[group.name] = joint_dict
+                self.joints_dict[rigid_group_occ_name] = joint_dict
 
 
     def __add_recursive_links(self, inertia_occurrence, mesh_folder):
@@ -446,14 +446,14 @@ class Configurator:
                 if isinstance(result, dict):
                     return result
             else:
+                # Defaulting to just the center of mass alone
+                center_of_mass = inertia['center_of_mass']
+                xyz = [0,0,0]
                 for jk, joint in self.joints_dict.items():
                     if joint['child_token'] == k or joint['parent_token'] == k:
                         center_of_mass = [ i-j for i, j in zip(inertia['center_of_mass'], joint['xyz'])]
                         xyz = joint['xyz']
-                    else:
-                        # Defaulting to just the center of mass alone
-                        center_of_mass = inertia['center_of_mass']
-                        xyz = [0,0,0]
+                        break
                 link = parts.Link(name = inertia['name'],
                                 xyz = (xyz[0], xyz[1], xyz[2]),
                                 center_of_mass = center_of_mass,
