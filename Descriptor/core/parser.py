@@ -444,8 +444,17 @@ class Configurator:
                 joint_dict['upper_limit'] = 0
                 joint_dict['lower_limit'] = 0
 
-                joint_dict['parent'] = parent_occ.name
-                joint_dict['child'] = occ.name
+                if parent_occ.entityToken == self.base_link.entityToken:
+                    parent_occ_name = "base_link"
+                    occ_name = occ_two.name
+                elif occ.entityToken == self.base_link.entityToken:
+                    parent_occ_name = occ_one.name
+                    occ_name = "base_link"
+                else:
+                    parent_occ_name = parent_occ.name
+                    occ_name = occ.name
+                joint_dict['parent'] = parent_occ_name
+                joint_dict['child'] = occ_name
                 joint_dict['parent_token'] = parent_occ.entityToken
                 joint_dict['child_token'] = occ.entityToken
 
