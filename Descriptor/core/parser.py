@@ -450,9 +450,9 @@ class Configurator:
 
                 if parent_occ.entityToken == self.base_link.entityToken:
                     parent_occ_name = "base_link"
-                    occ_name = occ_two.name
+                    occ_name = occ.name
                 elif occ.entityToken == self.base_link.entityToken:
-                    parent_occ_name = occ_one.name
+                    parent_occ_name = parent_occ.name
                     occ_name = "base_link"
                 else:
                     parent_occ_name = parent_occ.name
