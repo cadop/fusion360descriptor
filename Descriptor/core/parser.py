@@ -183,8 +183,8 @@ class Configurator:
         self.links = {} # Link class
         self.joints = {} # Joint class for writing to file
         self.joint_order = ('p','c') # Order of joints defined by components
-        self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
-        self.inertia_scale = 10000.0 # units to convert mass
+        self.scale = .01 # Units to convert to meters (or whatever simulator takes)
+        self.inertia_scale = 1.0 # units to convert mass starts as kg*cm^2.
         self.base_links= set()
         # self.component_map = set()
 
@@ -427,7 +427,8 @@ class Configurator:
             else:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
-            joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
+            joint_dict['xyz'] = [ x for x in geom_one_origin]
+            # joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
 
             self.joints_dict[joint.name] = joint_dict
 
@@ -502,7 +503,6 @@ class Configurator:
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
 
             self.links[link.name] = link
-
 
 
     def _build_joints(self):

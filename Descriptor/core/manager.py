@@ -5,6 +5,7 @@ import adsk
 
 from . import parser
 from . import io
+from . import parts
 
 
 class Manager:
@@ -49,7 +50,16 @@ class Manager:
         elif target_units=='cm': tar_u = 0.01
         elif target_units=='m': tar_u = 1.0
         
-        self.scale = tar_u / doc_u       
+        self.scale =   tar_u  # actually document is always CM
+        # self.scale = tar_u / doc_u    
+        parts.Link.mesh_scale = self.scale
+
+        if target_units=='mm': inertia_scale = 1000.0 # cm to mm
+        elif target_units=='cm': inertia_scale = 1.0
+        elif target_units=='m': inertia_scale = 0.0001 # cm to m
+
+        self.inertia_scale = inertia_scale
+
 
         if inertia_precision == 'Low':
             self.inert_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
@@ -105,6 +115,7 @@ class Manager:
         
         config = parser.Configurator(Manager.root)
         config.inertia_accuracy = self.inert_accuracy
+        config.inertia_scale = self.inertia_scale
         config.joint_order = self.joint_order
         config.scale = self.scale
         ## Return array of tuples (parent, child)
@@ -120,6 +131,7 @@ class Manager:
         config = parser.Configurator(Manager.root)
         config.inertia_accuracy = self.inert_accuracy
         config.scale = self.scale
+        config.inertia_scale = self.inertia_scale
         config.joint_order = self.joint_order
         config.sub_mesh = self.sub_mesh
         config.get_scene_configuration()

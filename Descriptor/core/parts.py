@@ -59,7 +59,7 @@ class Joint:
         joint.attrib = {'name':self.name.replace(':','_').replace(' ',''), 'type':self.type}
 
         origin = SubElement(joint, 'origin')
-        origin.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+        origin.attrib = {'xyz':' '.join([str(_ * 0.01) for _ in self.xyz]), 'rpy':'0 0 0'}
 
         parent = SubElement(joint, 'parent')
         self.parent = self.parent.replace(':','_').replace(' ','')
@@ -122,7 +122,8 @@ class Joint:
 
 class Link:
 
-    mesh_scale = '0.001'
+    mesh_scale = 1.0
+
 
     def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh):
         """
@@ -174,7 +175,7 @@ class Link:
         #inertial
         inertial = SubElement(link, 'inertial')
         origin_i = SubElement(inertial, 'origin')
-        origin_i.attrib = {'xyz':' '.join([str(_) for _ in self.center_of_mass]), 'rpy':'0 0 0'}       
+        origin_i.attrib = {'xyz':' '.join([str(_*0.01) for _ in self.center_of_mass]), 'rpy':'0 0 0'}       
         mass = SubElement(inertial, 'mass')
         mass.attrib = {'value':str(self.mass)}
         inertia = SubElement(inertial, 'inertia')
@@ -188,7 +189,7 @@ class Link:
                 # body_name = body_name.replace(':','_').replace(' ','')
                 visual = SubElement(link, 'visual')
                 origin_v = SubElement(visual, 'origin')
-                origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+                origin_v.attrib = {'xyz':' '.join([str(_*0.01) for _ in self.xyz]), 'rpy':'0 0 0'}
                 geometry_v = SubElement(visual, 'geometry')
                 mesh_v = SubElement(geometry_v, 'mesh')
                 mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
@@ -197,7 +198,7 @@ class Link:
         else:
             visual = SubElement(link, 'visual')
             origin_v = SubElement(visual, 'origin')
-            origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+            origin_v.attrib = {'xyz':' '.join([str(_*0.01) for _ in self.xyz]), 'rpy':'0 0 0'}
             geometry_v = SubElement(visual, 'geometry')
             mesh_v = SubElement(geometry_v, 'mesh')
             mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
@@ -208,10 +209,10 @@ class Link:
         # collision
         collision = SubElement(link, 'collision')
         origin_c = SubElement(collision, 'origin')
-        origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+        origin_c.attrib = {'xyz':' '.join([str(_*0.01) for _ in self.xyz]), 'rpy':'0 0 0'}
         geometry_c = SubElement(collision, 'geometry')
         mesh_c = SubElement(geometry_c, 'mesh')
-        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':'0.001 0.001 0.001'}
+        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
 
         rough_string = ElementTree.tostring(link, 'utf-8')
         reparsed = minidom.parseString(rough_string)
