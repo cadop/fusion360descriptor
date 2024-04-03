@@ -111,7 +111,8 @@ def component_exporter(exportMgr, newRoot, body_lst, filename, accuracy):
     stlOptions.isBinaryFormat = True
     stlOptions.meshRefinement = accuracy
     stlOptions.normalDeviation = 41
-    stlOptions.surfaceDeviation = 0.49
+    stlOptions.surfaceDeviation = 0.42
+    stlOptions.maximumEdgeLength  = 420
     
     
     exportMgr.execute(stlOptions)
@@ -133,7 +134,12 @@ def body_exporter(exportMgr, newRoot, body, filename, accuracy):
     stl_options = exportMgr.createSTLExportOptions(newBody, filename)
     stl_options.sendToPrintUtility = False
     stl_options.isBinaryFormat = True
+
     stl_options.meshRefinement = accuracy
+    stl_options.normalDeviation = 41
+    stl_options.surfaceDeviation = 0.42
+    stl_options.maximumEdgeLength  = 420
+
     exportMgr.execute(stl_options)                
 
     bf.deleteMe()
