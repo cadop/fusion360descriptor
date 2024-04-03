@@ -465,6 +465,30 @@ class Configurator:
                 joint_dict['xyz'] = [0,0,0] # Not sure if this will always work
                 self.joints_dict[rigid_group_occ_name] = joint_dict
 
+        occurrences = defaultdict(list)
+        for joint_name, joint_dict in self.joints_dict.items():
+            occurrences[joint_dict["parent"]].append(joint_name)
+            occurrences[joint_dict["child"]].append(joint_name)
+        grounded_occ = {"base_link"}
+        boundary = grounded_occ
+        while boundary:
+            new_boundary = set()
+            for occ_name in boundary:
+                for joint_name in occurrences[occ_name]:
+                    joint = self.joints_dict[joint_name]
+                    if joint["parent"] == occ_name:
+                        if joint["child"] not in grounded_occ:
+                            new_boundary.add(joint["child"])
+                    else:
+                        assert joint["child"] == occ_name
+                        if joint["parent"] not in grounded_occ:
+                            # Parent is further away from base_link than the child, swap them
+                            joint["child"] = joint["parent"]
+                            joint["parent"] = occ_name
+                            joint["xyz"] = [-x for x in joint["xyz"]]
+                            new_boundary.add(joint["child"])
+            grounded_occ.update(new_boundary)
+            boundary = new_boundary
 
     def __add_recursive_links(self, inertia_occurrence, mesh_folder):
         for k, inertia in inertia_occurrence.items():
