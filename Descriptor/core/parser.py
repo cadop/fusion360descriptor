@@ -483,8 +483,11 @@ class Configurator:
                         assert joint["child"] == occ_name
                         if joint["parent"] not in grounded_occ:
                             # Parent is further away from base_link than the child, swap them
+                            original_child_token = joint["child_token"]
                             joint["child"] = joint["parent"]
+                            joint["child_token"] = joint["parent_token"]
                             joint["parent"] = occ_name
+                            joint["parent_token"] = original_child_token
                             joint["xyz"] = [-x for x in joint["xyz"]]
                             new_boundary.add(joint["child"])
             grounded_occ.update(new_boundary)
