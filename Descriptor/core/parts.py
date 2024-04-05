@@ -125,7 +125,7 @@ class Link:
 
     mesh_scale = '0.001'
 
-    def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh):
+    def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh, material_dict):
         """
         Parameters
         ----------
@@ -160,6 +160,7 @@ class Link:
         self.inertia_tensor = inertia_tensor
         self.body_dict = body_dict
         self.sub_mesh = sub_mesh # if we want to export each body as a separate mesh
+        self.material_dict = material_dict
 
         
     @property
@@ -207,7 +208,7 @@ class Link:
             mesh_v = SubElement(geometry_v, 'mesh')
             mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
             material = SubElement(visual, 'material')
-            material.attrib = {'name':'silver'}
+            material.attrib = {'name': self.material_dict[self.name]['material']}
     
         
         # collision

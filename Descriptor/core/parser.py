@@ -519,7 +519,8 @@ class Configurator:
                                 mass = inertia['mass'],
                                 inertia_tensor = inertia['inertia'],
                                 body_dict = self.body_dict_urdf,
-                                sub_mesh = self.sub_mesh)
+                                sub_mesh = self.sub_mesh,
+                                material_dict = self.material_dict)
                 self.links_xyz_dict[k] = (link.xyz[0], link.xyz[1], link.xyz[2])
                 self.links[link.name] = link
 
