@@ -185,7 +185,7 @@ class Writer:
         save_dir = os.path.join(save_dir,'urdf')
         try: os.mkdir(save_dir)
         except: pass
-        file_name = os.path.join(save_dir, f'{config.name}.urdf')  # the name of urdf file
+        file_name = os.path.join(save_dir, f'{config.name}.xacro')  # the name of urdf file
         material_file_name = os.path.join(save_dir, f'materials.xacro')
 
         with open(file_name, mode='w', encoding="utf-8") as f:
