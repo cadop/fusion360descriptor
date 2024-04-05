@@ -354,6 +354,11 @@ class Configurator:
         for joint in self.root.allJoints:
             joint_dict = {}
 
+            # Check that both bodies are valid (e.g. there is no missing reference)
+            if not self._is_joint_valid(joint):
+                # TODO: Handle in a better way (like warning message)
+                continue
+
             # Rename if the joint already exists in our dictionary
             joint.name = utils.rename_if_duplicate(joint.name, self.joints_dict)
             joint_dict['token'] = joint.entityToken
@@ -363,11 +368,6 @@ class Configurator:
 
             occ_one = joint.occurrenceOne
             occ_two = joint.occurrenceTwo
-            
-            # Check that both bodies are valid (e.g. there is no missing reference)
-            if not self._is_joint_valid(joint):
-                # TODO: Handle in a better way (like warning message)
-                return joint_dict
 
             geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
             geom_one_primary = joint.geometryOrOriginOne.primaryAxisVector.asArray()
