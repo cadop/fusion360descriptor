@@ -8,3 +8,7 @@ def rename_if_duplicate(input: str, in_dict: dict):
         new_name = f"{input}_{count}"
         count += 1
     return new_name
+
+def convert_german(str_in):
+    translation_table = str.maketrans({'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue', 'ß': 'ss'})
+    return str_in.translate(translation_table)
