@@ -184,6 +184,8 @@ class Configurator:
         self.sub_mesh = False
         self.joints_dict = {}
         self.body_dict = {}
+        self.material_dict = {}
+        self.color_dict = {}
         self.links = {} # Link class
         self.joints = {} # Joint class for writing to file
         self.joint_order = ('p','c') # Order of joints defined by components
@@ -255,6 +257,7 @@ class Configurator:
         self._base()
         self._inertia()
         self._joints()
+        self._materials()
         self._build_links()
         self._build_joints()
 
@@ -519,6 +522,48 @@ class Configurator:
                                 sub_mesh = self.sub_mesh)
                 self.links_xyz_dict[k] = (link.xyz[0], link.xyz[1], link.xyz[2])
                 self.links[link.name] = link
+
+    def __get_appearance(self, occ: adsk.fusion.Occurrence):
+        # Prioritize appearance properties, but it could be null
+        appearance = None
+        if occ.appearance:
+            appearance = occ.appearance
+        elif occ.bRepBodies:
+            for body in occ.bRepBodies:
+                if body.appearance:
+                    appearance = body.appearance
+                    break
+        elif occ.component.material:
+            appearance = occ.component.material.appearance
+
+        # Material should always have an appearance, but just in case
+        if appearance is not None:
+            # Only supports one appearance per occurrence so return the first
+            for prop in appearance.appearanceProperties:
+                if type(prop) == adsk.core.ColorProperty:
+                    return(appearance.name, prop)
+        return (None, None)
+
+    def _materials(self) -> None:
+        # Adapted from SpaceMaster85/fusion2urdf
+        self.color_dict['silver_default'] = "0.700 0.700 0.700 1.000"
+
+        for occ in self._iterate_through_occurrences():
+            occ_material_dict = {}
+            occ_material_dict['material'] = "silver_default"
+            prop_name, prop = self.__get_appearance(occ)
+
+            if prop:
+                color_name = utils.convert_german(prop_name)
+                color_name = utils.format_name(color_name)
+                occ_material_dict['material'] = color_name
+                self.color_dict[color_name] = f"{prop.value.red/255} {prop.value.green/255} {prop.value.blue/255} {prop.value.opacity/255}"
+            if occ.entityToken == self.base_link.entityToken:
+                occ_name = "base_link"
+            else:
+                occ_name = occ.name
+            self.material_dict[utils.format_name(occ_name)] = occ_material_dict
+
 
     def _build_links(self):
         ''' create links '''
