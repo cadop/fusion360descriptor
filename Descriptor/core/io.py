@@ -186,18 +186,32 @@ class Writer:
         try: os.mkdir(save_dir)
         except: pass
         file_name = os.path.join(save_dir, f'{config.name}.urdf')  # the name of urdf file
+        material_file_name = os.path.join(save_dir, f'materials.xacro')
 
         with open(file_name, mode='w', encoding="utf-8") as f:
             f.write('<?xml version="1.0" ?>\n')
-            f.write(f'<robot name="{config.name}">\n\n')
-            f.write('<material name="silver">\n')
-            f.write('  <color rgba="0.700 0.700 0.700 1.000"/>\n')
-            f.write('</material>\n\n')
+            f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro">\n'.format(config.name))
+            f.write('\n')
+            f.write('<xacro:include filename="$(find {})/urdf/materials.xacro" />'.format(config.name + "_description"))
+            f.write('\n')
 
         self.write_link(config, file_name)
         self.write_joint(file_name, config)
+        self.write_materials_xacro(material_file_name, config)
 
         with open(file_name, mode='a') as f:
+            f.write('</robot>\n')
+
+    def write_materials_xacro(self, material_file_name, config):
+        with open(material_file_name, mode='w') as f:
+            f.write('<?xml version="1.0" ?>\n')
+            f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro" >\n'.format(config.name))
+            f.write('\n')
+            for color in config.color_dict:
+                f.write(f'<material name="{color}">\n')
+                f.write(f'  <color rgba="{config.color_dict[color]}"/>\n')
+                f.write('</material>\n')
+            f.write('\n')
             f.write('</robot>\n')
 
 def write_hello_pybullet(robot_name, save_dir):
