@@ -50,7 +50,9 @@ class Manager:
         elif target_units=='cm': tar_u = 0.01
         elif target_units=='m': tar_u = 1.0
         
-        self.scale =   tar_u  # actually document is always CM
+        self.scale =   0.01  # actually document is always CM
+        # self.scale =   1.0  # actually document is always CM
+        # self.scale =   tar_u  # actually document is always CM
         # self.scale = tar_u / doc_u    
         parts.Link.mesh_scale = self.scale
 
