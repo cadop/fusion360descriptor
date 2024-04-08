@@ -569,7 +569,7 @@ class Configurator:
     def _build_links(self):
         ''' create links '''
 
-        mesh_folder = f'{self.name}_description/meshes/'
+        mesh_folder = f'{self.name}/meshes/'
 
         #creates list of bodies that are visible
 
