@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -17,7 +16,7 @@ def generate_launch_description():
                 [
                     FindPackageShare("fusion2urdf"),
                     "urdf",
-                    "fusion2urdf.urdf",
+                    "fusion2urdf.xacro",
                 ]
             ),
 

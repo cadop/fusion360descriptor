@@ -192,8 +192,16 @@ class Writer:
             f.write('<?xml version="1.0" ?>\n')
             f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro">\n'.format(config.name))
             f.write('\n')
-            f.write('<xacro:include filename="$(find {})/urdf/materials.xacro" />'.format(config.name + "_description"))
+            f.write('<xacro:include filename="$(find {})/urdf/materials.xacro" />'.format(config.name))
             f.write('\n')
+
+            # Add dummy link since KDL does not support a root link with an inertia
+            # From https://robotics.stackexchange.com/a/97510
+            f.write('<link name="dummy_link" />\n')
+            f.write('<joint name="dummy_link_joint" type="fixed">\n')
+            f.write('  <parent link="dummy_link" />\n')
+            f.write('  <child link="base_link" />\n') # NOTE: Requires root link to be named "base_link"
+            f.write('</joint>\n')
 
         self.write_link(config, file_name)
         self.write_joint(file_name, config)
