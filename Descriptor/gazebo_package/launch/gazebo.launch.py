@@ -2,11 +2,11 @@
 
 from launch import LaunchDescription
 from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, AppendEnvironmentVariable
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_share_directory, get_package_prefix
 
 def generate_launch_description():
     ###### ROBOT DESCRIPTION ######
@@ -76,7 +76,11 @@ def generate_launch_description():
                                    '-entity', 'fusion2urdf'],
                         output='both')
 
+    # Add the install path model path
+    gazebo_env = AppendEnvironmentVariable("GAZEBO_MODEL_PATH", PathJoinSubstitution([get_package_prefix("fusion2urdf"), "share"]))
+
     return LaunchDescription([
+        gazebo_env,
         robot_state_publisher_node,
         joint_state_publisher_gui_node,
         rviz_node,
