@@ -273,16 +273,25 @@ def copy_ros2(save_dir, package_name):
     copy_package(save_dir, package_ros2_path)
     update_cmakelists(save_dir, package_name)
     update_package_xml(save_dir, package_name)
-    update_ros2_launchfile(save_dir, package_name)
+    update_package_name(save_dir + '/launch/robot_description.launch.py', package_name)
 
 def copy_gazebo(save_dir, package_name):
-    # Use current directory to find `package_ros2`
+    # Use current directory to find `gazebo_package`
     gazebo_package_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__))) + '/gazebo_package/'
     copy_package(save_dir, gazebo_package_path)
     update_cmakelists(save_dir, package_name)
     update_package_xml(save_dir, package_name)
-    update_ros2_launchfile(save_dir, package_name)
-    update_gazibo_launchfile(save_dir, package_name)
+    update_package_name(save_dir + '/launch/robot_description.launch.py', package_name)
+    update_package_name(save_dir + '/launch/gazebo.launch.py', package_name)
+
+def copy_moveit(save_dir, package_name):
+    # Use current directory to find `moveit_package`
+    moveit_package_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__))) + '/moveit_package/'
+    copy_package(save_dir, moveit_package_path)
+    update_cmakelists(save_dir, package_name)
+    update_package_xml(save_dir, package_name)
+    update_package_name(save_dir + '/launch/robot_description.launch.py', package_name)
+    update_package_name(save_dir + '/launch/moveit.launch.py', package_name)
 
 def copy_package(save_dir, package_dir):
     try:
@@ -304,18 +313,8 @@ def update_cmakelists(save_dir, package_name):
         else:
             sys.stdout.write(line)
 
-def update_ros2_launchfile(save_dir, package_name):
-    file_name = save_dir + '/launch/robot_description.launch.py'
-
-    for line in fileinput.input(file_name, inplace=True):
-        if 'fusion2urdf' in line:
-            sys.stdout.write(line.replace('fusion2urdf', package_name))
-        else:
-            sys.stdout.write(line)
-
-def update_gazibo_launchfile(save_dir, package_name):
-    file_name = save_dir + '/launch/gazebo.launch.py'
-
+def update_package_name(file_name, package_name):
+    # Replace 'fusion2urdf' with the package_name
     for line in fileinput.input(file_name, inplace=True):
         if 'fusion2urdf' in line:
             sys.stdout.write(line.replace('fusion2urdf', package_name))
