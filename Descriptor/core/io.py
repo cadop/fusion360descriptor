@@ -276,7 +276,7 @@ def copy_ros2(save_dir, package_name):
     update_package_name(save_dir + '/launch/robot_description.launch.py', package_name)
 
 def copy_gazebo(save_dir, package_name):
-    # Use current directory to find `package_ros2`
+    # Use current directory to find `gazebo_package`
     gazebo_package_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__))) + '/gazebo_package/'
     copy_package(save_dir, gazebo_package_path)
     update_cmakelists(save_dir, package_name)
