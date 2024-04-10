@@ -202,6 +202,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             di.add('pyBullet', False, '')
             di.add('rviz', False, '')
             di.add('Gazebo', False, '')
+            di.add('MoveIt', False, '')
 
             # Make a button to preview the hierarchy 
             btn = inputs.addBoolValueInput('preview', 'Preview Links', False)

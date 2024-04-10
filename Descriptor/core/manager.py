@@ -135,6 +135,8 @@ class Manager:
             io.copy_ros2(self.save_dir, config.name)
         elif self.target_platform == 'Gazebo':
             io.copy_gazebo(self.save_dir, config.name)
+        elif self.target_platform == 'MoveIt':
+            io.copy_moveit(self.save_dir, config.name)
 
         
         # Custom STL Export
