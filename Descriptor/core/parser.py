@@ -330,7 +330,12 @@ class Configurator:
         '''
         # Build a flat inertial dict
         for occ in self._iterate_through_occurrences():
-            self.inertial_dict[occ.entityToken] = self._get_inertia(occ)
+            # "An occurrence will only be visible if the light bulb is switched on.
+            # However, the light bulb can be on and the occurrence still invisible
+            # if a higher level occurrence in the assembly context is not visible
+            # because its light bulb is off."
+            if occ.isLightBulbOn:
+                self.inertial_dict[occ.entityToken] = self._get_inertia(occ)
 
     def _is_joint_valid(self, joint):
         '''_summary_
@@ -342,9 +347,7 @@ class Configurator:
 
         try: 
             joint.geometryOrOriginOne.origin.asArray()
-            joint.geometryOrOriginTwo.origin.asArray()
-            return True 
-        
+            return True
         except:
             return False
 
@@ -373,14 +376,6 @@ class Configurator:
             occ_two = joint.occurrenceTwo
 
             geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
-            geom_one_primary = joint.geometryOrOriginOne.primaryAxisVector.asArray()
-            geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
-            geom_one_third = joint.geometryOrOriginOne.thirdAxisVector.asArray()
-
-            geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
-            geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
-            geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
-            geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
             
             joint_type = joint.jointMotion.objectType # string 
             
@@ -618,12 +613,16 @@ class Configurator:
         the XML formats to be exported later '''
 
         for k, j in self.joints_dict.items():
+            # Do not add the joint if one of the links does not exist
+            if any(name not in self.links for name in (j['parent'], j['child'])):
+                continue
+
             xyz = []
             for p,c in zip(self.links_xyz_dict[j['parent_token']], self.links_xyz_dict[j['child_token']]):
                 xyz.append(p-c)
+
             joint = parts.Joint(name=k , joint_type=j['type'], 
                                 xyz=xyz, axis=j['axis'], 
                                 parent=j['parent'], child=j['child'], 
                                 upper_limit=j['upper_limit'], lower_limit=j['lower_limit'])
-
             self.joints[k] = joint
