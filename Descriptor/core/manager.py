@@ -16,7 +16,7 @@ class Manager:
     design = None
     _app = None
 
-    def __init__(self, save_dir, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
+    def __init__(self, save_dir, save_mesh, save_obj, sub_mesh, mesh_resolution, inertia_precision,
                 document_units, target_units, joint_order, target_platform) -> None:
         '''Initialization of Manager class 
 
@@ -41,6 +41,7 @@ class Manager:
 
         '''        
         self.save_mesh = save_mesh
+        self.save_obj = save_obj
         self.sub_mesh = sub_mesh
         if document_units=='mm': doc_u = 0.001
         elif document_units=='cm': doc_u = 0.01
@@ -150,4 +151,6 @@ class Manager:
         # Custom STL Export
         if self.save_mesh:
             io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh, config.body_mapper, Manager._app)
-
+        if self.save_obj:
+            # Conver the saved files to OBJ
+            io.convert_to_obj(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh, config.body_mapper, Manager._app)

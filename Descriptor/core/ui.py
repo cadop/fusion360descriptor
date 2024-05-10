@@ -44,6 +44,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             # Get settings of UI
             directory_path = inputs.itemById('directory_path')
             save_mesh = inputs.itemById('save_mesh')
+            save_obj = inputs.itemById('save_obj')
             sub_mesh = inputs.itemById('sub_mesh')
             mesh_resolution = inputs.itemById('mesh_resolution')
             inertia_precision = inputs.itemById('inertia_precision')
@@ -58,7 +59,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 #         {inertia_precision.selectedItem.name}, {document_units.selectedItem.name},\
                 #         {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
 
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, sub_mesh.value,
+                document_manager = manager.Manager(directory_path.text, save_mesh.value, save_obj.value, sub_mesh.value,
                                                    mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, 
                                                    document_units.selectedItem.name, 
@@ -71,7 +72,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             elif cmdInput.id == 'preview':
                 # Generate Hierarchy and Preview in panel
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, sub_mesh.value, mesh_resolution.selectedItem.name, 
+                document_manager = manager.Manager(directory_path.text, save_mesh.value, save_obj.value, sub_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name, target_platform.selectedItem.name)
                 # # Generate
@@ -157,6 +158,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
+            inputs.addBoolValueInput('save_obj', 'Convert mesh to OBJ', True)
 
             # Add checkbox to generate/export sub meshes or not
             inputs.addBoolValueInput('sub_mesh', 'Sub Mesh', True)

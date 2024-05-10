@@ -124,6 +124,7 @@ class Link:
 
     mesh_scale = 0.01
     stl_scale = 0.001
+    stl_scale = 1.0
 
 
     def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh):
@@ -193,7 +194,8 @@ class Link:
                 origin_v.attrib = {'xyz':' '.join([str(_*Link.mesh_scale) for _ in self.xyz]), 'rpy':'0 0 0'}
                 geometry_v = SubElement(visual, 'geometry')
                 mesh_v = SubElement(geometry_v, 'mesh')
-                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':f'{Link.stl_scale} {Link.stl_scale} {Link.stl_scale}'}
+                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.obj','scale':f'{Link.stl_scale} {Link.stl_scale} {Link.stl_scale}'}
+                # mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':f'{Link.stl_scale} {Link.stl_scale} {Link.stl_scale}'}
                 material = SubElement(visual, 'material')
                 material.attrib = {'name':'silver'}
         else:
@@ -202,7 +204,8 @@ class Link:
             origin_v.attrib = {'xyz':' '.join([str(_*Link.mesh_scale) for _ in self.xyz]), 'rpy':'0 0 0'}
             geometry_v = SubElement(visual, 'geometry')
             mesh_v = SubElement(geometry_v, 'mesh')
-            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.stl_scale} {Link.stl_scale} {Link.stl_scale}'}
+            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.obj','scale':f'{Link.stl_scale} {Link.stl_scale} {Link.stl_scale}'}
+            # mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.stl_scale} {Link.stl_scale} {Link.stl_scale}'}
             material = SubElement(visual, 'material')
             material.attrib = {'name':'silver'}
         
@@ -212,7 +215,8 @@ class Link:
         origin_c.attrib = {'xyz':' '.join([str(_*Link.mesh_scale) for _ in self.xyz]), 'rpy':'0 0 0'}
         geometry_c = SubElement(collision, 'geometry')
         mesh_c = SubElement(geometry_c, 'mesh')
-        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':f'{Link.stl_scale} {Link.stl_scale} {Link.stl_scale}'}
+        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.obj','scale':f'{Link.stl_scale} {Link.stl_scale} {Link.stl_scale}'}
+        # mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':f'{Link.stl_scale} {Link.stl_scale} {Link.stl_scale}'}
 
         rough_string = ElementTree.tostring(link, 'utf-8')
         reparsed = minidom.parseString(rough_string)

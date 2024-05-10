@@ -4,6 +4,24 @@ from . import parts
 from . import parser
 from . import manager
 from collections import Counter, defaultdict
+from ..stl_to_obj import stl_to_obj
+
+def convert_to_obj(design, save_dir, root, accuracy, body_dict, sub_mesh, body_mapper, _app):
+
+    # get the script location
+    save_dir = os.path.join(save_dir,'meshes')
+    try: os.mkdir(save_dir)
+    except: pass
+
+    # Parse all files in the save_dir to get the stl's
+    stl_files = [os.path.join(save_dir, f) for f in os.listdir(save_dir) if f.endswith('.stl')]
+    # Iterate over stl file paths, make another file path at the same location but for the obj file, then call stl_to_obj
+    for stl_file in stl_files:
+        obj = stl_file.replace('.stl','.obj')
+        # Replace each saved stl file with obj
+        stl_to_obj(stl_file, obj, scale=1000.0) # Scale the obj, since STL is always CM, we want to save as meters
+
+
 
 def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_mapper, _app):  
     """
