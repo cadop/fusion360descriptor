@@ -188,6 +188,8 @@ class Configurator:
         self.base_links= set()
         # self.component_map = set()
 
+        self.save_obj = False
+
         self.root_node = None
 
     def get_scene_configuration(self):

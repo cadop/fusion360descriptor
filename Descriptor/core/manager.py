@@ -51,11 +51,22 @@ class Manager:
         elif target_units=='cm': tar_u = 0.01
         elif target_units=='m': tar_u = 1.0
         
-        self.scale =   0.01  # actually document is always CM
-        # self.scale =   1.0  # actually document is always CM
-        # self.scale =   tar_u  # actually document is always CM
+
         # self.scale = tar_u / doc_u    
-        parts.Link.mesh_scale = self.scale
+
+        if self.save_obj: 
+            parts.Link.model_ext = 'obj'         
+            parts.Link.stl_scale = 1.0
+            parts.Link.mesh_scale = 0.01
+            self.scale =   0.01  # actually document is always CM
+            parts.Joint.joint_scale = 0.01 # TODO Does this change with document units?
+        else:
+            parts.Link.model_ext = 'stl'
+            parts.Link.stl_scale = 0.001
+            parts.Link.mesh_scale = 0.01 # document in centimeters
+            self.scale =   0.001  # actually document is always CM
+            parts.Joint.joint_scale = 0.01 # TODO Does this change with document units?
+
 
         if target_units=='mm': inertia_scale = 1000.0 # cm to mm
         elif target_units=='cm': inertia_scale = 1.0
@@ -133,7 +144,7 @@ class Manager:
         
         config = parser.Configurator(Manager.root)
         config.inertia_accuracy = self.inert_accuracy
-        config.scale = self.scale
+        # config.scale = self.scale
         config.inertia_scale = self.inertia_scale
         config.joint_order = self.joint_order
         config.sub_mesh = self.sub_mesh
@@ -142,6 +153,7 @@ class Manager:
 
         # --------------------
         # Generate URDF
+        
         writer = io.Writer()
         writer.write_urdf(self.save_dir, config)
 
