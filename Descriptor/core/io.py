@@ -92,6 +92,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
                     body_exporter(exporter, newRoot, body, save_name)
 
     # TODO close new document
+    newDoc.close(False)
 
 def component_exporter(exportMgr, newRoot, body_lst, filename):
     ''' Copy a component to a new document, save, then delete. 
