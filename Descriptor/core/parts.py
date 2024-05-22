@@ -151,7 +151,7 @@ class Link:
 
         self.name = name
         # xyz for visual
-        self.xyz = [-(_) for _ in xyz]  # reverse the sign of xyz
+        self.xyz = [x for x in xyz]
         # xyz for center of mass
         self.center_of_mass = [x for x in center_of_mass]
         self._link_xml = None
