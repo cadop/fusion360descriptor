@@ -281,6 +281,7 @@ def copy_gazebo(save_dir, package_name):
     copy_package(save_dir, gazebo_package_path)
     update_cmakelists(save_dir, package_name)
     update_package_xml(save_dir, package_name)
+    update_package_name(save_dir + '/launch/robot_description.launch.py', package_name) # Also include rviz alone
     update_package_name(save_dir + '/launch/gazebo.launch.py', package_name)
 
 def copy_moveit(save_dir, package_name):

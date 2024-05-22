@@ -1,5 +1,6 @@
 def format_name(input: str):
-    return input.replace(':','_').replace(' ','')
+    translation_table = str.maketrans({':':'_', '-':'_', '.':'_', ' ':'', '(':'{', ')':'}'})
+    return input.translate(translation_table)
 
 def rename_if_duplicate(input: str, in_dict: dict):
     count = 0
