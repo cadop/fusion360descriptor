@@ -179,8 +179,6 @@ class Configurator:
         self.inertial_dict = {}
         self.inertia_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
 
-        self.links_xyz_dict = {} # needed ?
-
         self.sub_mesh = False
         self.joints_dict = {}
         self.body_dict = {}
@@ -304,14 +302,15 @@ class Configurator:
                     mass -= body.physicalProperties.mass
 
         occs_dict['mass'] = mass
-        center_of_mass = [_/self.scale for _ in prop.centerOfMass.asArray()] ## cm to m
-        occs_dict['center_of_mass'] = center_of_mass
+
+        print(f"{oc.name}: origin={oc.transform2.getAsCoordinateSystem()[0]}, translation={oc.transform2.translation}, center_mass(global)={prop.centerOfMass}, center_mass(transformed)={prop.centerOfMass.transformBy(oc.transform2)}")
+
+        # cm -> m
+        occs_dict['center_of_mass'] = [_/self.scale for _ in prop.centerOfMass.transformBy(oc.transform2)] #XXX: Inverse?
 
         # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-ce341ee6-4490-11e5-b25b-f8b156d7cd97
-        (_, xx, yy, zz, xy, yz, xz) = prop.getXYZMomentsOfInertia()
-        moment_inertia_world = [_ / self.inertia_scale for _ in [xx, yy, zz, xy, yz, xz] ] ## kg / cm^2 -> kg/m^2
-
-        occs_dict['inertia'] = transforms.origin2center_of_mass(moment_inertia_world, center_of_mass, mass)
+        (_, xx, yy, zz, xy, yz, xz) = prop.getXYZMomentsOfInertia().transformBy(oc.transform2) #XXX: Inverse?
+        occs_dict['inertia'] = [_ / self.inertia_scale for _ in [xx, yy, zz, xy, yz, xz] ] ## kg / cm^2 -> kg/m^2
 
         return occs_dict
 
@@ -376,6 +375,13 @@ class Configurator:
             occ_two = joint.occurrenceTwo
 
             geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
+            try:
+                geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
+            except RuntimeError:
+                geom_two_origin = None
+
+            if geom_two_origin is not None and geom_two_origin != geom_one_origin:
+                raise RuntimeError(f'Occurrences {occ_one.name} and {occ_two.name} of non-fixed {joint.name} have origins that do not coincide. Make sure the joint is "at 0 / at home" before exporting')
             
             joint_type = joint.jointMotion.objectType # string 
             
@@ -417,15 +423,18 @@ class Configurator:
                 joint_dict['child'] = occ_two_name
                 joint_dict['parent_token'] = occ_one.entityToken
                 joint_dict['child_token'] = occ_two.entityToken
+                joint_dict['parent_transform'] = occ_one.transform2
+                joint_dict['child_transform'] = occ_two.transform2
             elif self.joint_order == ('c','p'):
                 joint_dict['child'] = occ_one_name
                 joint_dict['parent'] = occ_two_name
                 joint_dict['child_token'] = occ_one.entityToken
                 joint_dict['parent_token'] = occ_two.entityToken
+                joint_dict['child_transform'] = occ_one.transform2
+                joint_dict['parent_transform'] = occ_two.transform2
             else:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
-            joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
             self.joints_dict[joint.name] = joint_dict
 
         # Add RigidGroups as fixed joints
@@ -459,8 +468,9 @@ class Configurator:
                 joint_dict['child'] = occ_name
                 joint_dict['parent_token'] = parent_occ.entityToken
                 joint_dict['child_token'] = occ.entityToken
-
-                joint_dict['xyz'] = [0,0,0] # Not sure if this will always work
+                joint_dict['parent_transform'] = parent_occ.transform2
+                joint_dict['child_transform'] = occ.transform2
+                print(f"Fixed joint from rigid group, parent={parent_occ_name}, child={occ_name}")
                 self.joints_dict[rigid_group_occ_name] = joint_dict
 
         occurrences = defaultdict(list)
@@ -482,11 +492,14 @@ class Configurator:
                         if joint["parent"] not in grounded_occ:
                             # Parent is further away from base_link than the child, swap them
                             original_child_token = joint["child_token"]
+                            original_child_transform = joint["child_transform"]
                             joint["child"] = joint["parent"]
                             joint["child_token"] = joint["parent_token"]
+                            joint["child_transform"] = joint["parent_transform"]
                             joint["parent"] = occ_name
                             joint["parent_token"] = original_child_token
-                            joint["xyz"] = [-x for x in joint["xyz"]]
+                            joint["parent_transform"] = original_child_transform
+
                             new_boundary.add(joint["child"])
             grounded_occ.update(new_boundary)
             boundary = new_boundary
@@ -498,25 +511,16 @@ class Configurator:
                 if isinstance(result, dict):
                     return result
             else:
-                # Defaulting to just the center of mass alone
-                center_of_mass = inertia['center_of_mass']
-                xyz = [0,0,0]
-                for jk, joint in self.joints_dict.items():
-                    if joint['child_token'] == k or joint['parent_token'] == k:
-                        center_of_mass = [ i-j for i, j in zip(inertia['center_of_mass'], joint['xyz'])]
-                        xyz = joint['xyz']
-                        break
 
                 link = parts.Link(name = inertia['name'],
-                                xyz = (xyz[0], xyz[1], xyz[2]),
-                                center_of_mass = center_of_mass,
+                                xyz = (0,0,0),
+                                center_of_mass = inertia['center_of_mass'],
                                 sub_folder = mesh_folder,
                                 mass = inertia['mass'],
                                 inertia_tensor = inertia['inertia'],
                                 body_dict = self.body_dict_urdf,
                                 sub_mesh = self.sub_mesh,
                                 material_dict = self.material_dict)
-                self.links_xyz_dict[k] = (link.xyz[0], link.xyz[1], link.xyz[2])
                 self.links[link.name] = link
 
     def __get_appearance(self, occ: adsk.fusion.Occurrence):
@@ -617,9 +621,12 @@ class Configurator:
             if any(name not in self.links for name in (j['parent'], j['child'])):
                 continue
 
-            xyz = []
-            for p,c in zip(self.links_xyz_dict[j['parent_token']], self.links_xyz_dict[j['child_token']]):
-                xyz.append(p-c)
+            (child_origin, child_x, child_y, child_z) = j['child_transform'].getAsCoordinateSystem()
+            (parent_origin, parent_x, parent_y, parent_z) = j['parent_transform'].getAsCoordinateSystem()
+            if child_x != parent_x or child_y != parent_y or child_z != parent_z:
+                raise RuntimeError(f"child {j['child']} is rotated w.r.t parent {j['parent']} in link {k}: not supported")
+            print(f"child {j['child']} @ {child_origin} w.r.t parent {j['parent']} @ {parent_origin} in link {k}:{child_origin.transformBy(j['parent_transform'])}")
+            xyz = [_/self.scale for _ in child_origin.transformBy(j['parent_transform'])]
 
             joint = parts.Joint(name=k , joint_type=j['type'], 
                                 xyz=xyz, axis=j['axis'], 
