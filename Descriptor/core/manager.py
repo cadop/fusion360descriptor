@@ -1,5 +1,4 @@
 import os 
-from functools import partial
 
 import adsk 
 
@@ -132,6 +131,13 @@ class Manager:
 
         if self.target_platform == 'pyBullet':
             io.write_hello_pybullet(config.name, self.save_dir)
+        elif self.target_platform == 'rviz':
+            io.copy_ros2(self.save_dir, config.name)
+        elif self.target_platform == 'Gazebo':
+            io.copy_gazebo(self.save_dir, config.name)
+        elif self.target_platform == 'MoveIt':
+            io.copy_moveit(self.save_dir, config.name)
+
         
         # Custom STL Export
         if self.save_mesh:

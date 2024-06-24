@@ -10,6 +10,7 @@ Modified by cadop Dec 19 2021
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree import ElementTree
 from xml.dom import minidom
+from . import utils
 
 class Joint:
 
@@ -56,17 +57,17 @@ class Joint:
         """
 
         joint = Element('joint')
-        joint.attrib = {'name':self.name.replace(':','_').replace(' ',''), 'type':self.type}
+        joint.attrib = {'name':utils.format_name(self.name), 'type':self.type}
 
         origin = SubElement(joint, 'origin')
         origin.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
 
         parent = SubElement(joint, 'parent')
-        self.parent = self.parent.replace(':','_').replace(' ','')
+        self.parent = utils.format_name(self.parent)
         parent.attrib = {'link':self.parent}
 
         child = SubElement(joint, 'child')
-        self.child = self.child.replace(':','_').replace(' ','')
+        self.child = utils.format_name(self.child)
         child.attrib = {'link':self.child}
 
         if self.type == 'revolute' or self.type == 'continuous' or self.type == 'prismatic':        
@@ -97,18 +98,18 @@ class Joint:
         """        
         
         tran = Element('transmission')
-        tran.attrib = {'name':self.name.replace(':','_').replace(' ','') + '_tran'}
+        tran.attrib = {'name':utils.format_name(self.name) + '_tran'}
         
         joint_type = SubElement(tran, 'type')
         joint_type.text = 'transmission_interface/SimpleTransmission'
         
         joint = SubElement(tran, 'joint')
-        joint.attrib = {'name':self.name.replace(':','_').replace(' ','')}
+        joint.attrib = {'name':utils.format_name(self.name)}
         hardwareInterface_joint = SubElement(joint, 'hardwareInterface')
         hardwareInterface_joint.text = 'hardware_interface/EffortJointInterface'
         
         actuator = SubElement(tran, 'actuator')
-        actuator.attrib = {'name':self.name.replace(':','_').replace(' ','') + '_actr'}
+        actuator.attrib = {'name':utils.format_name(self.name) + '_actr'}
         hardwareInterface_actr = SubElement(actuator, 'hardwareInterface')
         hardwareInterface_actr.text = 'hardware_interface/EffortJointInterface'
         mechanicalReduction = SubElement(actuator, 'mechanicalReduction')
@@ -124,7 +125,7 @@ class Link:
 
     mesh_scale = '0.001'
 
-    def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh):
+    def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh, material_dict):
         """
         Parameters
         ----------
@@ -150,7 +151,7 @@ class Link:
 
         self.name = name
         # xyz for visual
-        self.xyz = [-(_) for _ in xyz]  # reverse the sign of xyz
+        self.xyz = [x for x in xyz]
         # xyz for center of mass
         self.center_of_mass = [x for x in center_of_mass]
         self._link_xml = None
@@ -159,6 +160,7 @@ class Link:
         self.inertia_tensor = inertia_tensor
         self.body_dict = body_dict
         self.sub_mesh = sub_mesh # if we want to export each body as a separate mesh
+        self.material_dict = material_dict
 
         
     @property
@@ -166,11 +168,15 @@ class Link:
         """
         Generate the link_xml and hold it by self.link_xml
         """
-        
+        self.name = utils.format_name(self.name)
+
+        # Only generate a link if there is an associated body
+        if self.body_dict.get(self.name) is None:
+            return ""
+
         link = Element('link')
-        self.name = self.name.replace(':','_').replace(' ','')
         link.attrib = {'name':self.name}
-        
+
         #inertial
         inertial = SubElement(link, 'inertial')
         origin_i = SubElement(inertial, 'origin')
@@ -179,13 +185,13 @@ class Link:
         mass.attrib = {'value':str(self.mass)}
         inertia = SubElement(inertial, 'inertia')
         inertia.attrib = {'ixx':str(self.inertia_tensor[0]), 'iyy':str(self.inertia_tensor[1]),
-                          'izz':str(self.inertia_tensor[2]), 'ixy':str(self.inertia_tensor[3]),
-                          'iyz':str(self.inertia_tensor[4]), 'ixz':str(self.inertia_tensor[5])}        
+                        'izz':str(self.inertia_tensor[2]), 'ixy':str(self.inertia_tensor[3]),
+                        'iyz':str(self.inertia_tensor[4]), 'ixz':str(self.inertia_tensor[5])}        
         
         # visual
         if self.sub_mesh: # if we want to export each as a separate mesh
             for body_name in self.body_dict[self.name]:
-                # body_name = body_name.replace(':','_').replace(' ','')
+                # body_name = utils.format_name(body_name)
                 visual = SubElement(link, 'visual')
                 origin_v = SubElement(visual, 'origin')
                 origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
@@ -202,16 +208,25 @@ class Link:
             mesh_v = SubElement(geometry_v, 'mesh')
             mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
             material = SubElement(visual, 'material')
-            material.attrib = {'name':'silver'}
+            material.attrib = {'name': self.material_dict[self.name]['material']}
     
         
         # collision
-        collision = SubElement(link, 'collision')
-        origin_c = SubElement(collision, 'origin')
-        origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
-        geometry_c = SubElement(collision, 'geometry')
-        mesh_c = SubElement(geometry_c, 'mesh')
-        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':'0.001 0.001 0.001'}
+        if self.sub_mesh:
+            for collision_body in self.body_dict[self.name]:
+                collision = SubElement(link, 'collision')
+                origin_c = SubElement(collision, 'origin')
+                origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+                geometry_c = SubElement(collision, 'geometry')
+                mesh_c = SubElement(geometry_c, 'mesh')
+                mesh_c.attrib = {'filename':f'package://{self.sub_folder}{collision_body}.stl','scale':'0.001 0.001 0.001'}
+        else:
+            collision = SubElement(link, 'collision')
+            origin_c = SubElement(collision, 'origin')
+            origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+            geometry_c = SubElement(collision, 'geometry')
+            mesh_c = SubElement(geometry_c, 'mesh')
+            mesh_c.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':'0.001 0.001 0.001'}
 
         rough_string = ElementTree.tostring(link, 'utf-8')
         reparsed = minidom.parseString(rough_string)

@@ -2,10 +2,11 @@
 module to parse fusion file 
 '''
 
-import copy
+from typing import Dict, List, Optional, Tuple, Union
 import adsk, adsk.core, adsk.fusion
 from . import transforms
 from . import parts
+from . import utils
 from collections import Counter, defaultdict
 
 class Hierarchy:
@@ -22,18 +23,18 @@ class Hierarchy:
         '''        
 
         self.children = []
-        self.component = component
-        self.name = component.name
+        self.component: adsk.fusion.Occurrence = component
+        self.name: str = component.name
         self._parent = None
 
-    def _add_child(self, c):
+    def _add_child(self, c) -> None:
         self.children.append(c)
         c.parent = self 
 
-    def get_children(self):
+    def get_children(self) -> list:
         return self.children        
 
-    def get_all_children(self):
+    def get_all_children(self) -> dict[str]:
         ''' get all children and sub children of this instance '''
 
         child_map = {}
@@ -49,10 +50,9 @@ class Hierarchy:
             if len(tmp.get_children())> 0:
                 # add them to the parent_stack
                 parent_stack.update(tmp.get_children())
-
         return child_map
 
-    def get_flat_body(self):
+    def get_flat_body(self) -> list:
         ''' get a flat list of all components and child components '''
 
         child_list = []
@@ -101,7 +101,7 @@ class Hierarchy:
 
         return flat_bodies
 
-    def get_all_parents(self):
+    def get_all_parents(self) -> list:
         ''' get all the parents of this instance '''
 
         child_stack = set()
@@ -145,6 +145,11 @@ class Hierarchy:
         
         for i in range(0, occurrences.count):
             occ = occurrences.item(i)
+
+            # Break links to avoid unwanted changes
+            if occ.isReferencedComponent:
+                occ.breakLink()
+
             cur = Hierarchy(occ)
 
             if parent is None: 
@@ -156,6 +161,18 @@ class Hierarchy:
             if occ.childOccurrences:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur
+
+def get_origin(o) -> Union[adsk.core.Vector3D, adsk.core.Point3D, None]:
+    if isinstance(o, adsk.fusion.JointGeometry):
+        return get_origin(o.origin)
+    elif o is None:
+        return None
+    elif isinstance(o, adsk.fusion.JointOrigin):
+        return get_origin(o.geometry)
+    elif isinstance(o, (adsk.core.Vector3D, adsk.core.Point3D)):
+        return o
+    else:
+        raise ValueError(f"get_origin: unexpected {o} of type {type(o)}")
 
 class Configurator:
 
@@ -170,25 +187,44 @@ class Configurator:
             root component of design document
         '''        
         # Export top-level occurrences
-        self.root = root
+        self.root: adsk.fusion.Component = root
         self.occ = root.occurrences.asList
         self.inertial_dict = {}
         self.inertia_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
 
-        self.links_xyz_dict = {} # needed ?
-
         self.sub_mesh = False
+        self.links_by_token = {}
+        self.links_by_name = {}
         self.joints_dict = {}
         self.body_dict = {}
+        self.material_dict = {}
+        self.color_dict = {}
         self.links = {} # Link class
         self.joints = {} # Joint class for writing to file
         self.joint_order = ('p','c') # Order of joints defined by components
         self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
+        self.eps = 1e-7 * self.scale
         self.inertia_scale = 10000.0 # units to convert mass
-        self.base_links= set()
-        # self.component_map = set()
+        self.base_link: adsk.fusion.Occurrence = None
+        self.component_map: dict[str, Hierarchy] = dict() # Entity tokens for each component
 
         self.root_node = None
+
+    def close_enough(self, a, b) -> bool:
+        if isinstance(a, float) and isinstance(b, float):
+            return abs(a-b) < self.eps
+        elif isinstance(a, list) and isinstance(b, list):
+            assert len(a) == len(b)
+            return all((self.close_enough(aa,bb) for aa,bb in zip(a,b)))
+        elif isinstance(a, tuple) and isinstance(b, tuple):
+            assert len(a) == len(b)
+            return all((self.close_enough(aa,bb) for aa,bb in zip(a,b)))
+        elif isinstance(a, adsk.core.Vector3D) and isinstance(b, adsk.core.Vector3D):
+            return self.close_enough(a.asArray(), b.asArray())
+        elif isinstance(a, adsk.core.Point3D) and isinstance(b, adsk.core.Point3D):
+            return self.close_enough(a.asArray(), b.asArray())
+        else:
+            raise ValueError(f"close_enough: {type(a)} and {type(b)}: not supported")
 
     def get_scene_configuration(self):
         '''Build the graph of how the scene components are related
@@ -203,7 +239,6 @@ class Configurator:
         self.get_sub_bodies()
 
         return self.component_map
-
 
 
     def get_sub_bodies(self):
@@ -222,9 +257,8 @@ class Configurator:
             top_level_body = [x for x in top_level_body if x.isLightBulbOn]
             
             # add to the body mapper
-            self.body_mapper[v.component.entityToken].extend(top_level_body)
-
-            top_body_name = [x.name for x in top_level_body]
+            if top_level_body != []:
+                self.body_mapper[v.component.entityToken].extend(top_level_body)
 
             while children:
                 cur = children.pop()
@@ -233,15 +267,7 @@ class Configurator:
                 sub_level_body = [x for x in sub_level_body if x.isLightBulbOn ]
                 
                 # add to this body mapper again 
-                self.body_mapper[v.component.entityToken].extend(sub_level_body)
-                
-                sub_body_name = [x.name for x in sub_level_body]
-
-        for oc in self.occ:       
-            # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
-            # body_cnt = oc.bRepBodies.count
-            # mapped_comp =self.component_map[oc.entityToken]
-            body_lst = self.component_map[oc.entityToken].get_flat_body()
+                self.body_mapper[cur.component.entityToken].extend(sub_level_body)
 
     def get_joint_preview(self):
         ''' Get the scenes joint relationships without calculating links 
@@ -257,11 +283,10 @@ class Configurator:
     def parse(self):
         ''' parse the scene by building up inertia and joints'''
 
-        self._inertia()
-        self._joints()
         self._base()
-        self._build_links()
-        self._build_joints()
+        self._joints()
+        self._materials()
+        self._build()
 
     @property
     def name(self):
@@ -269,185 +294,270 @@ class Configurator:
         return self.root.name.split()[0]
 
     def _base(self):
-        ''' Get the base link(s) '''
-        
-        for oc in self.occ:
+        ''' Get the base link '''
+        for oc in self._iterate_through_occurrences():
+            # Get only the first grounded link
             if oc.isGrounded:
-                name = oc.name
-                self.base_links.add(name)
-
-    def _inertia(self):
-        '''
-        Define inertia values
+                # We must store this object because we cannot occurrences
+                self.base_link = oc
+                break
+        if self.base_link is None:
+            # TODO: Improve handling if there is no grounded occurrence
+            print("ERROR: Failed to find a grounded occurrence for base_link")
+            exit("Failed to find a grounded occurrence for base_link")
         
-        Notes
-        -----
-        Original Authors: @syuntoku, @yanshil
-        Modified by @cadop
-        '''
+        self.links_by_token[self.base_link.entityToken] = "base_link"
+        self.links_by_name["base_link"] = self.base_link
+
+    def get_name(self, oc: adsk.fusion.Occurrence) -> str:
+        if oc.entityToken in self.links_by_token:
+            return self.links_by_token[oc.entityToken]
+        name = utils.rename_if_duplicate(oc.name, self.links_by_name)
+        self.links_by_name[name] = oc
+        self.links_by_token[oc.entityToken] = name
+        return name   
+    
+    def _get_inertia(self, oc: adsk.fusion.Occurrence):
+        occs_dict = {}
+
+        prop = oc.getPhysicalProperties(self.inertia_accuracy)
         
-        for oc in self.occ:       
-            occs_dict = {}
-            prop = oc.getPhysicalProperties(self.inertia_accuracy)
-            
-            occs_dict['name'] = oc.name
+        occ_name = self.get_name(oc)
+        occs_dict['name'] = occ_name
 
-            mass = prop.mass  # kg
+        mass = prop.mass  # kg
 
-            # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
-            # body_cnt = oc.bRepBodies.count
-            # mapped_comp =self.component_map[oc.entityToken]
-            body_lst = self.component_map[oc.entityToken].get_flat_body()
+        # Iterate through bodies, only add mass of bodies that are visible (lightbulb)
+        body_lst = self.component_map[oc.entityToken].get_flat_body()
 
-            if len(body_lst) > 0:
-                for body in body_lst:
-                    # Check if this body is hidden
-                    #  
-                    # body = oc.bRepBodies.item(i)
-                    if not body.isLightBulbOn:
-                        mass -= body.physicalProperties.mass
+        if len(body_lst) > 0:
+            for body in body_lst:
+                # Check if this body is hidden
+                #  
+                # body = oc.bRepBodies.item(i)
+                if not body.isLightBulbOn:
+                    mass -= body.physicalProperties.mass
 
+        occs_dict['mass'] = mass
 
-            occs_dict['mass'] = mass
-            center_of_mass = [_/self.scale for _ in prop.centerOfMass.asArray()] ## cm to m
-            occs_dict['center_of_mass'] = center_of_mass
+        center_of_mass = prop.centerOfMass.copy()
+        transform = oc.transform2.copy()
+        if not transform.invert():
+            raise RuntimeError("Inverse transform failed")
+        if not center_of_mass.transformBy(transform):
+            raise RuntimeError("Center of mass transform failed")
 
+        print(f"{oc.name}: origin={oc.transform2.getAsCoordinateSystem()[0].asArray()}, translation={oc.transform2.translation.asArray()}, center_mass(global)={prop.centerOfMass.asArray()}, center_mass(transformed)={center_of_mass.asArray()}")
 
-            # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-ce341ee6-4490-11e5-b25b-f8b156d7cd97
-            (_, xx, yy, zz, xy, yz, xz) = prop.getXYZMomentsOfInertia()
-            moment_inertia_world = [_ / self.inertia_scale for _ in [xx, yy, zz, xy, yz, xz] ] ## kg / cm^2 -> kg/m^2
+        # cm -> m
+        origin = self.link_origins[self.links_by_token[oc.entityToken]]
+        occs_dict['center_of_mass'] = [(c-o)/self.scale for c, o in zip(center_of_mass.asArray(), origin)]
 
-            occs_dict['inertia'] = transforms.origin2center_of_mass(moment_inertia_world, center_of_mass, mass)
+        moments = prop.getXYZMomentsOfInertia()
+        if not moments[0]:
+            raise RuntimeError("Retrieving moments of inertia failed")
 
-            self.inertial_dict[oc.name] = occs_dict
+        # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-ce341ee6-4490-11e5-b25b-f8b156d7cd97
+        occs_dict['inertia'] = [_ / self.inertia_scale for _ in transforms.origin2center_of_mass(moments[1:], prop.centerOfMass.asArray(), mass) ] ## kg / cm^2 -> kg/m^2
 
-    def _is_joint_valid(self, joint):
-        '''_summary_
-        Parameters
-        ----------
-        joint : _type_
-            _description_
-        '''
+        return occs_dict
 
-        try: 
-            joint.geometryOrOriginOne.origin.asArray()
-            joint.geometryOrOriginTwo.origin.asArray()
-            return True 
-        
-        except:
-            return False
+    def _iterate_through_occurrences(self):
+        for key, token in self.component_map.items():
+            yield token.component
 
 
     def _joints(self):
         ''' Iterates over joints list and defines properties for each joint
         (along with its relationship)
-        
-        '''        
+        '''
 
-        for joint in self.root.joints:
-            
+        for joint in self.root.allJoints:
             joint_dict = {}
+
+            orig_name = joint.name
+            # Rename if the joint already exists in our dictionary
+            name = utils.rename_if_duplicate(joint.name, self.joints_dict)
+            joint_dict['token'] = joint.entityToken
+            joint_dict['name'] = name
+
             joint_type = Configurator.joint_type_list[joint.jointMotion.jointType]
             joint_dict['type'] = joint_type
 
-            # switch by the type of the joint
-            joint_dict['axis'] = [0, 0, 0]
-            joint_dict['upper_limit'] = 0.0
-            joint_dict['lower_limit'] = 0.0
-
             occ_one = joint.occurrenceOne
             occ_two = joint.occurrenceTwo
+
+            # XXX: check isLightBulbOn???
+
+            print(f"Processing joint {orig_name} of type {joint_type}, between {occ_one.name} and {occ_two.name}")
+
+            try:
+                geom_one_origin = get_origin(joint.geometryOrOriginOne)
+            except RuntimeError:
+                geom_one_origin = None
+            try:
+                geom_two_origin = get_origin(joint.geometryOrOriginTwo)
+            except RuntimeError:
+                geom_two_origin = None
+
+            if joint_type != "fixed":
+                if geom_one_origin is None:
+                    raise RuntimeError(f'Non-fixed joint {orig_name} does not have an origin, aborting')
+                elif geom_two_origin is not None and not self.close_enough(geom_two_origin, geom_one_origin):
+                    raise RuntimeError(f'Occurrences {occ_one.name} and {occ_two.name} of non-fixed {orig_name}' +
+                                       f' have origins {geom_one_origin.asArray()} and {geom_two_origin.asArray()}'
+                                       f' that do not coincide. Make sure the joint is "at 0 / at home" before exporting')
             
-            # Check that both bodies are valid (e.g. there is no missing reference)
-            if not self._is_joint_valid(joint):
-                # TODO: Handle in a better way (like warning message)
-                continue
-
-            geom_one_origin = joint.geometryOrOriginOne.origin.asArray()
-            geom_one_primary = joint.geometryOrOriginOne.primaryAxisVector.asArray()
-            geom_one_secondary = joint.geometryOrOriginOne.secondaryAxisVector.asArray()
-            geom_one_third = joint.geometryOrOriginOne.thirdAxisVector.asArray()
-
-            # Check if this is already top level
-            # Check if the parent_list only contains one entity
-            parent_list = self.component_map[occ_one.entityToken].get_all_parents()
-            if len(parent_list) == 1:
-                pass
-            # If it is not, get the mapping and trace it back up
-            else: 
-                # the expectation is there is at least two items, the last is the full body
-                # the second to last should be the next top-most component
-                # reset occurrence one
-                occ_one = self.component_map[parent_list[-2]].component
-
-            parent_list = self.component_map[occ_two.entityToken].get_all_parents()
-            if len(parent_list) == 1:
-                pass
-            else:
-                # the expectation is there is at least two items, the last is the full body
-                # the second to last should be the next top-most component
-                # reset occurrence two
-                occ_two = self.component_map[parent_list[-2]].component
-
-            geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
-            geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
-            geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
-            geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
+                joint_dict['origin'] = geom_one_origin.asArray()
             
             joint_type = joint.jointMotion.objectType # string 
             
             # Only Revolute joints have rotation axis 
-            if 'RigidJointMotion' in joint_type:
-                pass
-            else:
-                
+            if 'RevoluteJointMotion' in joint_type:
                 joint_vector = joint.jointMotion.rotationAxisVector.asArray() 
-
-                joint_rot_val = joint.jointMotion.rotationValue
                 joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
                 joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
                 
                 if abs(joint_limit_max - joint_limit_min) == 0:
                     joint_limit_min = -3.14159
                     joint_limit_max = 3.14159
+            elif 'SliderJointMotion' in joint_type:
+                joint_vector=joint.jointMotion.slideDirectionVector.asArray()
+                joint_limit_max = joint.jointMotion.slideLimits.maximumValue/100.0
+                joint_limit_min = joint.jointMotion.slideLimits.minimumValue/100.0
+            else:
+                # Keep default limits for 'RigidJointMotion' or others
+                joint_vector = [0, 0, 0]
+                joint_limit_max = 0.0
+                joint_limit_min = 0.0
 
-                # joint_angle = joint.angle.value 
+            joint_dict['axis'] = joint_vector
+            joint_dict['upper_limit'] = joint_limit_max
+            joint_dict['lower_limit'] = joint_limit_min
 
-                joint_dict['axis'] = joint_vector
-                joint_dict['upper_limit'] = joint_limit_max
-                joint_dict['lower_limit'] = joint_limit_min
-
+            occ_one_name = self.get_name(occ_one)
+            occ_two_name = self.get_name(occ_two)
+            
             # Reverses which is parent and child
             if self.joint_order == ('p','c'):
-                joint_dict['parent'] = occ_one.name
-                joint_dict['child'] = occ_two.name
+                joint_dict['parent'] = occ_one_name
+                joint_dict['child'] = occ_two_name
             elif self.joint_order == ('c','p'):
-                joint_dict['child'] = occ_one.name
-                joint_dict['parent'] = occ_two.name
+                joint_dict['child'] = occ_one_name
+                joint_dict['parent'] = occ_two_name
             else:
                 raise ValueError(f'Order {self.joint_order} not supported')
 
-            joint_dict['xyz'] = [ x/self.scale for x in geom_one_origin]
+            self.joints_dict[name] = joint_dict
+            print(f"Got from Fusion: {joint_dict['type']} {name} connecting",
+                  f"{occ_one_name} @ {occ_one.transform2.getAsCoordinateSystem()[0].asArray()} and",
+                  f"{occ_two_name} @ {occ_two.transform2.getAsCoordinateSystem()[0].asArray()}", sep="\n\t")
+            print("\tOrigin 1:", geom_one_origin.asArray() if geom_one_origin is not None else None)
+            print("\tOrigin 2:", geom_two_origin.asArray() if geom_two_origin is not None else None)
 
-            self.joints_dict[joint.name] = joint_dict
+        # Add RigidGroups as fixed joints
+        for group in self.root.allRigidGroups:
+            original_group_name = group.name
+            print(f"Processing Rigid Group {original_group_name}")
+            for i, occ in enumerate(group.occurrences):
+                # Assumes that the first occurrence will be the parent
+                if i == 0:
+                    parent_occ = occ
+                    continue
+                joint_dict = {}
+                rigid_group_occ_name = utils.rename_if_duplicate(original_group_name, self.joints_dict)
+                joint_dict['name'] = rigid_group_occ_name
+                joint_dict['type'] = 'fixed'
 
-    def _build_links(self):
-        ''' create links '''
+                # Unneeded for fixed joints
+                joint_dict['axis'] = [0, 0, 0]
+                joint_dict['upper_limit'] = 0
+                joint_dict['lower_limit'] = 0
 
-        mesh_folder = 'meshes/'    
+                parent_occ_name = self.get_name(parent_occ)
+                occ_name = self.get_name(occ)
+                joint_dict['parent'] = parent_occ_name
+                joint_dict['child'] = occ_name
+                print(f"Got from Fusion: {rigid_group_occ_name}, connecting",
+                      f"parent {parent_occ_name} @ {parent_occ.transform2.getAsCoordinateSystem()[0].asArray()} and"
+                      f"child {occ_name} {occ.transform2.getAsCoordinateSystem()[0].asArray()}")
+                self.joints_dict[rigid_group_occ_name] = joint_dict
+
+    def __add_link(self, occ: adsk.fusion.Occurrence):
+        inertia = self._get_inertia(occ)
+        urdf_origin = self.link_origins[inertia['name']]
+        #fusion_origin = occ.transform2.getAsCoordinateSystem()[0].asArray()
+
+        link = parts.Link(name = inertia['name'],
+                        xyz = (-u/self.scale  for u in urdf_origin),
+                        center_of_mass = inertia['center_of_mass'],
+                        sub_folder = self.mesh_folder,
+                        mass = inertia['mass'],
+                        inertia_tensor = inertia['inertia'],
+                        body_dict = self.body_dict_urdf,
+                        sub_mesh = self.sub_mesh,
+                        material_dict = self.material_dict)
+        self.links[link.name] = link
+
+    def __get_appearance(self, occ: adsk.fusion.Occurrence):
+        # Prioritize appearance properties, but it could be null
+        appearance = None
+        if occ.appearance:
+            appearance = occ.appearance
+        elif occ.bRepBodies:
+            for body in occ.bRepBodies:
+                if body.appearance:
+                    appearance = body.appearance
+                    break
+        elif occ.component.material:
+            appearance = occ.component.material.appearance
+
+        # Material should always have an appearance, but just in case
+        if appearance is not None:
+            # Only supports one appearance per occurrence so return the first
+            for prop in appearance.appearanceProperties:
+                if type(prop) == adsk.core.ColorProperty:
+                    return(appearance.name, prop)
+        return (None, None)
+
+    def _materials(self) -> None:
+        # Adapted from SpaceMaster85/fusion2urdf
+        self.color_dict['silver_default'] = "0.700 0.700 0.700 1.000"
+
+        for occ in self._iterate_through_occurrences():
+            occ_material_dict = {}
+            occ_material_dict['material'] = "silver_default"
+            prop_name, prop = self.__get_appearance(occ)
+
+            if prop:
+                color_name = utils.convert_german(prop_name)
+                color_name = utils.format_name(color_name)
+                occ_material_dict['material'] = color_name
+                self.color_dict[color_name] = f"{prop.value.red/255} {prop.value.green/255} {prop.value.blue/255} {prop.value.opacity/255}"
+            occ_name = self.get_name(occ)
+            self.material_dict[utils.format_name(occ_name)] = occ_material_dict
+
+
+    def _build(self):
+        ''' create links and joints by setting parent and child relationships and constructing
+        the XML formats to be exported later'''
+
+        self.mesh_folder = f'{self.name}/meshes/'
 
         #creates list of bodies that are visible
 
         self.body_dict = defaultdict(list) # key : occurrence name -> value : list of bodies under that occurrence
-        body_dict_urdf = defaultdict(list) # list to send to parts.py
+        self.body_dict_urdf = defaultdict(list) # list to send to parts.py
         duplicate_bodies = defaultdict(int) # key : name -> value : # of instances
+        self.link_origins: Dict[str, Tuple[float,float,float]] = {} # Location of the URDF link origin w.r.t Fusion global frame in Fusion units
 
         oc_name = ''
         # Make sure no repeated body names
         body_count = Counter()
         
-        for oc in self.occ:
-            oc_name = oc.name.replace(':','_').replace(' ','')
+        for oc in self._iterate_through_occurrences():
+            occ_name = self.get_name(oc)
+            oc_name = utils.format_name(occ_name)
             # self.body_dict[oc_name] = []
             # body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
 
@@ -461,63 +571,80 @@ class Configurator:
                             duplicate_bodies[body.name] +=1
                         self.body_dict[oc_name].append(body)
 
-                        body_name = body.name.replace(':','_').replace(' ','')
+                        body_name = utils.format_name(body.name)
                         body_name_cnt = f'{body_name}_{body_count[body_name]}'
                         body_count[body_name] += 1
 
                         unique_bodyname = f'{oc_name}_{body_name_cnt}'
-                        body_dict_urdf[oc_name].append(unique_bodyname)
+                        self.body_dict_urdf[oc_name].append(unique_bodyname)
+        
+        occurrences = defaultdict(list)
+        for joint_name, joint_dict in self.joints_dict.items():
+            occurrences[joint_dict["parent"]].append(joint_name)
+            occurrences[joint_dict["child"]].append(joint_name)
+        grounded_occ = {"base_link"}
+        # URDF origin at base link origin "by definition"
+        self.link_origins["base_link"] = self.base_link.transform2.getAsCoordinateSystem()[0].asArray()
+        self.__add_link(self.base_link)
+        boundary = grounded_occ
+        while boundary:
+            new_boundary = set()
+            for occ_name in boundary:
+                for joint_name in occurrences[occ_name]:
+                    joint = self.joints_dict[joint_name]
+                    if joint["parent"] == occ_name:
+                        child_name = joint["child"]
+                        if child_name in grounded_occ:
+                            continue
+                    else:
+                        assert joint["child"] == occ_name
+                        if joint["parent"] not in grounded_occ:
+                            # Parent is further away from base_link than the child, swap them
+                            child_name = joint["parent"]
+                        else:
+                            continue
+
+                    new_boundary.add(child_name)
+
+                    (child_origin, child_x, child_y, child_z) = self.links_by_name[child_name].transform2.getAsCoordinateSystem()
+                    (_, parent_x, parent_y, parent_z) = self.links_by_name[occ_name].transform2.getAsCoordinateSystem()
+
+                    if not self.close_enough([child_x, child_y, child_z], [parent_x, parent_y, parent_z]):
+                        raise RuntimeError(f"child {child_name} is rotated w.r.t parent {occ_name} in link {joint['name']}: not supported")
                     
-        # Make the actual urdf names accessible
-        self.body_dict_urdf = body_dict_urdf
+                    parent_origin = self.link_origins[occ_name]
+                    if joint['type'] != 'fixed':
+                        child_origin = joint["origin"]
+                    else:
+                        child_origin = child_origin.asArray()
 
+                    self.link_origins[child_name] = child_origin
+                    
+                    xyz = [(c-p)/self.scale for c,p in zip(child_origin, parent_origin)]
 
-        base_link = self.base_links.pop()
-        center_of_mass = self.inertial_dict[base_link]['center_of_mass']
-        link = parts.Link(name=base_link, 
-                        xyz=[0,0,0], 
-                        center_of_mass=center_of_mass, 
-                        sub_folder=mesh_folder,
-                        mass=self.inertial_dict[base_link]['mass'],
-                        inertia_tensor=self.inertial_dict[base_link]['inertia'],
-                        body_dict = body_dict_urdf,
-                        sub_mesh = self.sub_mesh)
+                    self.joints[joint['name']] = parts.Joint(name=joint['name'] , joint_type=joint['type'], 
+                                        xyz=xyz, axis=joint['axis'], 
+                                        parent=occ_name, child=child_name, 
+                                        upper_limit=joint['upper_limit'], lower_limit=joint['lower_limit'])
+                    
+                    self.__add_link(self.links_by_name[child_name])
 
-        self.links_xyz_dict[link.name] = link.xyz
-        self.links[link.name] = link
+            grounded_occ.update(new_boundary)
+            boundary = new_boundary
 
-        for k, joint in self.joints_dict.items():
-            name = joint['child']
-
-            center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
-            link = parts.Link(name=name, 
-                            xyz=(joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
-                            center_of_mass=center_of_mass,
-                            sub_folder=mesh_folder, 
-                            mass=self.inertial_dict[name]['mass'],
-                            inertia_tensor=self.inertial_dict[name]['inertia'],
-                            body_dict = body_dict_urdf,
-                            sub_mesh = self.sub_mesh)
-
-            self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
-
-            self.links[link.name] = link
-
-
-
-    def _build_joints(self):
-        ''' create joints by setting parent and child relationships and constructing
-        the XML formats to be exported later '''
-
-        for k, j in self.joints_dict.items():
-
-            xyz = []
-            for p,c in zip(self.links_xyz_dict[j['parent']], self.links_xyz_dict[j['child']]):
-                xyz.append(p-c)
-            
-            joint = parts.Joint(name=k , joint_type=j['type'], 
-                                xyz=xyz, axis=j['axis'], 
-                                parent=j['parent'], child=j['child'], 
-                                upper_limit=j['upper_limit'], lower_limit=j['lower_limit'])
-
-            self.joints[k] = joint
+        # Sanity check
+        not_in_joints = set()
+        unreachable = set()
+        for component in self._iterate_through_occurrences():
+            if component.isLightBulbOn and self.body_dict.get(self.name) is not None:
+                if component.entityToken not in self.links_by_token:
+                    not_in_joints.add(component.name)
+                elif self.links_by_token[component.entityToken] not in grounded_occ:
+                    unreachable.add(component.name)
+        if not_in_joints or unreachable:
+            error = "Not all components were included in the export:"
+            if not_in_joints:
+                error += "Not a part of any joint or rigid group: " + ", ".join(not_in_joints) + "."
+            if unreachable:
+                error += "Unreacheable from the grounded component via joints+links: " + ", ".join(unreachable) + "."
+            raise RuntimeError(error)
