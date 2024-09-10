@@ -45,6 +45,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             directory_path = inputs.itemById('directory_path')
             save_mesh = inputs.itemById('save_mesh')
             save_obj = inputs.itemById('save_obj')
+            # remove_limits = inputs.itemById('remove_limits')
             sub_mesh = inputs.itemById('sub_mesh')
             mesh_resolution = inputs.itemById('mesh_resolution')
             inertia_precision = inputs.itemById('inertia_precision')
@@ -65,7 +66,8 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                                                    document_units.selectedItem.name, 
                                                    target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name, 
-                                                   target_platform.selectedItem.name)
+                                                   target_platform.selectedItem.name,
+                                                   )
                 
                 # Generate
                 document_manager.run()
@@ -159,6 +161,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
             inputs.addBoolValueInput('save_obj', 'Convert mesh to OBJ', True)
+            # inputs.addBoolValueInput('remove_limits', 'Remove limits for 360 joints', True)
 
             # Add checkbox to generate/export sub meshes or not
             inputs.addBoolValueInput('sub_mesh', 'Sub Mesh', True)

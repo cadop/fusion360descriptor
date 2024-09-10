@@ -184,11 +184,12 @@ class Configurator:
         self.joints = {} # Joint class for writing to file
         self.joint_order = ('p','c') # Order of joints defined by components
         self.scale = .01 # Units to convert to meters (or whatever simulator takes)
-        self.inertia_scale = 1.0 # units to convert mass starts as kg*cm^2.
+        self.inertia_scale = 0.0001 # units to convert mass starts as kg*cm^2.
         self.base_links= set()
         # self.component_map = set()
 
         self.save_obj = False
+        self.remove_limits = False
 
         self.root_node = None
 
@@ -311,13 +312,13 @@ class Configurator:
 
 
             occs_dict['mass'] = mass
-            center_of_mass = [_/self.scale for _ in prop.centerOfMass.asArray()] ## cm to m
+            center_of_mass = [_ * self.scale for _ in prop.centerOfMass.asArray()] ## cm to m
             occs_dict['center_of_mass'] = center_of_mass
 
 
             # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-ce341ee6-4490-11e5-b25b-f8b156d7cd97
             (_, xx, yy, zz, xy, yz, xz) = prop.getXYZMomentsOfInertia()
-            moment_inertia_world = [_ / self.inertia_scale for _ in [xx, yy, zz, xy, yz, xz] ] ## kg / cm^2 -> kg/m^2
+            moment_inertia_world = [_ * self.inertia_scale for _ in [xx, yy, zz, xy, yz, xz] ] ## kg / cm^2 -> kg/m^2
 
             occs_dict['inertia'] = transforms.origin2center_of_mass(moment_inertia_world, center_of_mass, mass)
 
@@ -333,7 +334,7 @@ class Configurator:
 
         try: 
             joint.geometryOrOriginOne.origin.asArray()
-            joint.geometryOrOriginTwo.origin.asArray()
+            # joint.geometryOrOriginTwo.origin.asArray() # Doesn't work for using joint origin
             return True 
         
         except:
@@ -391,10 +392,12 @@ class Configurator:
                 # reset occurrence two
                 occ_two = self.component_map[parent_list[-2]].component
 
-            geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
-            geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
-            geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
-            geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
+            # Doesn't work for using joint origin
+
+            # geom_two_origin = joint.geometryOrOriginTwo.origin.asArray()
+            # geom_two_primary = joint.geometryOrOriginTwo.primaryAxisVector.asArray()
+            # geom_two_secondary = joint.geometryOrOriginTwo.secondaryAxisVector.asArray()
+            # geom_two_third = joint.geometryOrOriginTwo.thirdAxisVector.asArray()
             
             joint_type = joint.jointMotion.objectType # string 
             
@@ -408,13 +411,17 @@ class Configurator:
                 joint_rot_val = joint.jointMotion.rotationValue
                 joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
                 joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
-                
-                if abs(joint_limit_max - joint_limit_min) == 0:
+
+                if not joint.jointMotion.rotationLimits.isMaximumValueEnabled:
+                    joint_limit_min = None
+                    joint_limit_max = None                
+
+                if joint_limit_min and abs(joint_limit_max - joint_limit_min) == 0:
                     joint_limit_min = -3.14159
                     joint_limit_max = 3.14159
 
                 # joint_angle = joint.angle.value 
-
+                
                 joint_dict['axis'] = joint_vector
                 joint_dict['upper_limit'] = joint_limit_max
                 joint_dict['lower_limit'] = joint_limit_min

@@ -14,7 +14,7 @@ from xml.dom import minidom
 class Joint:
 
     # Defaults for all joints 
-    effort_limit = 100
+    effort_limit = 1000
     vel_limit = 100
 
     def __init__(self, name, xyz, axis, parent, child, joint_type, upper_limit, lower_limit):
@@ -74,9 +74,15 @@ class Joint:
             axis.attrib = {'xyz':' '.join([str(_) for _ in self.axis])}
         if self.type == 'revolute' or self.type == 'prismatic':
             limit = SubElement(joint, 'limit')
-            limit.attrib = {'upper': str(self.upper_limit), 'lower': str(self.lower_limit),
-                            'effort': f'{Joint.effort_limit}', 'velocity': f'{Joint.vel_limit}'}
+        
+        # Check if user removes joint limits for 360, will be None if so
+        if self.upper_limit is None:
+            limit.attrib = {'effort': f'{Joint.effort_limit}', 'velocity': f'{Joint.vel_limit}'}
 
+        else:                    
+            limit.attrib = {'upper': str(self.upper_limit), 'lower': str(self.lower_limit),
+                            'effort': f'{Joint.effort_limit}', 'velocity': f'{Joint.vel_limit}'}        
+        
         rough_string = ElementTree.tostring(joint, 'utf-8')
         reparsed = minidom.parseString(rough_string)
         self._joint_xml = "\n".join(reparsed.toprettyxml(indent="  ").split("\n")[1:])

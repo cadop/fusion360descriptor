@@ -38,11 +38,14 @@ class Manager:
             if parent or child should be component 1
         target_platform : str
             which configuration to use for exporting urdf
-
+        # remove_limits: bool
+        #     if a joint limit is set to 360, do not write to urdf
+            
         '''        
         self.save_mesh = save_mesh
         self.save_obj = save_obj
         self.sub_mesh = sub_mesh
+        # self.remove_limits = remove_limits
         if document_units=='mm': doc_u = 0.001
         elif document_units=='cm': doc_u = 0.01
         elif document_units=='m': doc_u = 1.0
@@ -64,7 +67,7 @@ class Manager:
             parts.Link.model_ext = 'stl'
             parts.Link.stl_scale = 0.001
             parts.Link.mesh_scale = 0.01 # document in centimeters
-            self.scale =   0.001  # actually document is always CM
+            self.scale =   0.01  # actually document is always CM
             parts.Joint.joint_scale = 0.01 # TODO Does this change with document units?
 
 
@@ -148,6 +151,7 @@ class Manager:
         config.inertia_scale = self.inertia_scale
         config.joint_order = self.joint_order
         config.sub_mesh = self.sub_mesh
+        # config.remove_limits = self.remove_limits
         config.get_scene_configuration()
         config.parse()
 
