@@ -1,11 +1,12 @@
 ''' module: user interface'''
 
-import adsk
+from typing import Optional
 import adsk.core, adsk.fusion, traceback
 
+from . import utils
 from . import manager
 
-def file_dialog(ui):     
+def file_dialog(ui: adsk.core.UserInterface) -> Optional[str]:     
     '''display the dialog to save the file
 
     Parameters
@@ -27,19 +28,20 @@ def file_dialog(ui):
     dlgResult = folderDlg.showDialog()
     if dlgResult == adsk.core.DialogResults.DialogOK:
         return folderDlg.folder
-    return False
+    return None
 
 
 class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
-    def __init__(self, ui):
+    def __init__(self, ui: adsk.core.UserInterface):
         self.ui = ui
         super().__init__()
 
-    def notify(self, args):
+    def notify(self, eventArgs: adsk.core.InputChangedEventArgs) -> None:
         try:
-            cmd = args.firingEvent.sender
+            cmd = eventArgs.firingEvent.sender
+            assert isinstance(cmd, adsk.core.Command)
             inputs = cmd.commandInputs
-            cmdInput = args.input
+            cmdInput = eventArgs.input
 
             # Get settings of UI
             directory_path = inputs.itemById('directory_path')
@@ -51,6 +53,18 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             target_units = inputs.itemById('target_units')
             joint_order = inputs.itemById('joint_order')
             target_platform = inputs.itemById('target_platform')
+
+            utils.log(f"UI: processing command: {cmdInput.id}")
+
+            assert isinstance(directory_path, adsk.core.TextBoxCommandInput)
+            assert isinstance(save_mesh, adsk.core.BoolValueCommandInput)
+            assert isinstance(sub_mesh, adsk.core.BoolValueCommandInput)
+            assert isinstance(mesh_resolution, adsk.core.DropDownCommandInput)
+            assert isinstance(inertia_precision, adsk.core.DropDownCommandInput)
+            assert isinstance(document_units, adsk.core.DropDownCommandInput)
+            assert isinstance(target_units, adsk.core.DropDownCommandInput)
+            assert isinstance(joint_order, adsk.core.DropDownCommandInput)
+            assert isinstance(target_platform, adsk.core.DropDownCommandInput)
 
             if cmdInput.id == 'generate':
                 # User asked to generate using current settings
@@ -78,6 +92,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 _joints = document_manager.preview()
 
                 joints_text = inputs.itemById('jointlist')
+                assert isinstance(joints_text, adsk.core.TextBoxCommandInput)
 
                 _txt = 'joint name: parent link-> child link\n'
 
@@ -88,9 +103,9 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
                 save_dir = file_dialog(self.ui)
-                directory_path.text = save_dir
+                if save_dir is not None:
+                    directory_path.text = save_dir
 
-            return True
         except:
             if self.ui:
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
@@ -99,7 +114,7 @@ class MyDestroyHandler(adsk.core.CommandEventHandler):
     def __init__(self, ui):
         self.ui = ui
         super().__init__()
-    def notify(self, args):
+    def notify(self, eventArgs: adsk.core.CommandEventArgs) -> None:
         try:
             adsk.terminate()
         except:
@@ -114,7 +129,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
     adsk : adsk.core.CommandCreatedEventHandler
         Main handler for callbacks
     '''    
-    def __init__(self, ui, handlers):
+    def __init__(self, ui: adsk.core.UserInterface, handlers):
         '''[summary]
 
         Parameters
@@ -128,7 +143,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
         self.handlers = handlers
         super().__init__()
 
-    def notify(self, args):
+    def notify(self, eventArgs: adsk.core.CommandCreatedEventArgs) -> None:
         ''' Construct the GUI and set aliases to be referenced later
 
         Parameters
@@ -137,7 +152,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             UI information
         '''        
         try:
-            cmd = args.command
+            cmd = eventArgs.command
             onDestroy = MyDestroyHandler(self.ui)
             cmd.destroy.add(onDestroy)
             
@@ -229,7 +244,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 
-def config_settings(ui, ui_handlers):
+def config_settings(ui: adsk.core.UserInterface, ui_handlers) -> bool:
     '''[summary]
 
     Parameters
@@ -268,4 +283,4 @@ def config_settings(ui, ui_handlers):
         if ui:
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
-            return False
+        return False

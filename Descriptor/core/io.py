@@ -1,4 +1,4 @@
-import os, sys, fileinput
+import os.path, sys, fileinput
 import adsk, adsk.core, adsk.fusion
 from . import utils
 from collections import Counter
@@ -29,7 +29,8 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
     des: adsk.fusion.Design = _app.activeProduct
 
     newDoc: adsk.core.Document = _app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType, True) 
-    newDes: adsk.fusion.Design = newDoc.products.itemByProductType('DesignProductType')
+    newDes = newDoc.products.itemByProductType('DesignProductType')
+    assert isinstance(newDes, adsk.fusion.Design)
     newRoot = newDes.rootComponent
 
     # get the script location

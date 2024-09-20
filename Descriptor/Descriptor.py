@@ -1,4 +1,4 @@
-import adsk.core, adsk.fusion, adsk.cam, traceback
+import adsk.core, adsk.fusion, traceback
 
 from .core.ui import config_settings
 from .core import manager

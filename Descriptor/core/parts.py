@@ -7,6 +7,7 @@ Created on Sun May 12 20:17:17 2019
 Modified by cadop Dec 19 2021
 """
 
+from typing import List
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree import ElementTree
 from xml.dom import minidom
@@ -18,7 +19,7 @@ class Joint:
     effort_limit = 100
     vel_limit = 100
 
-    def __init__(self, name, xyz, axis, parent, child, joint_type, upper_limit, lower_limit):
+    def __init__(self, name: str, xyz: List[float], rpy: List[float], axis: List[float], parent: str, child:str, joint_type: str, upper_limit: float, lower_limit: float):
         """
         Attributes
         ----------
@@ -42,6 +43,7 @@ class Joint:
         self.name = name
         self.type = joint_type
         self.xyz = xyz
+        self.rpy = rpy
         self.parent = parent
         self.child = child
         self._joint_xml = None
@@ -60,7 +62,7 @@ class Joint:
         joint.attrib = {'name':utils.format_name(self.name), 'type':self.type}
 
         origin = SubElement(joint, 'origin')
-        origin.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+        origin.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':' '.join([str(_) for _ in self.rpy])}
 
         parent = SubElement(joint, 'parent')
         self.parent = utils.format_name(self.parent)

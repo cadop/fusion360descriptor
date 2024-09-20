@@ -1,18 +1,22 @@
-import os 
+from typing import Optional
+import os
+import os.path
 
-import adsk 
+import adsk.core
+import adsk.fusion
 
 from . import parser
 from . import io
+from . import utils
 
 
 class Manager:
     ''' Manager class for setting params and generating URDF 
     '''    
 
-    root = None 
-    design = None
-    _app = None
+    root: Optional[adsk.fusion.Component] = None 
+    design: Optional[adsk.fusion.Design] = None
+    _app: Optional[adsk.core.Application] = None
 
     def __init__(self, save_dir, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
                 document_units, target_units, joint_order, target_platform) -> None:
@@ -40,10 +44,13 @@ class Manager:
         '''        
         self.save_mesh = save_mesh
         self.sub_mesh = sub_mesh
+
+        doc_u = 1.0
         if document_units=='mm': doc_u = 0.001
         elif document_units=='cm': doc_u = 0.01
         elif document_units=='m': doc_u = 1.0
 
+        tar_u = 1.0
         if target_units=='mm': tar_u = 0.001
         elif target_units=='cm': tar_u = 0.01
         elif target_units=='m': tar_u = 1.0
@@ -85,7 +92,8 @@ class Manager:
         save_dir : str
             path to save
         '''        
-        # set the names        
+        # set the names
+        assert Manager.root is not None
         robot_name = Manager.root.name.split()[0]
         package_name = robot_name + '_description'
 
@@ -116,19 +124,24 @@ class Manager:
         exporting mesh, if applicable
         '''        
         
+        utils.log("*** Parsing ***")
         config = parser.Configurator(Manager.root)
         config.inertia_accuracy = self.inert_accuracy
         config.scale = self.scale
         config.joint_order = self.joint_order
         config.sub_mesh = self.sub_mesh
+        utils.log("** Getting scene configuration **")
         config.get_scene_configuration()
+        utils.log("** Parsing the configuration **")
         config.parse()
 
         # --------------------
         # Generate URDF
+        utils.log(f"*** Generating URDF under {os.path.realpath(self.save_dir)} ***")
         writer = io.Writer()
         writer.write_urdf(self.save_dir, config)
 
+        utils.log(f"*** Generating {self.target_platform} configuration")
         if self.target_platform == 'pyBullet':
             io.write_hello_pybullet(config.name, self.save_dir)
         elif self.target_platform == 'rviz':
