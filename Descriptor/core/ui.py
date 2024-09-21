@@ -97,7 +97,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 _txt = 'joint name: parent link-> child link\n'
 
                 for k, j in _joints.items():
-                    _txt += f'{k} : {j["parent"]} -> {j["child"]}\n' 
+                    _txt += f'{k} : {j.parent} -> {j.child}\n' 
                 joints_text.text = _txt
 
             elif cmdInput.id == 'save_dir':

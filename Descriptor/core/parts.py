@@ -7,7 +7,7 @@ Created on Sun May 12 20:17:17 2019
 Modified by cadop Dec 19 2021
 """
 
-from typing import List
+from typing import List, Sequence
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree import ElementTree
 from xml.dom import minidom
@@ -19,7 +19,7 @@ class Joint:
     effort_limit = 100
     vel_limit = 100
 
-    def __init__(self, name: str, xyz: List[float], rpy: List[float], axis: List[float], parent: str, child:str, joint_type: str, upper_limit: float, lower_limit: float):
+    def __init__(self, name: str, xyz: Sequence[float], rpy: Sequence[float], axis: Sequence[float], parent: str, child:str, joint_type: str, upper_limit: float, lower_limit: float):
         """
         Attributes
         ----------
