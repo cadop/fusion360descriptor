@@ -2,7 +2,7 @@ import os.path, sys, fileinput
 import adsk, adsk.core, adsk.fusion
 from . import utils
 from collections import Counter
-from distutils.dir_util import copy_tree
+from shutil import copytree
 
 def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_mapper, _app):  
     """
@@ -302,7 +302,7 @@ def copy_package(save_dir, package_dir):
         os.mkdir(save_dir + '/urdf')
     except:
         pass
-    copy_tree(package_dir, save_dir)
+    copytree(package_dir, save_dir, dirs_exist_ok=True)
 
 def update_cmakelists(save_dir, package_name):
     file_name = save_dir + '/CMakeLists.txt'
