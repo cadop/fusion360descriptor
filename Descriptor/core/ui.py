@@ -3,6 +3,14 @@
 from typing import Optional
 import adsk.core, adsk.fusion, traceback
 
+try:
+    import numpy # Test whether numpy is there
+    numpy.abs(0) # Noop for numpy import to not be unused
+except ModuleNotFoundError:
+    import subprocess
+    import sys
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'numpy'])
+
 from . import utils
 from . import manager
 
