@@ -17,7 +17,7 @@ class JointInfo:
     parent: str
     child: str
     type: str = "fixed"
-    origin: adsk.core.Point3D = field(default_factory=adsk.core.Point3D)
+    origin: adsk.core.Point3D = field(default_factory=adsk.core.Point3D.create)
     axis: Tuple[float,...] = (0.0, 0.0, 0.0)
     upper_limit: float = 0.0
     lower_limit: float = 0.0
@@ -632,9 +632,9 @@ class Configurator:
                     self.link_origins[child_name] = child_origin
 
                     transform = (*child_origin.getAsCoordinateSystem(), *parent_origin.getAsCoordinateSystem())
-                    t = adsk.core.Matrix3D()
+                    t = adsk.core.Matrix3D.create()
                     assert t.setToAlignCoordinateSystems(*transform)
-                    child_zero = adsk.core.Point3D()
+                    child_zero = adsk.core.Point3D.create()
                     assert child_zero.set(0,0,0)
                     assert child_zero.transformBy(t)
 
