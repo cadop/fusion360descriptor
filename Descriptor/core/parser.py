@@ -634,13 +634,8 @@ class Configurator:
                     transform = (*child_origin.getAsCoordinateSystem(), *parent_origin.getAsCoordinateSystem())
                     t = adsk.core.Matrix3D.create()
                     assert t.setToAlignCoordinateSystems(*transform)
-                    child_zero = adsk.core.Point3D.create()
-                    assert child_zero.set(0,0,0)
-                    assert child_zero.transformBy(t)
 
-                    utils.log(f"Debug {joint_name}, child_zero: {child_zero.asArray()}, t.transtation: {t.translation.asArray()}")
-                    
-                    xyz = [c/self.scale for c in child_zero.asArray()]
+                    xyz = [c/self.scale for c in t.translation.asArray()]
                     rpy = utils.so3_to_euler(t)
 
                     self.joints[joint.name] = parts.Joint(name=joint.name , joint_type=joint.type, 
