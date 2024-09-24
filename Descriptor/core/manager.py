@@ -5,6 +5,7 @@ import os.path
 import adsk.core
 import adsk.fusion
 
+from .parts import Link
 from . import parser
 from . import io
 from . import utils
@@ -128,6 +129,7 @@ class Manager:
         config = parser.Configurator(Manager.root)
         config.inertia_accuracy = self.inert_accuracy
         config.scale = self.scale
+        Link.scale = str(1.0/self.scale)
         config.joint_order = self.joint_order
         config.sub_mesh = self.sub_mesh
         utils.log("** Getting scene configuration **")

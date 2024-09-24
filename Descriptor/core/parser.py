@@ -499,10 +499,15 @@ class Configurator:
     def __add_link(self, occ: adsk.fusion.Occurrence):
         inertia = self._get_inertia(occ)
         urdf_origin = self.link_origins[inertia['name']]
+        inv = urdf_origin.copy()
+        assert inv.invert()
         #fusion_origin = occ.transform2.getAsCoordinateSystem()[0].asArray()
 
+        utils.log(f"DEBUG: link {inertia['name']} urdf_origin at {urdf_origin.getAsCoordinateSystem()[0].asArray()} ({urdf_origin.translation.asArray()=}, {utils.so3_to_euler(urdf_origin)=}) and inv at {inv.getAsCoordinateSystem()[0].asArray()} ({inv.translation.asArray()=}, {utils.so3_to_euler(inv)=})")
+
         link = parts.Link(name = inertia['name'],
-                        xyz = (-u/self.scale  for u in urdf_origin.getAsCoordinateSystem()[0].asArray()),
+                        xyz = (u/self.scale for u in inv.translation.asArray()),
+                        rpy = utils.so3_to_euler(inv),
                         center_of_mass = inertia['center_of_mass'],
                         sub_folder = self.mesh_folder,
                         mass = inertia['mass'],
@@ -631,12 +636,15 @@ class Configurator:
 
                     self.link_origins[child_name] = child_origin
 
-                    transform = (*child_origin.getAsCoordinateSystem(), *parent_origin.getAsCoordinateSystem())
+                    #transform = (*child_origin.getAsCoordinateSystem(), *parent_origin.getAsCoordinateSystem())
+                    transform = (*parent_origin.getAsCoordinateSystem(), *child_origin.getAsCoordinateSystem())
                     t = adsk.core.Matrix3D.create()
                     assert t.setToAlignCoordinateSystems(*transform)
 
                     xyz = [c/self.scale for c in t.translation.asArray()]
                     rpy = utils.so3_to_euler(t)
+
+                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.getAsCoordinateSystem()[0].asArray()} to {child_name} {child_origin.getAsCoordinateSystem()[0].asArray()} -> {xyz=} {rpy=}")
 
                     self.joints[joint.name] = parts.Joint(name=joint.name , joint_type=joint.type, 
                                         xyz=xyz, rpy=rpy, axis=joint.axis, 
