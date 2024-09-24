@@ -5,7 +5,6 @@ import os.path
 import adsk.core
 import adsk.fusion
 
-from .parts import Link
 from . import parser
 from . import io
 from . import utils
@@ -60,7 +59,8 @@ class Manager:
         elif target_units=='cm': tar_u = 0.01
         elif target_units=='m': tar_u = 1.0
         
-        self.scale = tar_u / doc_u       
+        self.scale = doc_u / tar_u
+        self.cm = 0.01 / tar_u      
 
         if inertia_precision == 'Low':
             self.inert_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
@@ -115,10 +115,9 @@ class Manager:
             mapping of joint names with parent-> child relationship
         '''        
         
-        config = parser.Configurator(Manager.root)
+        config = parser.Configurator(Manager.root, self.scale, self.cm)
         config.inertia_accuracy = self.inert_accuracy
         config.joint_order = self.joint_order
-        config.scale = self.scale
         ## Return array of tuples (parent, child)
         config.get_scene_configuration()
         return config.get_joint_preview()
@@ -130,10 +129,8 @@ class Manager:
         '''        
         
         utils.log("*** Parsing ***")
-        config = parser.Configurator(Manager.root)
+        config = parser.Configurator(Manager.root, self.scale, self.cm)
         config.inertia_accuracy = self.inert_accuracy
-        config.scale = self.scale
-        Link.scale = str(1.0/self.scale)
         config.joint_order = self.joint_order
         config.sub_mesh = self.sub_mesh
         utils.log("** Getting scene configuration **")

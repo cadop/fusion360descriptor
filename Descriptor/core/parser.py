@@ -194,7 +194,7 @@ class Configurator:
     joint_type_list = [ 'fixed', 'revolute', 'prismatic', 'Cylinderical',
                         'PinSlot', 'Planner', 'Ball']  # these are the names in urdf
 
-    def __init__(self, root) -> None:
+    def __init__(self, root, scale: float, cm: float) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
         Parameters
         ----------
@@ -217,8 +217,10 @@ class Configurator:
         self.links: Dict[str, parts.Link] = {} # Link class
         self.joints: Dict[str, parts.Joint] = {} # Joint class for writing to file
         self.joint_order: Union[Tuple[Literal['p'], Literal['c']], Tuple[Literal['c'], Literal['p']]] = ('p','c') # Order of joints defined by components
-        self.scale = 100.0 # Units to convert to meters (or whatever simulator takes)
-        self.eps = 1e-7 * self.scale
+        self.scale = scale # Convert autodesk units to meters (or whatever simulator takes)
+        self.cm = cm # Convert cm units to meters (or whatever simulator takes)
+        parts.Link.scale = str(self.scale)
+        self.eps = 1e-7 / self.scale
         self.inertia_scale = 10000.0 # units to convert mass
         self.base_link: Optional[adsk.fusion.Occurrence] = None
         self.component_map: dict[str, Hierarchy] = dict() # Entity tokens for each component
@@ -369,7 +371,7 @@ class Configurator:
         # transform, cm -> m
         c_o_m = center_of_mass.copy()
         c_o_m.transformBy(self.link_origins[self.links_by_token[oc.entityToken]])
-        occs_dict['center_of_mass'] = [c/self.scale for c in c_o_m.asArray()]
+        occs_dict['center_of_mass'] = [c * self.scale for c in c_o_m.asArray()]
 
         moments = prop.getXYZMomentsOfInertia()
         if not moments[0]:
@@ -455,7 +457,11 @@ class Configurator:
                         
                 # Only Revolute joints have rotation axis 
                 if isinstance(joint.jointMotion, adsk.fusion.RevoluteJointMotion):
-                    joint_vector = joint.jointMotion.rotationAxisVector.asArray() 
+                    assert joint.jointMotion.rotationLimits.isMaximumValueEnabled
+                    assert joint.jointMotion.rotationLimits.isMinimumValueEnabled
+                    joint_vector = joint.jointMotion.rotationAxisVector.asArray()
+                    # The values are in radians per
+                    # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-e3fb19a1-d7ef-4b34-a6f5-76a907d6a774
                     joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
                     joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
                     
@@ -463,10 +469,13 @@ class Configurator:
                         joint_limit_min = -3.14159
                         joint_limit_max = 3.14159
                 elif isinstance(joint.jointMotion, adsk.fusion.SliderJointMotion):
+                    assert joint.jointMotion.slideLimits.isMaximumValueEnabled
+                    assert joint.jointMotion.slideLimits.isMinimumValueEnabled
                     joint_vector=joint.jointMotion.slideDirectionVector.asArray()
-                    joint_limit_max = joint.jointMotion.slideLimits.maximumValue/self.scale
-                    joint_limit_min = joint.jointMotion.slideLimits.minimumValue/self.scale
-                    utils.log(f"DEBUG: {name} joint limits: {joint.jointMotion.slideLimits} ({joint.jointMotion.slideLimits.minimumValue}..{joint.jointMotion.slideLimits.maximumValue})")
+                    # The values are in cm per
+                    # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-e3fb19a1-d7ef-4b34-a6f5-76a907d6a774
+                    joint_limit_max = joint.jointMotion.slideLimits.maximumValue * self.cm
+                    joint_limit_min = joint.jointMotion.slideLimits.minimumValue * self.cm
                 else:
                     # Keep default limits for 'RigidJointMotion' or others
                     joint_vector = [0.0, 0.0, 0.0]
@@ -507,7 +516,7 @@ class Configurator:
         utils.log(f"DEBUG: link {inertia['name']} urdf_origin at {urdf_origin.getAsCoordinateSystem()[0].asArray()} ({utils.so3_to_euler(urdf_origin)=}) and inv at {inv.getAsCoordinateSystem()[0].asArray()} ({utils.so3_to_euler(inv)=})")
 
         link = parts.Link(name = inertia['name'],
-                        xyz = (u/self.scale for u in inv.translation.asArray()),
+                        xyz = (u * self.scale for u in inv.translation.asArray()),
                         rpy = utils.so3_to_euler(inv),
                         center_of_mass = inertia['center_of_mass'],
                         sub_folder = self.mesh_folder,
@@ -651,7 +660,7 @@ class Configurator:
                     ct = child_origin.copy()
                     assert ct.transformBy(t)
 
-                    xyz = [c/self.scale for c in ct.translation.asArray()]
+                    xyz = [c * self.scale for c in ct.translation.asArray()]
                     rpy = utils.so3_to_euler(ct)
 
                     utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.getAsCoordinateSystem()[0].asArray()} to {child_name} {child_origin.getAsCoordinateSystem()[0].asArray()} -> {xyz=} rpy={[float(a) for a in rpy]}")
