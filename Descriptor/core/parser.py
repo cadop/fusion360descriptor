@@ -18,7 +18,7 @@ class JointInfo:
     child: str
     type: str = "fixed"
     origin: adsk.core.Point3D = field(default_factory=adsk.core.Point3D.create)
-    axis: Tuple[float,...] = (0.0, 0.0, 0.0)
+    axis: adsk.core.Vector3D = field(default_factory=adsk.core.Vector3D.create)
     upper_limit: float = 0.0
     lower_limit: float = 0.0
 
@@ -459,7 +459,7 @@ class Configurator:
                 if isinstance(joint.jointMotion, adsk.fusion.RevoluteJointMotion):
                     assert joint.jointMotion.rotationLimits.isMaximumValueEnabled
                     assert joint.jointMotion.rotationLimits.isMinimumValueEnabled
-                    joint_vector = joint.jointMotion.rotationAxisVector.asArray()
+                    joint_vector = joint.jointMotion.rotationAxisVector
                     # The values are in radians per
                     # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-e3fb19a1-d7ef-4b34-a6f5-76a907d6a774
                     joint_limit_max = joint.jointMotion.rotationLimits.maximumValue
@@ -471,20 +471,20 @@ class Configurator:
                 elif isinstance(joint.jointMotion, adsk.fusion.SliderJointMotion):
                     assert joint.jointMotion.slideLimits.isMaximumValueEnabled
                     assert joint.jointMotion.slideLimits.isMinimumValueEnabled
-                    joint_vector=joint.jointMotion.slideDirectionVector.asArray()
+                    joint_vector=joint.jointMotion.slideDirectionVector
                     # The values are in cm per
                     # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-e3fb19a1-d7ef-4b34-a6f5-76a907d6a774
                     joint_limit_max = joint.jointMotion.slideLimits.maximumValue * self.cm
                     joint_limit_min = joint.jointMotion.slideLimits.minimumValue * self.cm
                 else:
                     # Keep default limits for 'RigidJointMotion' or others
-                    joint_vector = [0.0, 0.0, 0.0]
+                    joint_vector = adsk.core.Vector3D.create()
                     joint_limit_max = 0.0
                     joint_limit_min = 0.0
 
                 info = JointInfo(
                     name=name, child=child, parent=parent, origin=geom_one_origin, type=joint_type,
-                    axis=tuple(joint_vector), upper_limit=joint_limit_max, lower_limit=joint_limit_min)
+                    axis=joint_vector, upper_limit=joint_limit_max, lower_limit=joint_limit_min)
 
             self.joints_dict[name] = info
 
@@ -639,11 +639,17 @@ class Configurator:
 
                     child_origin = self.links_by_name[child_name].transform2
                     parent_origin = self.link_origins[occ_name]
+                    axis = joint.axis
                     
                     if joint.type != "fixed":
                         utils.log(f"DEBUG: for non-fixed joint {joint.name}, updating child origin from {child_origin.translation.asArray()} to {joint.origin.asArray()}")
                         child_origin = child_origin.copy()
                         assert child_origin.setWithCoordinateSystem(joint.origin, *child_origin.getAsCoordinateSystem()[1:])
+                        t = parent_origin.copy()
+                        t.translation = adsk.core.Vector3D.create()
+                        assert t.invert()
+                        axis.transformBy(t)
+                        utils.log(f"DEBUG:    and updating axis from {joint.axis.asArray()} to {axis.asArray()}")
 
                     self.link_origins[child_name] = child_origin
 
@@ -666,7 +672,7 @@ class Configurator:
                     utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.getAsCoordinateSystem()[0].asArray()} to {child_name} {child_origin.getAsCoordinateSystem()[0].asArray()} -> {xyz=} rpy={[float(a) for a in rpy]}")
 
                     self.joints[joint.name] = parts.Joint(name=joint.name , joint_type=joint.type, 
-                                        xyz=xyz, rpy=rpy, axis=joint.axis, 
+                                        xyz=xyz, rpy=rpy, axis=axis.asArray(), 
                                         parent=occ_name, child=child_name, 
                                         upper_limit=joint.upper_limit, lower_limit=joint.lower_limit)
                     
