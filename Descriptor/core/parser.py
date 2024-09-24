@@ -466,6 +466,7 @@ class Configurator:
                     joint_vector=joint.jointMotion.slideDirectionVector.asArray()
                     joint_limit_max = joint.jointMotion.slideLimits.maximumValue/self.scale
                     joint_limit_min = joint.jointMotion.slideLimits.minimumValue/self.scale
+                    utils.log(f"DEBUG: {name} joint limits: {joint.jointMotion.slideLimits} ({joint.jointMotion.slideLimits.minimumValue}..{joint.jointMotion.slideLimits.maximumValue})")
                 else:
                     # Keep default limits for 'RigidJointMotion' or others
                     joint_vector = [0.0, 0.0, 0.0]

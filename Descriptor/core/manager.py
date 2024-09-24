@@ -20,7 +20,7 @@ class Manager:
     _app: Optional[adsk.core.Application] = None
 
     def __init__(self, save_dir, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
-                document_units, target_units, joint_order, target_platform) -> None:
+                target_units, joint_order, target_platform) -> None:
         '''Initialization of Manager class 
 
         Parameters
@@ -46,10 +46,14 @@ class Manager:
         self.save_mesh = save_mesh
         self.sub_mesh = sub_mesh
 
+        assert self.design is not None
+
         doc_u = 1.0
-        if document_units=='mm': doc_u = 0.001
-        elif document_units=='cm': doc_u = 0.01
-        elif document_units=='m': doc_u = 1.0
+        if self.design.unitsManager.defaultLengthUnits=='mm': doc_u = 0.001
+        elif self.design.unitsManager.defaultLengthUnits=='cm': doc_u = 0.01
+        elif self.design.unitsManager.defaultLengthUnits=='m': doc_u = 1.0
+        else:
+            raise ValueError(f"Inexpected document units: '{self.design.unitsManager.defaultLengthUnits}'")
 
         tar_u = 1.0
         if target_units=='mm': tar_u = 0.001

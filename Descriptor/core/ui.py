@@ -57,7 +57,6 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             sub_mesh = inputs.itemById('sub_mesh')
             mesh_resolution = inputs.itemById('mesh_resolution')
             inertia_precision = inputs.itemById('inertia_precision')
-            document_units = inputs.itemById('document_units')
             target_units = inputs.itemById('target_units')
             joint_order = inputs.itemById('joint_order')
             target_platform = inputs.itemById('target_platform')
@@ -69,7 +68,6 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             assert isinstance(sub_mesh, adsk.core.BoolValueCommandInput)
             assert isinstance(mesh_resolution, adsk.core.DropDownCommandInput)
             assert isinstance(inertia_precision, adsk.core.DropDownCommandInput)
-            assert isinstance(document_units, adsk.core.DropDownCommandInput)
             assert isinstance(target_units, adsk.core.DropDownCommandInput)
             assert isinstance(joint_order, adsk.core.DropDownCommandInput)
             assert isinstance(target_platform, adsk.core.DropDownCommandInput)
@@ -77,13 +75,12 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             if cmdInput.id == 'generate':
                 # User asked to generate using current settings
                 # print(f'{directory_path.text}, {save_mesh.value}, {mesh_resolution.selectedItem.name},\
-                #         {inertia_precision.selectedItem.name}, {document_units.selectedItem.name},\
+                #         {inertia_precision.selectedItem.name},\
                 #         {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
 
                 document_manager = manager.Manager(directory_path.text, save_mesh.value, sub_mesh.value,
                                                    mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, 
-                                                   document_units.selectedItem.name, 
                                                    target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name, 
                                                    target_platform.selectedItem.name)
@@ -94,7 +91,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             elif cmdInput.id == 'preview':
                 # Generate Hierarchy and Preview in panel
                 document_manager = manager.Manager(directory_path.text, save_mesh.value, sub_mesh.value, mesh_resolution.selectedItem.name, 
-                                                   inertia_precision.selectedItem.name, document_units.selectedItem.name, target_units.selectedItem.name, 
+                                                   inertia_precision.selectedItem.name, target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name, target_platform.selectedItem.name)
                 # # Generate
                 _joints = document_manager.preview()
@@ -197,13 +194,6 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             di.add('Low', True, '')
             di.add('Medium', False, '')
             di.add('High', False, '')
-
-            # Add dropdown to set current document units
-            di = inputs.addDropDownCommandInput('document_units', 'Document Units', adsk.core.DropDownStyles.TextListDropDownStyle)
-            di = di.listItems
-            di.add('mm', False, '')
-            di.add('cm', True, '')
-            di.add('m', False, '')
 
             # Add dropdown to set target export units
             di = inputs.addDropDownCommandInput('target_units', 'Target Units', adsk.core.DropDownStyles.TextListDropDownStyle)
