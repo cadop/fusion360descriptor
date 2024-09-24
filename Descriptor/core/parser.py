@@ -644,7 +644,15 @@ class Configurator:
                     xyz = [c/self.scale for c in t.translation.asArray()]
                     rpy = utils.so3_to_euler(t)
 
-                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.getAsCoordinateSystem()[0].asArray()} to {child_name} {child_origin.getAsCoordinateSystem()[0].asArray()} -> {xyz=} {rpy=}")
+                    t = parent_origin.copy()
+                    assert t.invert()
+                    co = child_origin.translation.copy()
+                    assert co.transformBy(t)
+
+                    ct = child_origin.copy()
+                    assert ct.transformBy(t)
+
+                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.getAsCoordinateSystem()[0].asArray()} to {child_name} {child_origin.getAsCoordinateSystem()[0].asArray()} -> {xyz=} alt_xyz={co.asArray()} alt2_xyz={ct.translation.asArray()} rpy={[float(a) for a in rpy]} alt_rpy={[float(a) for a in utils.so3_to_euler(ct)]}")
 
                     self.joints[joint.name] = parts.Joint(name=joint.name , joint_type=joint.type, 
                                         xyz=xyz, rpy=rpy, axis=joint.axis, 
