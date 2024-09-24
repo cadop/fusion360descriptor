@@ -1,6 +1,8 @@
 from typing import Any, Dict, NoReturn, Optional, Tuple
 import adsk.core
 
+LOG_DEBUG = True
+
 def format_name(input: str):
     translation_table = str.maketrans({':':'_', '-':'_', '.':'_', ' ':'', '(':'{', ')':'}'})
     return input.translate(translation_table)
@@ -18,6 +20,8 @@ def convert_german(str_in):
     return str_in.translate(translation_table)
 
 def log(msg: str, level: Optional[adsk.core.LogLevels] = None) -> None:
+    if not LOG_DEBUG and msg.startswith("DEBUG"):
+        return
     if level is None:
         level = adsk.core.LogLevels.InfoLogLevel
         if msg.startswith("WARN"):

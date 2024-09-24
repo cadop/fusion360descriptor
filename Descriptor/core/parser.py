@@ -364,7 +364,7 @@ class Configurator:
         if not center_of_mass.transformBy(transform):
             utils.fatal(f"Center of mass transform failed for {oc.name}")
 
-        print(f"{oc.name}: origin={oc.transform2.getAsCoordinateSystem()[0].asArray()}, translation={oc.transform2.translation.asArray()}, center_mass(global)={prop.centerOfMass.asArray()}, center_mass(transformed)={center_of_mass.asArray()}")
+        print(f"{oc.name}: origin={oc.transform2.getAsCoordinateSystem()[0].asArray()}, center_mass(global)={prop.centerOfMass.asArray()}, center_mass(transformed)={center_of_mass.asArray()}")
 
         # transform, cm -> m
         c_o_m = center_of_mass.copy()
@@ -481,7 +481,7 @@ class Configurator:
         # Add RigidGroups as fixed joints
         for group in self.root.allRigidGroups:
             original_group_name = group.name
-            print(f"Processing Rigid Group {original_group_name}")
+            utils.log(f"DEBUG: Processing Rigid Group {original_group_name}")
             for i, occ in enumerate(group.occurrences):
                 # Assumes that the first occurrence will be the parent
                 if i == 0:
@@ -503,7 +503,7 @@ class Configurator:
         assert inv.invert()
         #fusion_origin = occ.transform2.getAsCoordinateSystem()[0].asArray()
 
-        utils.log(f"DEBUG: link {inertia['name']} urdf_origin at {urdf_origin.getAsCoordinateSystem()[0].asArray()} ({urdf_origin.translation.asArray()=}, {utils.so3_to_euler(urdf_origin)=}) and inv at {inv.getAsCoordinateSystem()[0].asArray()} ({inv.translation.asArray()=}, {utils.so3_to_euler(inv)=})")
+        utils.log(f"DEBUG: link {inertia['name']} urdf_origin at {urdf_origin.getAsCoordinateSystem()[0].asArray()} ({utils.so3_to_euler(urdf_origin)=}) and inv at {inv.getAsCoordinateSystem()[0].asArray()} ({utils.so3_to_euler(inv)=})")
 
         link = parts.Link(name = inertia['name'],
                         xyz = (u/self.scale for u in inv.translation.asArray()),
@@ -631,18 +631,16 @@ class Configurator:
                     parent_origin = self.link_origins[occ_name]
                     
                     if joint.type != "fixed":
+                        utils.log(f"DEBUG: for non-fixed joint {joint.name}, updating child origin from {child_origin.translation.asArray()} to {joint.origin.asArray()}")
                         child_origin = child_origin.copy()
                         assert child_origin.setWithCoordinateSystem(joint.origin, *child_origin.getAsCoordinateSystem()[1:])
 
                     self.link_origins[child_name] = child_origin
 
                     #transform = (*child_origin.getAsCoordinateSystem(), *parent_origin.getAsCoordinateSystem())
-                    transform = (*parent_origin.getAsCoordinateSystem(), *child_origin.getAsCoordinateSystem())
-                    t = adsk.core.Matrix3D.create()
-                    assert t.setToAlignCoordinateSystems(*transform)
-
-                    xyz = [c/self.scale for c in t.translation.asArray()]
-                    rpy = utils.so3_to_euler(t)
+                    #transform = (*parent_origin.getAsCoordinateSystem(), *child_origin.getAsCoordinateSystem())
+                    #t = adsk.core.Matrix3D.create()
+                    #assert t.setToAlignCoordinateSystems(*transform)
 
                     t = parent_origin.copy()
                     assert t.invert()
@@ -652,7 +650,10 @@ class Configurator:
                     ct = child_origin.copy()
                     assert ct.transformBy(t)
 
-                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.getAsCoordinateSystem()[0].asArray()} to {child_name} {child_origin.getAsCoordinateSystem()[0].asArray()} -> {xyz=} alt_xyz={co.asArray()} alt2_xyz={ct.translation.asArray()} rpy={[float(a) for a in rpy]} alt_rpy={[float(a) for a in utils.so3_to_euler(ct)]}")
+                    xyz = [c/self.scale for c in ct.translation.asArray()]
+                    rpy = utils.so3_to_euler(ct)
+
+                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.getAsCoordinateSystem()[0].asArray()} to {child_name} {child_origin.getAsCoordinateSystem()[0].asArray()} -> {xyz=} rpy={[float(a) for a in rpy]}")
 
                     self.joints[joint.name] = parts.Joint(name=joint.name , joint_type=joint.type, 
                                         xyz=xyz, rpy=rpy, axis=joint.axis, 
