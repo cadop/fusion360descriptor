@@ -17,7 +17,7 @@ class JointInfo:
     parent: str
     child: str
     type: str = "fixed"
-    origin: adsk.core.Point3D = field(default_factory=adsk.core.Point3D.create)
+    origin: adsk.core.Vector3D = field(default_factory=adsk.core.Vector3D.create)
     axis: adsk.core.Vector3D = field(default_factory=adsk.core.Vector3D.create)
     upper_limit: float = 0.0
     lower_limit: float = 0.0
@@ -175,29 +175,31 @@ class Hierarchy:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur  # type: ignore[undef]
 
-def get_origin(o) -> Union[adsk.core.Point3D, None]:
+def get_origin(o) -> Union[adsk.core.Vector3D, None]:
     if isinstance(o, adsk.fusion.JointGeometry):
         return get_origin(o.origin)
     elif o is None:
         return None
     elif isinstance(o, adsk.fusion.JointOrigin):
-        return get_origin(o.geometry)
+        res = get_origin(o.geometry).copy()
+        assert res.transformBy(getMatrixFromRoot(o.assemblyContext))
+        return res
     elif isinstance(o, adsk.core.Vector3D):
-        return o.asPoint()
-    elif isinstance(o,  adsk.core.Point3D):
         return o
+    elif isinstance(o,  adsk.core.Point3D):
+        return o.asVector()
     else:
         raise ValueError(f"get_origin: unexpected {o} of type {type(o)}")
     
 def get_context_name(c: Optional[adsk.fusion.Occurrence]) -> str:
     return c.name if c is not None else 'ROOT level'
 
-def assy_stack(c: Optional[adsk.fusion.Occurrence]) -> List[adsk.fusion.Occurrence]:
-    if c is None:
-        return []
-    res = assy_stack(c.assemblyContext)
-    res.append(c)
-    return res
+def getMatrixFromRoot(occ: Optional[adsk.fusion.Occurrence]) -> adsk.core.Matrix3D:
+    mat = adsk.core.Matrix3D.create()
+    while occ is not None:
+        mat.transformBy(occ.transform2)
+        occ = occ.assemblyContext
+    return mat
 
 class Configurator:
 
@@ -374,7 +376,7 @@ class Configurator:
         occs_dict['mass'] = mass
 
         center_of_mass = prop.centerOfMass.copy()
-        transform = oc.transform2.copy()
+        transform = getMatrixFromRoot(oc.assemblyContext)
         if not transform.invert():
             utils.fatal(f"Inverse transform failed for {oc.name}")
         if not center_of_mass.transformBy(transform):
@@ -397,7 +399,7 @@ class Configurator:
         return occs_dict
 
     def _iterate_through_occurrences(self):
-        for key, token in self.component_map.items():
+        for token in self.component_map.values():
             yield token.component
 
 
@@ -430,15 +432,6 @@ class Configurator:
             name = utils.rename_if_duplicate(joint.name, self.joints_dict)
             utils.log(f"Processing joint {orig_name} of type {joint_type}, between {occ_one.name} and {occ_two.name}")
 
-            try:
-                geom_one_origin = get_origin(joint.geometryOrOriginOne)
-            except RuntimeError:
-                geom_one_origin = None
-            try:
-                geom_two_origin = get_origin(joint.geometryOrOriginTwo)
-            except RuntimeError:
-                geom_two_origin = None
-
             occ_one_name = self.get_name(occ_one)
             occ_two_name = self.get_name(occ_two)
             
@@ -455,13 +448,23 @@ class Configurator:
             print(f"Got from Fusion: {joint_type} {name} connecting",
                   f"{occ_one_name} @ {occ_one.transform2.getAsCoordinateSystem()[0].asArray()} and",
                   f"{occ_two_name} @ {occ_two.transform2.getAsCoordinateSystem()[0].asArray()}", sep="\n\t")
-            print("\tOrigin 1:", geom_one_origin.asArray() if geom_one_origin is not None else None)
-            print("\tOrigin 2:", geom_two_origin.asArray() if geom_two_origin is not None else None)
 
             if joint_type == "fixed":
                 info = JointInfo(name=name, child=child, parent=parent)
 
             else:
+                try:
+                    geom_one_origin = get_origin(joint.geometryOrOriginOne)
+                except RuntimeError:
+                    geom_one_origin = None
+                try:
+                    geom_two_origin = get_origin(joint.geometryOrOriginTwo)
+                except RuntimeError:
+                    geom_two_origin = None
+
+                print("\tOrigin 1:", geom_one_origin.asArray() if geom_one_origin is not None else None)
+                print("\tOrigin 2:", geom_two_origin.asArray() if geom_two_origin is not None else None)
+
                 if occ_one.assemblyContext != occ_two.assemblyContext:
                     utils.log(f"WARNING: Non-fixed joint {name} crosses the assembly context boundary:"
                                 f" {occ_one_name} is in {get_context_name(occ_one.assemblyContext)}"
@@ -532,11 +535,11 @@ class Configurator:
         assert inv.invert()
         #fusion_origin = occ.transform2.getAsCoordinateSystem()[0].asArray()
 
-        utils.log(f"DEBUG: link {inertia['name']} urdf_origin at {urdf_origin.getAsCoordinateSystem()[0].asArray()} ({utils.so3_to_euler(urdf_origin)=}) and inv at {inv.getAsCoordinateSystem()[0].asArray()} ({utils.so3_to_euler(inv)=})")
+        utils.log(f"DEBUG: link {inertia['name']} urdf_origin at {urdf_origin.getAsCoordinateSystem()[0].asArray()} ({transforms.so3_to_euler(urdf_origin)=}) and inv at {inv.getAsCoordinateSystem()[0].asArray()} ({transforms.so3_to_euler(inv)=})")
 
         link = parts.Link(name = inertia['name'],
                         xyz = (u * self.scale for u in inv.translation.asArray()),
-                        rpy = utils.so3_to_euler(inv),
+                        rpy = transforms.so3_to_euler(inv),
                         center_of_mass = inertia['center_of_mass'],
                         sub_folder = self.mesh_folder,
                         mass = inertia['mass'],
@@ -634,7 +637,7 @@ class Configurator:
         grounded_occ = {"base_link"}
         # URDF origin at base link origin "by definition"
         assert self.base_link is not None
-        self.link_origins["base_link"] = self.base_link.transform2
+        self.link_origins["base_link"] = getMatrixFromRoot(self.base_link)
         self.__add_link(self.base_link)
         boundary = grounded_occ
         while boundary:
@@ -656,43 +659,19 @@ class Configurator:
 
                     new_boundary.add(child_name)
 
-                    child_origin = self.links_by_name[child_name].transform2
+                    child_origin = getMatrixFromRoot(self.links_by_name[child_name])
                     parent_origin = self.link_origins[occ_name]
-
-                    child_context = self.links_by_name[child_name].assemblyContext
-                    parent_context = self.links_by_name[occ_name].assemblyContext
-
-                    if child_context != parent_context:
-                        parent_origin = parent_origin.copy()
-                        parent_stack = assy_stack(parent_context)
-                        child_stack = assy_stack(child_context)
-                        utils.log(f"DEBUG: {child_name} (full: {self.links_by_name[child_name].fullPathName}) is under {' & '.join(['ROOT'] + [c.name for c in child_stack])}")
-                        utils.log(f"DEBUG: {occ_name} (full: {self.links_by_name[occ_name].fullPathName}) is under {' & '.join(['ROOT'] + [c.name for c in parent_stack])}")
-                        i = len(parent_stack) - 1
-                        utils.log(f"DEBUG: {occ_name} :{utils.mat_str(parent_origin)} wrt {get_context_name(parent_context)}")
-                        while i >= 0 and (i >= len(child_stack) or parent_stack[i] != child_stack[i]):
-                            # Transform parent origin out of parent assembly-local frame
-                            utils.log(f"DEBUG: ... <- {parent_stack[i]} via {utils.mat_str(parent_stack[i].transform2)}")
-                            assert parent_origin.transformBy(parent_stack[i].transform2)
-                            utils.log(f"DEBUG: ... :{utils.mat_str(parent_origin)} wrt {get_context_name(parent_stack[i].assemblyContext)}")
-                            i -= 1
-                        for j in range(i+1, len(child_stack)):
-                            # Transform parent origin into child assembly-local subframe
-                            utils.log(f"DEBUG: ... -> {child_stack[j].name} via inv of {utils.mat_str(child_stack[j].transform2)}")
-                            t = child_stack[j].transform2.copy()
-                            assert t.invert()
-                            assert parent_origin.transformBy(t)
-                            utils.log(f"DEBUG: ... :{utils.mat_str(parent_origin)} wrt {child_stack[j].name}")
 
                     axis = joint.axis
                     
                     if joint.type != "fixed":
                         utils.log(f"DEBUG: for non-fixed joint {joint.name}, updating child origin from {child_origin.translation.asArray()} to {joint.origin.asArray()}")
                         child_origin = child_origin.copy()
-                        assert child_origin.setWithCoordinateSystem(joint.origin, *child_origin.getAsCoordinateSystem()[1:])
+                        child_origin.translation = joint.origin
                         t = parent_origin.copy()
                         t.translation = adsk.core.Vector3D.create()
                         assert t.invert()
+                        axis = axis.copy()
                         assert axis.transformBy(t)
                         utils.log(f"DEBUG:    and updating axis from {joint.axis.asArray()} to {axis.asArray()}")
 
@@ -712,7 +691,7 @@ class Configurator:
                     assert ct.transformBy(t)
 
                     xyz = [c * self.scale for c in ct.translation.asArray()]
-                    rpy = utils.so3_to_euler(ct)
+                    rpy = transforms.so3_to_euler(ct)
 
                     utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.getAsCoordinateSystem()[0].asArray()} to {child_name} {child_origin.getAsCoordinateSystem()[0].asArray()} -> {xyz=} {rpy=}")
 

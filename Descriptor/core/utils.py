@@ -1,5 +1,6 @@
-from typing import Any, Dict, NoReturn, Optional, Tuple
+from typing import Any, Dict, NoReturn, Optional
 import adsk.core
+from .transforms import so3_to_euler
 
 LOG_DEBUG = True
 
@@ -38,28 +39,6 @@ def log(msg: str, level: Optional[adsk.core.LogLevels] = None) -> None:
 def fatal(msg: str) -> NoReturn:
     log("FATAL ERROR: " + msg)
     raise RuntimeError(msg)
-
-import numpy as np
-from scipy.spatial.transform import Rotation   
-
-def so3_to_euler(mat: adsk.core.Matrix3D) -> Tuple[float, float, float]:
-    """Converts an SO3 rotation matrix to Euler angles
-
-    Args:
-        so3: Matrix3D coordinate transform
-
-    Returns:
-        tuple of Euler angles (size 3)
-
-    """
-    so3 = np.zeros((3,3))
-    for i in range(3):
-        for j in range(3):
-            so3[i,j] = mat.getCell(i,j)
-    ### first transform the matrix to euler angles
-    r =  Rotation.from_matrix(so3)
-    yaw, pitch, roll = r.as_euler("ZYX", degrees=False)
-    return (float(roll), float(pitch), float(yaw))
 
 def mat_str(m: adsk.core.Matrix3D) -> str:
     return f"xyz={m.translation.asArray()} rpy={so3_to_euler(m)}"
