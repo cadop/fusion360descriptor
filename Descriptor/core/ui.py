@@ -5,11 +5,20 @@ import adsk.core, adsk.fusion, traceback
 
 try:
     from scipy.spatial.transform import Rotation # Test whether it's there
-    _ = Rotation # Noop for numpy import to not be unused
+    _ = Rotation # Noop for import to not be unused
 except ModuleNotFoundError:
-    import subprocess
     import sys
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'scipy'])
+    import subprocess
+    import os.path
+    exec = sys.executable
+    if "python" not in os.path.basename(sys.executable).lower():
+        # There is a crazy thing on Mac, where sys.executable is Fusion iteself, not Python :(
+        exec = subprocess.__file__
+        for i in range(3):
+            exec = os.path.dirname(exec)
+        exec = os.path.join(exec, "bin", "python")
+    subprocess.check_call([exec, '-m', 'ensurepip'])
+    subprocess.check_call([exec, '-m', 'pip', 'install', 'scipy'])
 
 from . import utils
 from . import manager

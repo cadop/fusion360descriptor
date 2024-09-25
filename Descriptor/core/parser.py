@@ -2,7 +2,7 @@
 module to parse fusion file 
 '''
 
-from typing import Dict, List, Literal, Optional, Set, Tuple, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union, cast
 from dataclasses import dataclass, field
 
 import adsk.core, adsk.fusion
@@ -175,13 +175,15 @@ class Hierarchy:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur  # type: ignore[undef]
 
-def get_origin(o) -> Union[adsk.core.Vector3D, None]:
+def get_origin(o: Any) -> Union[adsk.core.Vector3D, None]:
     if isinstance(o, adsk.fusion.JointGeometry):
         return get_origin(o.origin)
     elif o is None:
         return None
     elif isinstance(o, adsk.fusion.JointOrigin):
-        res = get_origin(o.geometry).copy()
+        res = get_origin(o.geometry)
+        assert res is not None
+        res = res.copy()
         assert res.transformBy(getMatrixFromRoot(o.assemblyContext))
         return res
     elif isinstance(o, adsk.core.Vector3D):
