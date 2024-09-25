@@ -19,6 +19,8 @@ def convert_german(str_in):
     translation_table = str.maketrans({'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue', 'ß': 'ss'})
     return str_in.translate(translation_table)
 
+viewport: Optional[adsk.core.Viewport] = None
+
 def log(msg: str, level: Optional[adsk.core.LogLevels] = None) -> None:
     if not LOG_DEBUG and msg.startswith("DEBUG"):
         return
@@ -29,6 +31,8 @@ def log(msg: str, level: Optional[adsk.core.LogLevels] = None) -> None:
         elif msg.startswith("FATAL") or msg.startswith("ERR"):
             level = adsk.core.LogLevels.ErrorLogLevel
     adsk.core.Application.log(msg, level)
+    if viewport is not None:
+        viewport.refresh()
     print(msg)
 
 def fatal(msg: str) -> NoReturn:
@@ -55,4 +59,7 @@ def so3_to_euler(mat: adsk.core.Matrix3D) -> Tuple[float, float, float]:
     ### first transform the matrix to euler angles
     r =  Rotation.from_matrix(so3)
     yaw, pitch, roll = r.as_euler("ZYX", degrees=False)
-    return (roll, pitch, yaw)
+    return (float(roll), float(pitch), float(yaw))
+
+def mat_str(m: adsk.core.Matrix3D) -> str:
+    return f"xyz={m.translation.asArray()} rpy={so3_to_euler(m)}"

@@ -127,7 +127,8 @@ class Manager:
         ''' process the scene, including writing to directory and
         exporting mesh, if applicable
         '''        
-        
+        if self._app is not None and self._app.activeViewport is not None:
+            utils.viewport = self._app.activeViewport
         utils.log("*** Parsing ***")
         config = parser.Configurator(Manager.root, self.scale, self.cm)
         config.inertia_accuracy = self.inert_accuracy
