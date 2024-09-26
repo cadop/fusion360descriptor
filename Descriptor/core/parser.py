@@ -420,6 +420,8 @@ class Configurator:
             orig_name = joint.name
             # Rename if the joint already exists in our dictionary
             try:
+                _ = joint.entityToken # Just making sure it exists
+
                 joint_type = Configurator.joint_types[joint.jointMotion.jointType]
 
                 occ_one = joint.occurrenceOne
