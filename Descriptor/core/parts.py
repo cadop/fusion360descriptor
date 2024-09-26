@@ -127,7 +127,7 @@ class Link:
 
     scale = '0.001'
 
-    def __init__(self, name, xyz, rpy, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh, material_dict):
+    def __init__(self, name, xyz, rpy, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh, material_dict, visible):
         """
         Parameters
         ----------
@@ -164,6 +164,7 @@ class Link:
         self.body_dict = body_dict
         self.sub_mesh = sub_mesh # if we want to export each body as a separate mesh
         self.material_dict = material_dict
+        self.visible = visible
 
         
     @property
@@ -202,16 +203,16 @@ class Link:
                 origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
                 geometry_v = SubElement(visual, 'geometry')
                 mesh_v = SubElement(geometry_v, 'mesh')
-                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':scale}
+                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(body_name)}.stl','scale':scale}
                 material = SubElement(visual, 'material')
                 material.attrib = {'name':'silver'}
-        else:
+        elif self.visible:
             visual = SubElement(link, 'visual')
             origin_v = SubElement(visual, 'origin')
             origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
             geometry_v = SubElement(visual, 'geometry')
             mesh_v = SubElement(geometry_v, 'mesh')
-            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':scale}
+            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(self.name)}.stl','scale':scale}
             material = SubElement(visual, 'material')
             material.attrib = {'name': self.material_dict[self.name]['material']}
     
@@ -224,14 +225,14 @@ class Link:
                 origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
                 geometry_c = SubElement(collision, 'geometry')
                 mesh_c = SubElement(geometry_c, 'mesh')
-                mesh_c.attrib = {'filename':f'package://{self.sub_folder}{collision_body}.stl','scale':scale}
-        else:
+                mesh_c.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(collision_body)}.stl','scale':scale}
+        elif self.visible:
             collision = SubElement(link, 'collision')
             origin_c = SubElement(collision, 'origin')
             origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
             geometry_c = SubElement(collision, 'geometry')
             mesh_c = SubElement(geometry_c, 'mesh')
-            mesh_c.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':scale}
+            mesh_c.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(self.name)}.stl','scale':scale}
 
         rough_string = ElementTree.tostring(link, 'utf-8')
         reparsed = minidom.parseString(rough_string)

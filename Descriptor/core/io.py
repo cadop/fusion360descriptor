@@ -1,10 +1,17 @@
 import os.path, sys, fileinput
+from typing import Dict
 import adsk, adsk.core, adsk.fusion
 from . import utils
 from collections import Counter
 from shutil import copytree
 
-def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_mapper, _app):  
+def visible_to_stl(
+        design: adsk.fusion.Design, 
+        save_dir: str,
+        root: adsk.fusion.Component, 
+        accuracy, body_dict, sub_mesh, body_mapper,
+        name_mapper: Dict[str, str],
+        _app):  
     """
     export top-level components as a single stl file into "save_dir/"
     
@@ -45,6 +52,8 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
     for oc in occ:
         if oc.isLightBulbOn:
             visible_components.append(oc)
+        else:
+            utils.log(f"Skipping stl generation because occurrence is not visible: {name_mapper[oc.entityToken]}")
 
     # Make sure no repeated body names
     body_count = Counter()
@@ -56,7 +65,7 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         if oc.isGrounded:
             occName = utils.format_name("base_link")
         else:
-            occName = utils.format_name(oc.name)
+            occName = utils.format_name(name_mapper[oc.entityToken])
         
         if body_mapper[oc.entityToken] == []:
             continue

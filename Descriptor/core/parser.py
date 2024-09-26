@@ -42,8 +42,7 @@ class Hierarchy:
         self.name: str = component.name
         self.parent: Optional["Hierarchy"] = None
         Hierarchy.total_components += 1
-        if Hierarchy.total_components % 20 == 0:
-            utils.log(f"... Collected {self.total_components} components ...")
+        utils.log(f"... {Hierarchy.total_components}. Collected {self.name}...")
 
     def _add_child(self, c: "Hierarchy") -> None:
         self.children.append(c)
@@ -546,7 +545,8 @@ class Configurator:
                         inertia_tensor = inertia['inertia'],
                         body_dict = self.body_dict_urdf,
                         sub_mesh = self.sub_mesh,
-                        material_dict = self.material_dict)
+                        material_dict = self.material_dict,
+                        visible = occ.isLightBulbOn)
         self.links[link.name] = link
 
     def __get_appearance(self, occ: adsk.fusion.Occurrence):

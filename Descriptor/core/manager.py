@@ -126,7 +126,10 @@ class Manager:
     def run(self):
         ''' process the scene, including writing to directory and
         exporting mesh, if applicable
-        '''        
+        '''
+        assert Manager.root is not None
+        assert Manager.design is not None
+
         if self._app is not None and self._app.activeViewport is not None:
             utils.viewport = self._app.activeViewport
         utils.log("*** Parsing ***")
@@ -158,5 +161,5 @@ class Manager:
         
         # Custom STL Export
         if self.save_mesh:
-            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh, config.body_mapper, Manager._app)
+            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh, config.body_mapper, config.links_by_token, Manager._app)
 
