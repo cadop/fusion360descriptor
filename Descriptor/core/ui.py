@@ -71,7 +71,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             joint_order = inputs.itemById('joint_order')
             target_platform = inputs.itemById('target_platform')
 
-            utils.log(f"UI: processing command: {cmdInput.id}")
+            utils.log(f"DEBUG: UI: processing command: {cmdInput.id}")
 
             assert isinstance(directory_path, adsk.core.TextBoxCommandInput)
             assert isinstance(robot_name, adsk.core.TextBoxCommandInput)
@@ -183,11 +183,12 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             assert manager.Manager.root is not None
 
             # Show path to save
-            inputs.addTextBoxCommandInput('directory_path', 'Save Directory', 'C:', 3, True)
-            inputs.addTextBoxCommandInput('robot_name', 'Robot Name', manager.Manager.root.name.split()[0], 1, False)
+            inputs.addTextBoxCommandInput('directory_path', 'Save Directory', 'C:', 2, True)
             # Button to set the save directory
             btn = inputs.addBoolValueInput('save_dir', 'Set Save Directory', False)
             btn.isFullWidth = True
+
+            inputs.addTextBoxCommandInput('robot_name', 'Robot Name', manager.Manager.root.name.split()[0], 1, False)
 
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)

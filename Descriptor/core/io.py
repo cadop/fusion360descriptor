@@ -291,7 +291,7 @@ def copy_moveit(save_dir, package_name):
     copy_package(save_dir, moveit_package_path)
     update_cmakelists(save_dir, package_name)
     update_package_xml(save_dir, package_name)
-    update_package_name(save_dir + '/launch/moveit.launch.py', package_name)
+    update_package_name(save_dir + '/launch/setup_assistant.launch.py', package_name)
 
 def copy_package(save_dir, package_dir):
     try:
