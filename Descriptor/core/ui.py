@@ -62,6 +62,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             # Get settings of UI
             directory_path = inputs.itemById('directory_path')
+            robot_name = inputs.itemById('robot_name')
             save_mesh = inputs.itemById('save_mesh')
             sub_mesh = inputs.itemById('sub_mesh')
             mesh_resolution = inputs.itemById('mesh_resolution')
@@ -73,6 +74,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             utils.log(f"UI: processing command: {cmdInput.id}")
 
             assert isinstance(directory_path, adsk.core.TextBoxCommandInput)
+            assert isinstance(robot_name, adsk.core.TextBoxCommandInput)
             assert isinstance(save_mesh, adsk.core.BoolValueCommandInput)
             assert isinstance(sub_mesh, adsk.core.BoolValueCommandInput)
             assert isinstance(mesh_resolution, adsk.core.DropDownCommandInput)
@@ -87,7 +89,8 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 #         {inertia_precision.selectedItem.name},\
                 #         {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
 
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, sub_mesh.value,
+                document_manager = manager.Manager(directory_path.text, robot_name.text,
+                                                   save_mesh.value, sub_mesh.value,
                                                    mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, 
                                                    target_units.selectedItem.name, 
@@ -99,7 +102,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             elif cmdInput.id == 'preview':
                 # Generate Hierarchy and Preview in panel
-                document_manager = manager.Manager(directory_path.text, save_mesh.value, sub_mesh.value, mesh_resolution.selectedItem.name, 
+                document_manager = manager.Manager(directory_path.text, robot_name.text, save_mesh.value, sub_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, target_units.selectedItem.name, 
                                                    joint_order.selectedItem.name, target_platform.selectedItem.name)
                 # # Generate
@@ -177,9 +180,11 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             self.handlers.append(onInputChanged)
             inputs = cmd.commandInputs
 
+            assert manager.Manager.root is not None
 
             # Show path to save
-            inputs.addTextBoxCommandInput('directory_path', 'Save Directory', 'C:', 2, True)
+            inputs.addTextBoxCommandInput('directory_path', 'Save Directory', 'C:', 3, True)
+            inputs.addTextBoxCommandInput('robot_name', 'Robot Name', manager.Manager.root.name.split()[0], 1, False)
             # Button to set the save directory
             btn = inputs.addBoolValueInput('save_dir', 'Set Save Directory', False)
             btn.isFullWidth = True

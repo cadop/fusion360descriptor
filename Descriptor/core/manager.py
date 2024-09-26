@@ -18,7 +18,7 @@ class Manager:
     design: Optional[adsk.fusion.Design] = None
     _app: Optional[adsk.core.Application] = None
 
-    def __init__(self, save_dir, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
+    def __init__(self, save_dir, robot_name, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
                 target_units, joint_order, target_platform) -> None:
         '''Initialization of Manager class 
 
@@ -86,6 +86,8 @@ class Manager:
         # set the target platform
         self.target_platform = target_platform
 
+        self.robot_name = robot_name
+
         # Set directory 
         self._set_dir(save_dir)
 
@@ -98,9 +100,7 @@ class Manager:
             path to save
         '''        
         # set the names
-        assert Manager.root is not None
-        robot_name = Manager.root.name.split()[0]
-        package_name = robot_name + '_description'
+        package_name = self.robot_name + '_description'
 
         self.save_dir = os.path.join(save_dir, package_name)
         try: os.mkdir(self.save_dir)
@@ -115,7 +115,7 @@ class Manager:
             mapping of joint names with parent-> child relationship
         '''        
         
-        config = parser.Configurator(Manager.root, self.scale, self.cm)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name)
         config.inertia_accuracy = self.inert_accuracy
         config.joint_order = self.joint_order
         ## Return array of tuples (parent, child)
@@ -130,7 +130,7 @@ class Manager:
         if self._app is not None and self._app.activeViewport is not None:
             utils.viewport = self._app.activeViewport
         utils.log("*** Parsing ***")
-        config = parser.Configurator(Manager.root, self.scale, self.cm)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name)
         config.inertia_accuracy = self.inert_accuracy
         config.joint_order = self.joint_order
         config.sub_mesh = self.sub_mesh

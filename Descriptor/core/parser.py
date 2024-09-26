@@ -208,7 +208,7 @@ class Configurator:
     joint_type_list = [ 'fixed', 'revolute', 'prismatic', 'Cylinderical',
                         'PinSlot', 'Planner', 'Ball']  # these are the names in urdf
 
-    def __init__(self, root, scale: float, cm: float) -> None:
+    def __init__(self, root, scale: float, cm: float, name: str) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
         Parameters
         ----------
@@ -240,6 +240,8 @@ class Configurator:
         self.component_map: dict[str, Hierarchy] = dict() # Entity tokens for each component
 
         self.root_node: Optional[Hierarchy] = None
+
+        self.name = name
 
     def close_enough(self, a, b) -> bool:
         if isinstance(a, float) and isinstance(b, float):
@@ -324,11 +326,6 @@ class Configurator:
         self._joints()
         self._materials()
         self._build()
-
-    @property
-    def name(self):
-        ''' Name of the root component '''
-        return self.root.name.split()[0]
 
     def _base(self):
         ''' Get the base link '''
