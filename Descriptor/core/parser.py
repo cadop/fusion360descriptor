@@ -134,7 +134,7 @@ class Hierarchy:
         return parent_map
 
     @staticmethod
-    def traverse(occurrences, parent: Optional["Hierarchy"] = None) -> "Hierarchy":
+    def traverse(occurrences: adsk.fusion.OccurrenceList, parent: Optional["Hierarchy"] = None) -> "Hierarchy":
         '''Recursively create class instances and define a parent->child structure
         Based on the fusion 360 API docs
         
@@ -153,10 +153,6 @@ class Hierarchy:
         assert occurrences
         for i in range(0, occurrences.count):
             occ = occurrences.item(i)
-
-            # Break links to avoid unwanted changes
-            if occ.isReferencedComponent:
-                occ.breakLink()
 
             cur = Hierarchy(occ)
 
@@ -232,7 +228,6 @@ class Configurator:
         self.color_dict: Dict[str, str] = {}
         self.links: Dict[str, parts.Link] = {} # Link class
         self.joints: Dict[str, parts.Joint] = {} # Joint class for writing to file
-        self.joint_order: Union[Tuple[Literal['p'], Literal['c']], Tuple[Literal['c'], Literal['p']]] = ('p','c') # Order of joints defined by components
         self.scale = scale # Convert autodesk units to meters (or whatever simulator takes)
         self.cm = cm # Convert cm units to meters (or whatever simulator takes)
         parts.Link.scale = str(self.scale)
@@ -266,11 +261,10 @@ class Configurator:
     def get_scene_configuration(self):
         '''Build the graph of how the scene components are related
         '''        
-        
+        Hierarchy.total_components = 0
+        utils.log("* Traversing the hierarchy *")
         self.root_node = Hierarchy(self.root)
         occ_list=self.root.occurrences.asList
-
-        utils.log("* Traversing the hierarchy *")
         Hierarchy.traverse(occ_list, self.root_node)
         utils.log(f"* Collected {Hierarchy.total_components} components, processing *")
         self.component_map = self.root_node.get_all_children()
@@ -433,22 +427,12 @@ class Configurator:
             name = utils.rename_if_duplicate(joint.name, self.joints_dict)
             utils.log(f"Processing joint {orig_name} of type {joint_type}, between {occ_one.name} and {occ_two.name}")
 
-            occ_one_name = self.get_name(occ_one)
-            occ_two_name = self.get_name(occ_two)
-            
-            # Reverses which is parent and child
-            if self.joint_order == ('p','c'):
-                parent = occ_one_name
-                child = occ_two_name
-            elif self.joint_order == ('c','p'):
-                child = occ_one_name
-                parent = occ_two_name
-            else:
-                raise ValueError(f'Order {self.joint_order} not supported')
+            parent = self.get_name(occ_one)
+            child = self.get_name(occ_two)
 
             print(f"Got from Fusion: {joint_type} {name} connecting",
-                  f"{occ_one_name} @ {occ_one.transform2.getAsCoordinateSystem()[0].asArray()} and",
-                  f"{occ_two_name} @ {occ_two.transform2.getAsCoordinateSystem()[0].asArray()}", sep="\n\t")
+                  f"{parent} @ {occ_one.transform2.getAsCoordinateSystem()[0].asArray()} and",
+                  f"{child} @ {occ_two.transform2.getAsCoordinateSystem()[0].asArray()}", sep="\n\t")
 
             if joint_type == "fixed":
                 info = JointInfo(name=name, child=child, parent=parent)
@@ -468,8 +452,8 @@ class Configurator:
 
                 if occ_one.assemblyContext != occ_two.assemblyContext:
                     utils.log(f"WARNING: Non-fixed joint {name} crosses the assembly context boundary:"
-                                f" {occ_one_name} is in {get_context_name(occ_one.assemblyContext)}"
-                                f" but {occ_two_name} is in {get_context_name(occ_two.assemblyContext)}")
+                                f" {parent} is in {get_context_name(occ_one.assemblyContext)}"
+                                f" but {child} is in {get_context_name(occ_two.assemblyContext)}")
 
                 if geom_one_origin is None:
                     utils.fatal(f'Non-fixed joint {orig_name} does not have an origin, aborting')

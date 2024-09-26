@@ -19,7 +19,7 @@ class Manager:
     _app: Optional[adsk.core.Application] = None
 
     def __init__(self, save_dir, robot_name, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
-                target_units, joint_order, target_platform) -> None:
+                target_units, target_platform) -> None:
         '''Initialization of Manager class 
 
         Parameters
@@ -36,8 +36,6 @@ class Manager:
             base units of current file
         target_units : str
             target files units
-        joint_order : str
-            if parent or child should be component 1
         target_platform : str
             which configuration to use for exporting urdf
 
@@ -75,13 +73,6 @@ class Manager:
             self.mesh_accuracy = adsk.fusion.MeshRefinementSettings.MeshRefinementMedium
         elif mesh_resolution == 'High':
             self.mesh_accuracy = adsk.fusion.MeshRefinementSettings.MeshRefinementHigh
-
-        if joint_order == 'Parent':
-            self.joint_order = ('p','c')
-        elif joint_order == 'Child':
-            self.joint_order = ('c','p')
-        else:
-            raise ValueError(f'Order method not supported')
         
         # set the target platform
         self.target_platform = target_platform
@@ -117,7 +108,6 @@ class Manager:
         
         config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name)
         config.inertia_accuracy = self.inert_accuracy
-        config.joint_order = self.joint_order
         ## Return array of tuples (parent, child)
         config.get_scene_configuration()
         return config.get_joint_preview()
@@ -135,7 +125,6 @@ class Manager:
         utils.log("*** Parsing ***")
         config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name)
         config.inertia_accuracy = self.inert_accuracy
-        config.joint_order = self.joint_order
         config.sub_mesh = self.sub_mesh
         utils.log("** Getting scene configuration **")
         config.get_scene_configuration()
@@ -161,5 +150,7 @@ class Manager:
         
         # Custom STL Export
         if self.save_mesh:
+            utils.log("*** Generating mesh STLs ***")
             io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh, config.body_mapper, config.links_by_token, Manager._app)
+        utils.log("*** Done! ***")
 

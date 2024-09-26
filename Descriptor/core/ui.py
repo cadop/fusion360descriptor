@@ -68,7 +68,6 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             mesh_resolution = inputs.itemById('mesh_resolution')
             inertia_precision = inputs.itemById('inertia_precision')
             target_units = inputs.itemById('target_units')
-            joint_order = inputs.itemById('joint_order')
             target_platform = inputs.itemById('target_platform')
 
             utils.log(f"DEBUG: UI: processing command: {cmdInput.id}")
@@ -80,21 +79,19 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             assert isinstance(mesh_resolution, adsk.core.DropDownCommandInput)
             assert isinstance(inertia_precision, adsk.core.DropDownCommandInput)
             assert isinstance(target_units, adsk.core.DropDownCommandInput)
-            assert isinstance(joint_order, adsk.core.DropDownCommandInput)
             assert isinstance(target_platform, adsk.core.DropDownCommandInput)
 
             if cmdInput.id == 'generate':
                 # User asked to generate using current settings
                 # print(f'{directory_path.text}, {save_mesh.value}, {mesh_resolution.selectedItem.name},\
                 #         {inertia_precision.selectedItem.name},\
-                #         {target_units.selectedItem.name}, {joint_order.selectedItem.name}' )
+                #         {target_units.selectedItem.name} )
 
                 document_manager = manager.Manager(directory_path.text, robot_name.text,
                                                    save_mesh.value, sub_mesh.value,
                                                    mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, 
                                                    target_units.selectedItem.name, 
-                                                   joint_order.selectedItem.name, 
                                                    target_platform.selectedItem.name)
                 
                 # Generate
@@ -104,7 +101,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 # Generate Hierarchy and Preview in panel
                 document_manager = manager.Manager(directory_path.text, robot_name.text, save_mesh.value, sub_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, target_units.selectedItem.name, 
-                                                   joint_order.selectedItem.name, target_platform.selectedItem.name)
+                                                   target_platform.selectedItem.name)
                 # # Generate
                 _joints = document_manager.preview()
 
@@ -216,12 +213,6 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             di.add('mm', False, '')
             di.add('cm', False, '')
             di.add('m', True, '')
-
-            # Add dropdown to define the order that joints were defined (parent as component 1 or component 2)
-            di = inputs.addDropDownCommandInput('joint_order', 'Joint Component 1', adsk.core.DropDownStyles.TextListDropDownStyle)
-            di = di.listItems
-            di.add('Parent', False, '')
-            di.add('Child', True, '')
 
             # Set the type of platform to target for building XML
             di = inputs.addDropDownCommandInput('target_platform', 'Target Platform', adsk.core.DropDownStyles.TextListDropDownStyle)
