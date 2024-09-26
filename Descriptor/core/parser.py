@@ -165,21 +165,18 @@ class Hierarchy:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur  # type: ignore[undef]
 
-def get_origin(o: Any) -> Union[adsk.core.Vector3D, None]:
+def get_origin(
+        o: Optional[adsk.core.Base],
+        context: adsk.fusion.Occurrence
+    ) -> Union[adsk.core.Vector3D, None]:
     if isinstance(o, adsk.fusion.JointGeometry):
-        return get_origin(o.origin)
+        res = o.origin.asVector().copy()
+        assert res.transformBy(getMatrixFromRoot(context))
+        return res
     elif o is None:
         return None
     elif isinstance(o, adsk.fusion.JointOrigin):
-        res = get_origin(o.geometry)
-        assert res is not None
-        res = res.copy()
-        assert res.transformBy(getMatrixFromRoot(o.assemblyContext))
-        return res
-    elif isinstance(o, adsk.core.Vector3D):
-        return o
-    elif isinstance(o,  adsk.core.Point3D):
-        return o.asVector()
+        return get_origin(o.geometry, o.assemblyContext)
     else:
         raise ValueError(f"get_origin: unexpected {o} of type {type(o)}")
     
@@ -430,25 +427,25 @@ class Configurator:
             parent = self.get_name(occ_one)
             child = self.get_name(occ_two)
 
-            print(f"Got from Fusion: {joint_type} {name} connecting",
-                  f"{parent} @ {occ_one.transform2.getAsCoordinateSystem()[0].asArray()} and",
-                  f"{child} @ {occ_two.transform2.getAsCoordinateSystem()[0].asArray()}", sep="\n\t")
+            utils.log(f"DEBUG: Got from Fusion: {joint_type} {name} connecting")
+            utils.log(f"DEBUG: ... {parent} @ {occ_one.transform2.translation.asArray()} and")
+            utils.log(f"DEBUG: ... {child} @ {occ_two.transform2.translation.asArray()}")
 
             if joint_type == "fixed":
                 info = JointInfo(name=name, child=child, parent=parent)
 
             else:
                 try:
-                    geom_one_origin = get_origin(joint.geometryOrOriginOne)
+                    geom_one_origin = get_origin(joint.geometryOrOriginOne, joint.assemblyContext)
                 except RuntimeError:
                     geom_one_origin = None
                 try:
-                    geom_two_origin = get_origin(joint.geometryOrOriginTwo)
+                    geom_two_origin = get_origin(joint.geometryOrOriginTwo, joint.assemblyContext)
                 except RuntimeError:
                     geom_two_origin = None
 
-                print("\tOrigin 1:", geom_one_origin.asArray() if geom_one_origin is not None else None)
-                print("\tOrigin 2:", geom_two_origin.asArray() if geom_two_origin is not None else None)
+                utils.log(f"DEBUG: ... Origin 1: {geom_one_origin.asArray() if geom_one_origin is not None else None}")
+                utils.log(f"DEBUG: ... Origin 2: {geom_two_origin.asArray() if geom_two_origin is not None else None}")
 
                 if occ_one.assemblyContext != occ_two.assemblyContext:
                     utils.log(f"WARNING: Non-fixed joint {name} crosses the assembly context boundary:"
@@ -479,6 +476,7 @@ class Configurator:
                     assert joint.jointMotion.slideLimits.isMaximumValueEnabled
                     assert joint.jointMotion.slideLimits.isMinimumValueEnabled
                     joint_vector=joint.jointMotion.slideDirectionVector
+
                     # The values are in cm per
                     # https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-e3fb19a1-d7ef-4b34-a6f5-76a907d6a774
                     joint_limit_max = joint.jointMotion.slideLimits.maximumValue * self.cm
@@ -488,6 +486,12 @@ class Configurator:
                     joint_vector = adsk.core.Vector3D.create()
                     joint_limit_max = 0.0
                     joint_limit_min = 0.0
+
+                if joint_vector.length > 0:
+                    t = getMatrixFromRoot(joint.assemblyContext)
+                    t.translation = adsk.core.Vector3D.create()
+                    joint_vector = joint_vector.copy()
+                    assert joint_vector.transformBy(t)
 
                 info = JointInfo(
                     name=name, child=child, parent=parent, origin=geom_one_origin, type=joint_type,
