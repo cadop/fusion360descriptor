@@ -15,9 +15,9 @@ from . import utils
 
 class Joint:
 
-    # Defaults for all joints 
-    effort_limit = 100
-    vel_limit = 100
+    # Defaults for all joints. Need be be floats, not ints
+    effort_limit = 100.0
+    vel_limit = 100.0
 
     def __init__(self, name: str, xyz: Sequence[float], rpy: Sequence[float], axis: Sequence[float], parent: str, child:str, joint_type: str, upper_limit: float, lower_limit: float):
         """
