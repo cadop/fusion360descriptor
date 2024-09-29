@@ -2,6 +2,7 @@
 module to parse fusion file 
 '''
 
+import math
 from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union, cast
 from dataclasses import dataclass, field
 
@@ -165,6 +166,17 @@ class Hierarchy:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur  # type: ignore[undef]
 
+def vector_to_str(v: Union[adsk.core.Vector3D, adsk.core.Point3D]) -> str:
+    """Turn a verctor into a debug printout"""
+    return f"[{', '.join(f'{x:.1f}' for x in v.asArray())}]"
+
+def ct_to_str(ct: adsk.core.Matrix3D) -> str:
+    """Turn a coordinate transform matrix into a debug printout"""
+    rpy = transforms.so3_to_euler(ct)
+    return (f"@{vector_to_str(ct.translation)}"
+            f" rpy=({', '.join(str(int(x/math.pi*180)) for x in rpy)})"
+            f" ({' '.join(('[' + ','.join(str(int(x)) for x in v.asArray()) + ']') for v in ct.getAsCoordinateSystem()[1:])})")
+
 def get_origin(
         o: Optional[adsk.core.Base],
         context: adsk.fusion.Occurrence
@@ -172,6 +184,7 @@ def get_origin(
     if isinstance(o, adsk.fusion.JointGeometry):
         res = o.origin.asVector().copy()
         assert res.transformBy(getMatrixFromRoot(context))
+        utils.log(f"DEBUG: Joint Origin {vector_to_str(o.origin)} wrt {get_context_name(context)} is {vector_to_str(res)} wrt {get_context_name(None)}")
         return res
     elif o is None:
         return None
@@ -184,6 +197,7 @@ def get_context_name(c: Optional[adsk.fusion.Occurrence]) -> str:
     return c.name if c is not None else 'ROOT level'
 
 def getMatrixFromRoot(occ: Optional[adsk.fusion.Occurrence]) -> adsk.core.Matrix3D:
+    """Given an occurence, return its coordinate transform w.r.t the global frame"""
     mat = adsk.core.Matrix3D.create()
     while occ is not None:
         mat.transformBy(occ.transform2)
@@ -374,12 +388,13 @@ class Configurator:
         if not center_of_mass.transformBy(transform):
             utils.fatal(f"Center of mass transform failed for {oc.name}")
 
-        print(f"{oc.name}: origin={oc.transform2.getAsCoordinateSystem()[0].asArray()}, center_mass(global)={prop.centerOfMass.asArray()}, center_mass(transformed)={center_of_mass.asArray()}")
+        utils.log(f"DEBUG: {oc.name}: origin={vector_to_str(oc.transform2.translation)}, center_mass(global)={vector_to_str(prop.centerOfMass)}, center_mass(transformed)={vector_to_str(center_of_mass)}")
 
         # transform, cm -> m
         c_o_m = center_of_mass.copy()
         assert c_o_m.transformBy(self.link_origins[self.links_by_token[oc.entityToken]])
-        occs_dict['center_of_mass'] = [c * self.scale for c in c_o_m.asArray()]
+        # XXX: not 100% sure between self.scale and self.cm here, but does seem to be cm
+        occs_dict['center_of_mass'] = [c * self.cm for c in c_o_m.asArray()]
 
         moments = prop.getXYZMomentsOfInertia()
         if not moments[0]:
@@ -487,11 +502,15 @@ class Configurator:
                     joint_limit_max = 0.0
                     joint_limit_min = 0.0
 
-                if joint_vector.length > 0:
+                l = joint_vector.length
+                if l > 0:
+                    utils.log(f"DEBUG: ... joint_vector (axis) was: {joint_vector.asArray()}")
                     t = getMatrixFromRoot(joint.assemblyContext)
-                    t.translation = adsk.core.Vector3D.create()
+                    # t.translation = adsk.core.Vector3D.create()
                     joint_vector = joint_vector.copy()
                     assert joint_vector.transformBy(t)
+                    assert self.close_enough(l, joint_vector.length)
+                    utils.log(f"DEBUG: ... joint_vector (axis) now: {joint_vector.asArray()}")
 
                 info = JointInfo(
                     name=name, child=child, parent=parent, origin=geom_one_origin, type=joint_type,
@@ -513,8 +532,8 @@ class Configurator:
                 parent_occ_name = self.get_name(parent_occ)  # type: ignore[undef]
                 occ_name = self.get_name(occ)
                 print(f"Got from Fusion: {rigid_group_occ_name}, connecting",
-                      f"parent {parent_occ_name} @ {parent_occ.transform2.getAsCoordinateSystem()[0].asArray()} and" # type: ignore[undef]
-                      f"child {occ_name} {occ.transform2.getAsCoordinateSystem()[0].asArray()}")
+                      f"parent {parent_occ_name} @ {parent_occ.transform2.translation.asArray()} and" # type: ignore[undef]
+                      f"child {occ_name} {occ.transform2.translation.asArray()}")
                 self.joints_dict[rigid_group_occ_name] = JointInfo(name=rigid_group_occ_name, parent=parent_occ_name, child=occ_name)
 
     def __add_link(self, occ: adsk.fusion.Occurrence):
@@ -522,12 +541,12 @@ class Configurator:
         urdf_origin = self.link_origins[inertia['name']]
         inv = urdf_origin.copy()
         assert inv.invert()
-        #fusion_origin = occ.transform2.getAsCoordinateSystem()[0].asArray()
+        #fusion_origin = occ.transform2.translation.asArray()
 
-        utils.log(f"DEBUG: link {inertia['name']} urdf_origin at {urdf_origin.getAsCoordinateSystem()[0].asArray()} ({transforms.so3_to_euler(urdf_origin)=}) and inv at {inv.getAsCoordinateSystem()[0].asArray()} ({transforms.so3_to_euler(inv)=})")
+        utils.log(f"DEBUG: link {inertia['name']} urdf_origin at {urdf_origin.translation.asArray()} ({transforms.so3_to_euler(urdf_origin)=}) and inv at {inv.translation.asArray()} ({transforms.so3_to_euler(inv)=})")
 
         link = parts.Link(name = inertia['name'],
-                        xyz = (u * self.scale for u in inv.translation.asArray()),
+                        xyz = (u * self.cm for u in inv.translation.asArray()),
                         rpy = transforms.so3_to_euler(inv),
                         center_of_mass = inertia['center_of_mass'],
                         sub_folder = self.mesh_folder,
@@ -649,8 +668,30 @@ class Configurator:
 
                     new_boundary.add(child_name)
 
+                    utils.log(f"DEBUG: {child_name} ({self.links_by_name[child_name].name}) is {ct_to_str(self.links_by_name[child_name].transform2)} wrt {get_context_name(self.links_by_name[child_name].assemblyContext)}")
+                    if utils.LOG_DEBUG:
+                        occ = self.links_by_name[child_name]
+                        max_level = 1
+                        while occ is not None:
+                            mat = adsk.core.Matrix3D.create()
+                            occ = self.links_by_name[child_name]
+                            i = 1
+                            while occ is not None and i <= max_level:
+                                mat.transformBy(occ.transform2)
+                                occ = occ.assemblyContext
+                                i += 1
+                            max_level += 1
+                            utils.log(f"DEBUG: ..... {ct_to_str(mat)} wrt {get_context_name(occ)}")
+
                     child_origin = getMatrixFromRoot(self.links_by_name[child_name])
                     parent_origin = self.link_origins[occ_name]
+
+                    if utils.LOG_DEBUG and self.close_enough(parent_origin.getAsCoordinateSystem()[1:], adsk.core.Matrix3D.create().getAsCoordinateSystem()[1:]) and not self.close_enough(child_origin.getAsCoordinateSystem()[1:], adsk.core.Matrix3D.create().getAsCoordinateSystem()[1:]):
+                        utils.log(f"***** !!!!! rotating off the global frame's orientation")
+                        utils.log(f"      Child axis: {[v.asArray() for v in child_origin.getAsCoordinateSystem()[1:]]}")
+
+                    t = parent_origin.copy()
+                    assert t.invert()
 
                     axis = joint.axis
                     
@@ -658,11 +699,10 @@ class Configurator:
                         utils.log(f"DEBUG: for non-fixed joint {joint.name}, updating child origin from {child_origin.translation.asArray()} to {joint.origin.asArray()}")
                         child_origin = child_origin.copy()
                         child_origin.translation = joint.origin
-                        t = parent_origin.copy()
-                        t.translation = adsk.core.Vector3D.create()
-                        assert t.invert()
+                        tt = t.copy()
+                        tt.translation = adsk.core.Vector3D.create()
                         axis = axis.copy()
-                        assert axis.transformBy(t)
+                        assert axis.transformBy(tt)
                         utils.log(f"DEBUG:    and updating axis from {joint.axis.asArray()} to {axis.asArray()}")
 
                     self.link_origins[child_name] = child_origin
@@ -672,18 +712,13 @@ class Configurator:
                     #t = adsk.core.Matrix3D.create()
                     #assert t.setToAlignCoordinateSystems(*transform)
 
-                    t = parent_origin.copy()
-                    assert t.invert()
-                    co = child_origin.translation.copy()
-                    assert co.transformBy(t)
-
                     ct = child_origin.copy()
                     assert ct.transformBy(t)
 
-                    xyz = [c * self.scale for c in ct.translation.asArray()]
+                    xyz = [c * self.cm for c in ct.translation.asArray()]
                     rpy = transforms.so3_to_euler(ct)
 
-                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.getAsCoordinateSystem()[0].asArray()} to {child_name} {child_origin.getAsCoordinateSystem()[0].asArray()} -> {xyz=} {rpy=}")
+                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {parent_origin.translation.asArray()} to {child_name} {child_origin.translation.asArray()} -> {xyz=} {rpy=}")
 
                     self.joints[joint.name] = parts.Joint(name=joint.name , joint_type=joint.type, 
                                         xyz=xyz, rpy=rpy, axis=axis.asArray(), 
