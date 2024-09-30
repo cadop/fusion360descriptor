@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Dict, Optional
 import os
 import os.path
+import json
 
 import adsk.core
 import adsk.fusion
@@ -19,7 +20,7 @@ class Manager:
     _app: Optional[adsk.core.Application] = None
 
     def __init__(self, save_dir, robot_name, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
-                target_units, target_platform) -> None:
+                target_units, target_platform, name_map) -> None:
         '''Initialization of Manager class 
 
         Parameters
@@ -79,6 +80,11 @@ class Manager:
 
         self.robot_name = robot_name
 
+        self.name_map: Dict[str, str] = {}
+        if name_map:
+            with open(name_map, "r") as fp:
+                self.name_map = json.load(fp)
+
         # Set directory 
         self._set_dir(save_dir)
 
@@ -123,7 +129,7 @@ class Manager:
         if self._app is not None and self._app.activeViewport is not None:
             utils.viewport = self._app.activeViewport
         utils.log("*** Parsing ***")
-        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map)
         config.inertia_accuracy = self.inert_accuracy
         config.sub_mesh = self.sub_mesh
         utils.log("** Getting scene configuration **")

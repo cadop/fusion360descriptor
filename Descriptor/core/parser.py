@@ -221,7 +221,7 @@ class Configurator:
         adsk.fusion.JointTypes.BallJointType: "Ball_unsupported",
     }
 
-    def __init__(self, root, scale: float, cm: float, name: str) -> None:
+    def __init__(self, root, scale: float, cm: float, name: str, name_map: Dict[str, str]) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
         Parameters
         ----------
@@ -248,7 +248,8 @@ class Configurator:
         parts.Link.scale = str(self.scale)
         self.eps = 1e-7 / self.scale
         self.base_link: Optional[adsk.fusion.Occurrence] = None
-        self.component_map: dict[str, Hierarchy] = dict() # Entity tokens for each component
+        self.component_map: Dict[str, Hierarchy] = {} # Entity tokens for each component
+        self.name_map = name_map
 
         self.root_node: Optional[Hierarchy] = None
 
@@ -356,7 +357,7 @@ class Configurator:
     def get_name(self, oc: adsk.fusion.Occurrence) -> str:
         if oc.entityToken in self.links_by_token:
             return self.links_by_token[oc.entityToken]
-        name = utils.rename_if_duplicate(oc.name, self.links_by_name)
+        name = utils.rename_if_duplicate(self.name_map.get(oc.name, oc.name), self.links_by_name)
         self.links_by_name[name] = oc
         self.links_by_token[oc.entityToken] = name
         return name   
@@ -436,7 +437,7 @@ class Configurator:
                 utils.log(f"WARNING: Failed to process joint {joint.name} (child of {joint.parentComponent.name}): {e}, {joint.isValid=}. This is likely a Fusion bug - the joint was likely deleted, but somehow we still see it. Will ignore it.")
                 continue
 
-            name = utils.rename_if_duplicate(joint.name, self.joints_dict)
+            name = utils.rename_if_duplicate(self.name_map.get(joint.name, joint.name), self.joints_dict)
             utils.log(f"Processing joint {orig_name} of type {joint_type}, between {occ_one.name} and {occ_two.name}")
 
             parent = self.get_name(occ_one)

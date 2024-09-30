@@ -23,8 +23,8 @@ except ModuleNotFoundError:
 from . import utils
 from . import manager
 
-def file_dialog(ui: adsk.core.UserInterface) -> Optional[str]:     
-    '''display the dialog to save the file
+def save_dir_dialog(ui: adsk.core.UserInterface) -> Optional[str]:     
+    '''display the dialog to pick the save directory
 
     Parameters
     ----------
@@ -39,7 +39,7 @@ def file_dialog(ui: adsk.core.UserInterface) -> Optional[str]:
 
     # Set styles of folder dialog.
     folderDlg = ui.createFolderDialog()
-    folderDlg.title = 'Fusion Folder Dialog' 
+    folderDlg.title = 'URDF Save Folder Dialog' 
     
     # Show folder dialog
     dlgResult = folderDlg.showDialog()
@@ -47,6 +47,31 @@ def file_dialog(ui: adsk.core.UserInterface) -> Optional[str]:
         return folderDlg.folder
     return None
 
+def json_file_dialog(ui: adsk.core.UserInterface) -> Optional[str]:     
+    '''display the dialog to pick a json file
+
+    Parameters
+    ----------
+    ui : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
+    '''    
+
+    # Set styles of folder dialog.
+    fileDlg = ui.createFileDialog()
+    fileDlg.filter = "Name Map JSON file (*.json)"
+    fileDlg.title = 'Name Mapping File Dialog' 
+    fileDlg.isMultiSelectEnabled = False
+    
+    # Show folder dialog
+    dlgResult = fileDlg.showOpen()
+    if dlgResult == adsk.core.DialogResults.DialogOK:
+        return fileDlg.filename
+    return None
 
 class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
     def __init__(self, ui: adsk.core.UserInterface):
@@ -62,6 +87,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             # Get settings of UI
             directory_path = inputs.itemById('directory_path')
+            name_map = inputs.itemById('name_map')
             robot_name = inputs.itemById('robot_name')
             save_mesh = inputs.itemById('save_mesh')
             sub_mesh = inputs.itemById('sub_mesh')
@@ -73,6 +99,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             utils.log(f"DEBUG: UI: processing command: {cmdInput.id}")
 
             assert isinstance(directory_path, adsk.core.TextBoxCommandInput)
+            assert isinstance(name_map, adsk.core.TextBoxCommandInput)
             assert isinstance(robot_name, adsk.core.TextBoxCommandInput)
             assert isinstance(save_mesh, adsk.core.BoolValueCommandInput)
             assert isinstance(sub_mesh, adsk.core.BoolValueCommandInput)
@@ -92,7 +119,8 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                                                    mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, 
                                                    target_units.selectedItem.name, 
-                                                   target_platform.selectedItem.name)
+                                                   target_platform.selectedItem.name,
+                                                   name_map.text)
                 
                 # Generate
                 document_manager.run()
@@ -101,7 +129,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 # Generate Hierarchy and Preview in panel
                 document_manager = manager.Manager(directory_path.text, robot_name.text, save_mesh.value, sub_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, target_units.selectedItem.name, 
-                                                   target_platform.selectedItem.name)
+                                                   target_platform.selectedItem.name, name_map.text)
                 # # Generate
                 _joints = document_manager.preview()
 
@@ -116,9 +144,15 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
-                save_dir = file_dialog(self.ui)
-                if save_dir is not None:
-                    directory_path.text = save_dir
+                name_map_file = save_dir_dialog(self.ui)
+                if name_map_file is not None:
+                    directory_path.text = name_map_file
+
+            elif cmdInput.id == 'set_name_map':
+                # User set the save directory
+                name_map_file = json_file_dialog(self.ui)
+                if name_map_file is not None:
+                    name_map.text = name_map_file
 
         except:
             if self.ui:
@@ -186,6 +220,11 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             btn.isFullWidth = True
 
             inputs.addTextBoxCommandInput('robot_name', 'Robot Name', manager.Manager.root.name.split()[0], 1, False)
+
+            inputs.addTextBoxCommandInput('name_map', 'Name Map File', '', 1, True)
+            # Button to set the save directory
+            btn = inputs.addBoolValueInput('set_name_map', 'Select Name Map File', False)
+            btn.isFullWidth = True
 
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
