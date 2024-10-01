@@ -10,7 +10,7 @@ import adsk.core, adsk.fusion
 from . import transforms
 from . import parts
 from . import utils
-from collections import Counter, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 
 @dataclass(frozen=True, kw_only=True, eq=False)
 class JointInfo:
@@ -239,7 +239,7 @@ class Configurator:
         self.links_by_name : Dict[str, adsk.fusion.Occurrence] = {}
         self.joints_dict: Dict[str, JointInfo] = {}
         self.body_dict: Dict[str, List[adsk.fusion.BRepBody]] = {}
-        self.material_dict: Dict[str, Dict[str, str]] = {}
+        self.material_dict: Dict[str, Dict[str, str]] = OrderedDict()
         self.color_dict: Dict[str, str] = {}
         self.links: Dict[str, parts.Link] = {} # Link class
         self.joints: Dict[str, parts.Joint] = {} # Joint class for writing to file
