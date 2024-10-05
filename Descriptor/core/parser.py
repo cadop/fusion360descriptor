@@ -512,7 +512,17 @@ class Configurator:
         # Add RigidGroups as fixed joints
         for group in self.root.allRigidGroups:
             original_group_name = group.name
-            utils.log(f"DEBUG: Processing Rigid Group {original_group_name}")
+            utils.log(f"DEBUG: Processing rigid group {original_group_name}")
+            try:
+                if group.isSuppressed:
+                    utils.log(f"Skipping suppressed rigid group {original_group_name}")
+                    continue
+                if not group.isValid:
+                    utils.log(f"WARNING: skipping invalid rigid group {original_group_name}")
+                    continue
+            except RuntimeError:
+                utils.log(f"WARNING: skipping invalid rigid group {original_group_name}")
+                continue
             for i, occ in enumerate(group.occurrences):
                 # Assumes that the first occurrence will be the parent
                 if i == 0:
