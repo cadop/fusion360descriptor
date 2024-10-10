@@ -360,6 +360,7 @@ class Configurator:
         name = utils.rename_if_duplicate(self.name_map.get(oc.name, oc.name), self.links_by_name)
         self.links_by_name[name] = oc
         self.links_by_token[oc.entityToken] = name
+        utils.log(f"DEBUG: link '{oc.name}' token '{oc.entityToken}' became '{name}'")
         return name   
     
     def _get_inertia(self, oc: adsk.fusion.Occurrence):
@@ -395,7 +396,7 @@ class Configurator:
         # It is in cm, not in design units.
         occs_dict['center_of_mass'] = [c * self.cm for c in c_o_m.asArray()]
 
-        utils.log(f"DEBUG: {oc.name}: origin={vector_to_str(oc.transform2.translation)}, center_mass(global)={vector_to_str(prop.centerOfMass)}, center_mass(URDF)={occs_dict['center_of_mass']}")
+        utils.log(f"DEBUG: {occ_name}: origin={vector_to_str(oc.transform2.translation)}, center_mass(global)={vector_to_str(prop.centerOfMass)}, center_mass(URDF)={occs_dict['center_of_mass']}")
 
         moments = prop.getXYZMomentsOfInertia()
         if not moments[0]:
@@ -598,7 +599,7 @@ class Configurator:
         # Adapted from SpaceMaster85/fusion2urdf
         self.color_dict['silver_default'] = "0.700 0.700 0.700 1.000"
 
-        for occ in self._iterate_through_occurrences():
+        for occ_name, occ in self.links_by_name.items():
             occ_material_dict = {}
             occ_material_dict['material'] = "silver_default"
             prop_name, prop = self.__get_appearance(occ)
@@ -608,7 +609,6 @@ class Configurator:
                 color_name = utils.format_name(color_name)
                 occ_material_dict['material'] = color_name
                 self.color_dict[color_name] = f"{prop.value.red/255} {prop.value.green/255} {prop.value.blue/255} {prop.value.opacity/255}"
-            occ_name = self.get_name(occ)
             self.material_dict[utils.format_name(occ_name)] = occ_material_dict
 
 
@@ -658,6 +658,8 @@ class Configurator:
         for joint_name, joint_info in self.joints_dict.items():
             occurrences[joint_info.parent].append(joint_name)
             occurrences[joint_info.child].append(joint_name)
+        for link_name, joints in occurrences.items():
+            utils.log(f"DEBUG: {link_name} touches joints {joints}")
         grounded_occ = {"base_link"}
         # URDF origin at base link origin "by definition"
         assert self.base_link is not None
@@ -730,7 +732,7 @@ class Configurator:
             grounded_occ.update(new_boundary)
             boundary = new_boundary
 
-        # Sanity check
+        # Sanity checks
         not_in_joints = set()
         unreachable = set()
         for component in self._iterate_through_occurrences():
@@ -746,3 +748,10 @@ class Configurator:
             if unreachable:
                 error += "Unreacheable from the grounded component via joints+links: " + ", ".join(unreachable) + "."
             utils.fatal(error)
+        missing_joints = set(self.joints_dict).difference(self.joints)
+        if missing_joints:
+            utils.fatal("Lost joints: '" + "', '".join(missing_joints) + "'")
+        extra_joints = set(self.joints).difference(self.joints_dict)
+        if extra_joints:
+            utils.fatal("Extra joints: '" + "', '".join(extra_joints) + "'")
+            
