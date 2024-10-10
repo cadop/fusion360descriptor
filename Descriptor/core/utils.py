@@ -1,8 +1,21 @@
+import time
 from typing import Any, Dict, NoReturn, Optional
 import adsk.core
 from .transforms import so3_to_euler
 
 LOG_DEBUG = True
+REFRESH_DELAY = 2.0
+
+start_time: Optional[float] = None
+last_refresh = 0.0
+            
+def start_log_timer() -> None:
+    global start_time
+    start_time = time.time()
+
+def time_elapsed() -> float:
+    assert start_time is not None
+    return time.time() - start_time
 
 def format_name(input: str):
     translation_table = str.maketrans({':':'_', '-':'_', '.':'_', ' ':'', '(':'{', ')':'}'})
@@ -33,11 +46,17 @@ def log(msg: str, level: Optional[adsk.core.LogLevels] = None) -> None:
             level = adsk.core.LogLevels.ErrorLogLevel
     adsk.core.Application.log(msg, level)
     if viewport is not None:
-        viewport.refresh()
+        global last_refresh
+        if time.time() >= last_refresh + REFRESH_DELAY:
+            viewport.refresh()
+            last_refresh = time.time()
     print(msg)
 
 def fatal(msg: str) -> NoReturn:
-    log("FATAL ERROR: " + msg)
+    log_msg = "FATAL ERROR: " + msg
+    if start_time is not None:
+        log_msg += f"\n\tTime Elapsed: {time_elapsed():.1f}s."
+    log(log_msg)
     raise RuntimeError(msg)
 
 def mat_str(m: adsk.core.Matrix3D) -> str:

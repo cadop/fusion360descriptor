@@ -1,3 +1,4 @@
+import time
 from typing import Dict, Optional
 import os
 import os.path
@@ -112,7 +113,7 @@ class Manager:
             mapping of joint names with parent-> child relationship
         '''        
         
-        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map)
         config.inertia_accuracy = self.inert_accuracy
         ## Return array of tuples (parent, child)
         config.get_scene_configuration()
@@ -126,6 +127,7 @@ class Manager:
         assert Manager.root is not None
         assert Manager.design is not None
 
+        utils.start_log_timer()
         if self._app is not None and self._app.activeViewport is not None:
             utils.viewport = self._app.activeViewport
         utils.log("*** Parsing ***")
@@ -158,5 +160,5 @@ class Manager:
         if self.save_mesh:
             utils.log("*** Generating mesh STLs ***")
             io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh, config.body_mapper, config.links_by_token, Manager._app)
-        utils.log("*** Done! ***")
+        utils.log(f"*** Done! Time elapsed: {utils.time_elapsed():.1f}s ***")
 

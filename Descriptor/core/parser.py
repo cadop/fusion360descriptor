@@ -612,7 +612,7 @@ class Configurator:
             self.material_dict[utils.format_name(occ_name)] = occ_material_dict
 
 
-    def _build(self):
+    def _build(self) -> None:
         ''' create links and joints by setting parent and child relationships and constructing
         the XML formats to be exported later'''
 
