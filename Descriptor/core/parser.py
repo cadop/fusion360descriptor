@@ -235,20 +235,20 @@ class Configurator:
         self.inertia_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
 
         self.sub_mesh = False
-        self.links_by_token: Dict[str, str] = {}
-        self.links_by_name : Dict[str, adsk.fusion.Occurrence] = {}
-        self.joints_dict: Dict[str, JointInfo] = {}
-        self.body_dict: Dict[str, List[adsk.fusion.BRepBody]] = {}
+        self.links_by_token: Dict[str, str] = OrderedDict()
+        self.links_by_name : Dict[str, adsk.fusion.Occurrence] = OrderedDict()
+        self.joints_dict: Dict[str, JointInfo] = OrderedDict()
+        self.body_dict: Dict[str, List[adsk.fusion.BRepBody]] = OrderedDict()
         self.material_dict: Dict[str, Dict[str, str]] = OrderedDict()
-        self.color_dict: Dict[str, str] = {}
-        self.links: Dict[str, parts.Link] = {} # Link class
-        self.joints: Dict[str, parts.Joint] = {} # Joint class for writing to file
+        self.color_dict: Dict[str, str] = OrderedDict()
+        self.links: Dict[str, parts.Link] = OrderedDict() # Link class
+        self.joints: Dict[str, parts.Joint] = OrderedDict() # Joint class for writing to file
         self.scale = scale # Convert autodesk units to meters (or whatever simulator takes)
         self.cm = cm # Convert cm units to meters (or whatever simulator takes)
         parts.Link.scale = str(self.scale)
         self.eps = 1e-7 / self.scale
         self.base_link: Optional[adsk.fusion.Occurrence] = None
-        self.component_map: Dict[str, Hierarchy] = {} # Entity tokens for each component
+        self.component_map: Dict[str, Hierarchy] = OrderedDict() # Entity tokens for each component
         self.name_map = name_map
 
         self.root_node: Optional[Hierarchy] = None
@@ -418,6 +418,18 @@ class Configurator:
 
         for joint in self.root.allJoints:
             if joint.healthState in [adsk.fusion.FeatureHealthStates.SuppressedFeatureHealthState, adsk.fusion.FeatureHealthStates.RolledBackFeatureHealthState]:
+                continue
+            if isinstance(joint.jointMotion, adsk.fusion.RevoluteJointMotion):
+                if joint.jointMotion.rotationValue != 0.0:
+                    utils.log(f"WARNING: joint {joint.name} was not at 0, rotating it to 0")
+                    joint.jointMotion.rotationValue = 0.0
+            elif isinstance(joint.jointMotion, adsk.fusion.SliderJointMotion):
+                if joint.jointMotion.slideValue != 0.0:
+                    utils.log(f"WARNING: joint {joint.name} was not at 0, sliding it to 0")
+                    joint.jointMotion.slideValue = 0.0
+
+        for joint in self.root.allJoints:
+            if joint.healthState in [adsk.fusion.FeatureHealthStates.SuppressedFeatureHealthState, adsk.fusion.FeatureHealthStates.RolledBackFeatureHealthState]:
                 utils.log(f"Skipping joint {joint.name} (child of {joint.parentComponent.name}) as it is suppressed or rolled back")
                 continue
 
@@ -464,7 +476,7 @@ class Configurator:
                 utils.log(f"DEBUG: ... Origin 2: {vector_to_str(geom_two_origin) if geom_two_origin is not None else None}")
 
                 if occ_one.assemblyContext != occ_two.assemblyContext:
-                    utils.log(f"WARNING: Non-fixed joint {name} crosses the assembly context boundary:"
+                    utils.log(f"DEBUG: Non-fixed joint {name} crosses the assembly context boundary:"
                                 f" {parent} is in {get_context_name(occ_one.assemblyContext)}"
                                 f" but {child} is in {get_context_name(occ_two.assemblyContext)}")
 
