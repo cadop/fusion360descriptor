@@ -3,7 +3,7 @@ from typing import Any, Dict, NoReturn, Optional
 import adsk.core
 from .transforms import so3_to_euler
 
-LOG_DEBUG = True
+LOG_DEBUG = False
 REFRESH_DELAY = 2.0
 
 start_time: Optional[float] = None

@@ -484,9 +484,9 @@ class Configurator:
                 if geom_one_origin is None:
                     utils.fatal(f'Non-fixed joint {orig_name} does not have an origin, aborting')
                 elif geom_two_origin is not None and not self.close_enough(geom_two_origin, geom_one_origin):
-                    utils.fatal(f'Occurrences {occ_one.name} and {occ_two.name} of non-fixed {orig_name}' +
+                    utils.log(f'WARNING: Occurrences {occ_one.name} and {occ_two.name} of non-fixed {orig_name}' +
                                        f' have origins {geom_one_origin.asArray()} and {geom_two_origin.asArray()}'
-                                       f' that do not coincide. Make sure the joint is "at 0 / at home" before exporting')
+                                       f' that do not coincide.')
                         
                 # Only Revolute joints have rotation axis 
                 if isinstance(joint.jointMotion, adsk.fusion.RevoluteJointMotion):
