@@ -350,9 +350,7 @@ class Configurator:
             # TODO: Improve handling if there is no grounded occurrence
             print("ERROR: Failed to find a grounded occurrence for base_link")
             exit("Failed to find a grounded occurrence for base_link")
-        
-        self.links_by_token[self.base_link.entityToken] = "base_link"
-        self.links_by_name["base_link"] = self.base_link
+        self.get_name(self.base_link)
 
     def get_name(self, oc: adsk.fusion.Occurrence) -> str:
         if oc.entityToken in self.links_by_token:
@@ -660,10 +658,11 @@ class Configurator:
             occurrences[joint_info.child].append(joint_name)
         for link_name, joints in occurrences.items():
             utils.log(f"DEBUG: {link_name} touches joints {joints}")
-        grounded_occ = {"base_link"}
         # URDF origin at base link origin "by definition"
         assert self.base_link is not None
-        self.link_origins["base_link"] = self.base_link.transform2
+        base_link_name = self.get_name(self.base_link)
+        grounded_occ = {base_link_name}
+        self.link_origins[base_link_name] = self.base_link.transform2
         self.__add_link(self.base_link)
         boundary = grounded_occ
         while boundary:

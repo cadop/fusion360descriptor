@@ -1,6 +1,8 @@
 import os.path, sys, fileinput
 from typing import Dict
 import adsk, adsk.core, adsk.fusion
+
+from .parser import Configurator
 from . import utils
 from collections import Counter
 from shutil import copytree
@@ -62,10 +64,7 @@ def visible_to_stl(
         # Create a new exporter in case its a memory thing
         exporter = design.exportManager
 
-        if oc.isGrounded:
-            occName = utils.format_name("base_link")
-        else:
-            occName = utils.format_name(name_mapper[oc.entityToken])
+        occName = utils.format_name(name_mapper[oc.entityToken])
         
         if body_mapper[oc.entityToken] == []:
             continue
@@ -145,43 +144,24 @@ def body_exporter(exportMgr, newRoot, body, filename):
 
 class Writer:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, save_dir: str, config: Configurator) -> None:
+        self.save_dir = save_dir
+        self.config = config
 
-    def write_link(self, config, file_name):
-        ''' Write links information into urdf file_name
-        
-        Parameters
-        ----------
-        config : Configurator
-            root nodes instance of configurator class
-        file_name: str
-            urdf full path
+    def write_link(self):
+        ''' Write links information into self.f urdf '''
 
-        '''
+        for _, link in self.config.links.items():  
+            self.f.write(f'{link.link_xml}\n')
 
-        with open(file_name, mode='a', encoding="utf-8") as f:
-            for _, link in config.links.items():  
-                f.write(f'{link.link_xml}\n')
-
-    def write_joint(self, file_name, config):
-        ''' Write joints and transmission information into urdf file_name
-            
-        Parameters
-        ----------
-        file_name: str
-            urdf full path
-        config : Configurator
-            root nodes instance of configurator class
-
-        '''
-        
-        with open(file_name, mode='a', encoding="utf-8") as f:
-            for _, joint in config.joints.items():
-                f.write(f'{joint.joint_xml}\n')
+    def write_joint(self):
+        ''' Write joints and transmission information into self.f urdf '''
+      
+        for _, joint in self.config.joints.items():
+            self.f.write(f'{joint.joint_xml}\n')
 
 
-    def write_urdf(self, save_dir, config):
+    def write_urdf(self):
         ''' Write each component of the xml structure to file
 
         Parameters
@@ -192,42 +172,43 @@ class Writer:
             root nodes instance of configurator class
         '''        
 
-        save_dir = os.path.join(save_dir,'urdf')
-        try: os.mkdir(save_dir)
+        self.save_dir = os.path.join(self.save_dir,'urdf')
+        try: os.mkdir(self.save_dir)
         except: pass
-        file_name = os.path.join(save_dir, f'{config.name}.xacro')  # the name of urdf file
-        material_file_name = os.path.join(save_dir, f'materials.xacro')
+        file_name = os.path.join(self.save_dir, f'{self.config.name}.xacro')  # the name of urdf file
+        material_file_name = os.path.join(self.save_dir, f'materials.xacro')
 
-        with open(file_name, mode='w', encoding="utf-8") as f:
-            f.write('<?xml version="1.0" ?>\n')
-            f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro">\n'.format(config.name))
-            f.write('\n')
-            f.write('<xacro:include filename="$(find {})/urdf/materials.xacro" />'.format(config.name))
-            f.write('\n')
+        with open(file_name, mode='w', encoding="utf-8") as self.f:
+            self.f.write('<?xml version="1.0" ?>\n')
+            self.f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro">\n'.format(self.config.name))
+            self.f.write('\n')
+            self.f.write('<xacro:include filename="$(find {})/urdf/materials.xacro" />'.format(self.config.name))
+            self.f.write('\n')
 
             # Add dummy link since KDL does not support a root link with an inertia
             # From https://robotics.stackexchange.com/a/97510
-            f.write('<link name="dummy_link" />\n')
-            f.write('<joint name="dummy_link_joint" type="fixed">\n')
-            f.write('  <parent link="dummy_link" />\n')
-            f.write('  <child link="base_link" />\n') # NOTE: Requires root link to be named "base_link"
-            f.write('</joint>\n')
+            self.f.write('<link name="dummy_link" />\n')
+            self.f.write('<joint name="dummy_link_joint" type="fixed">\n')
+            self.f.write('  <parent link="dummy_link" />\n')
+            assert self.config.base_link is not None
+            self.f.write(f'  <child link="{self.config.get_name(self.config.base_link)}" />\n')
+            self.f.write('</joint>\n')
 
-        self.write_link(config, file_name)
-        self.write_joint(file_name, config)
-        self.write_materials_xacro(material_file_name, config)
+            self.write_link()
+            self.write_joint()
 
-        with open(file_name, mode='a') as f:
-            f.write('</robot>\n')
+            self.f.write('</robot>\n')
 
-    def write_materials_xacro(self, material_file_name, config):
+        self.write_materials_xacro(material_file_name)
+
+    def write_materials_xacro(self, material_file_name):
         with open(material_file_name, mode='w') as f:
             f.write('<?xml version="1.0" ?>\n')
-            f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro" >\n'.format(config.name))
+            f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro" >\n'.format(self.config.name))
             f.write('\n')
-            for color in config.color_dict:
+            for color in self.config.color_dict:
                 f.write(f'<material name="{color}">\n')
-                f.write(f'  <color rgba="{config.color_dict[color]}"/>\n')
+                f.write(f'  <color rgba="{self.config.color_dict[color]}"/>\n')
                 f.write('</material>\n')
             f.write('\n')
             f.write('</robot>\n')

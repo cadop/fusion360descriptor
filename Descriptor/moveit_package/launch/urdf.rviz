@@ -62,51 +62,6 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        back_motor_left_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        back_motor_right_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        back_wheel_left_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        back_wheel_right_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        front_motor_left_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        front_motor_right_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        front_wheel_left_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        front_wheel_right_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
@@ -115,51 +70,17 @@ Visualization Manager:
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15
-      Frames:
-        All Enabled: true
-        back_motor_left_2:
-          Value: true
-        back_motor_right_2:
-          Value: true
-        back_wheel_left_2:
-          Value: true
-        back_wheel_right_2:
-          Value: true
-        base_link:
-          Value: true
-        front_motor_left_2:
-          Value: true
-        front_motor_right_2:
-          Value: true
-        front_wheel_left_2:
-          Value: true
-        front_wheel_right_2:
-          Value: true
       Marker Scale: 0.5
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
-      Tree:
-        base_link:
-          back_motor_right_2:
-            back_wheel_right_2:
-              {}
-          back_wheel_left_2:
-            back_motor_left_2:
-              {}
-          front_motor_left_2:
-            front_wheel_left_2:
-              {}
-          front_motor_right_2:
-            front_wheel_right_2:
-              {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_link
+    Fixed Frame: dummy_link
     Frame Rate: 30
   Name: root
   Tools:

@@ -142,8 +142,8 @@ class Manager:
         # --------------------
         # Generate URDF
         utils.log(f"*** Generating URDF under {os.path.realpath(self.save_dir)} ***")
-        writer = io.Writer()
-        writer.write_urdf(self.save_dir, config)
+        writer = io.Writer(self.save_dir, config)
+        writer.write_urdf()
 
         utils.log(f"*** Generating {self.target_platform} configuration")
         if self.target_platform == 'pyBullet':
