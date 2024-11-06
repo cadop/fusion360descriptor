@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict, NoReturn, Optional
+from typing import Any, Dict, List, NoReturn, Optional
 import adsk.core
 from .transforms import so3_to_euler
 
@@ -35,6 +35,8 @@ def convert_german(str_in):
 
 viewport: Optional[adsk.core.Viewport] = None
 
+all_warnings: List[str] = []
+
 def log(msg: str, level: Optional[adsk.core.LogLevels] = None) -> None:
     if not LOG_DEBUG and msg.startswith("DEBUG"):
         return
@@ -45,6 +47,8 @@ def log(msg: str, level: Optional[adsk.core.LogLevels] = None) -> None:
         elif msg.startswith("FATAL") or msg.startswith("ERR"):
             level = adsk.core.LogLevels.ErrorLogLevel
     adsk.core.Application.log(msg, level)
+    if level == adsk.core.LogLevels.WarningLogLevel:
+        all_warnings.append(msg)
     if viewport is not None:
         global last_refresh
         if time.time() >= last_refresh + REFRESH_DELAY:

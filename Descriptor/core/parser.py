@@ -221,7 +221,7 @@ class Configurator:
         adsk.fusion.JointTypes.BallJointType: "Ball_unsupported",
     }
 
-    def __init__(self, root, scale: float, cm: float, name: str, name_map: Dict[str, str]) -> None:
+    def __init__(self, root: adsk.fusion.Component, scale: float, cm: float, name: str, name_map: Dict[str, str]) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
         Parameters
         ----------
@@ -229,7 +229,7 @@ class Configurator:
             root component of design document
         '''        
         # Export top-level occurrences
-        self.root: adsk.fusion.Component = root
+        self.root = root
         self.occ = root.occurrences.asList
         self.inertial_dict = {}
         self.inertia_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
@@ -427,7 +427,7 @@ class Configurator:
                     utils.log(f"WARNING: joint {joint.name} was not at 0, sliding it to 0")
                     joint.jointMotion.slideValue = 0.0
 
-        for joint in self.root.allJoints:
+        for joint in sorted(self.root.allJoints, key=lambda joint: joint.name):
             if joint.healthState in [adsk.fusion.FeatureHealthStates.SuppressedFeatureHealthState, adsk.fusion.FeatureHealthStates.RolledBackFeatureHealthState]:
                 utils.log(f"Skipping joint {joint.name} (child of {joint.parentComponent.name}) as it is suppressed or rolled back")
                 continue
@@ -448,8 +448,12 @@ class Configurator:
                 utils.log(f"WARNING: Failed to process joint {joint.name} (child of {joint.parentComponent.name}): {e}, {joint.isValid=}. This is likely a Fusion bug - the joint was likely deleted, but somehow we still see it. Will ignore it.")
                 continue
 
+            if occ_one is None or occ_two is None:
+                utils.log(f"WARNING: Failed to process joint {joint.name} (child of {joint.parentComponent.name}): {joint.isValid=}: occ_one is {None if occ_one is None else occ_one.name}, occ_two is {None if occ_two is None else occ_two.name}")
+                continue
+
             name = utils.rename_if_duplicate(self.name_map.get(joint.name, joint.name), self.joints_dict)
-            utils.log(f"Processing joint {orig_name} of type {joint_type}, between {occ_one.name} and {occ_two.name}")
+            utils.log(f"Processing joint {orig_name}->{name} of type {joint_type}, between {occ_one.name} and {occ_two.name}")
 
             parent = self.get_name(occ_one)
             child = self.get_name(occ_two)
@@ -521,7 +525,7 @@ class Configurator:
             self.joints_dict[name] = info
 
         # Add RigidGroups as fixed joints
-        for group in self.root.allRigidGroups:
+        for group in sorted(self.root.allRigidGroups, key=lambda group: group.name):
             original_group_name = group.name
             utils.log(f"DEBUG: Processing rigid group {original_group_name}")
             try:
@@ -534,9 +538,12 @@ class Configurator:
             except RuntimeError:
                 utils.log(f"WARNING: skipping invalid rigid group {original_group_name}")
                 continue
-            for i, occ in enumerate(group.occurrences):
-                # Assumes that the first occurrence will be the parent
-                if i == 0:
+            parent_occ: Optional[adsk.fusion.Occurrence] = None
+            for occ in group.occurrences:
+                if occ is None:
+                    continue
+                elif parent_occ is None:
+                    # Assumes that the first occurrence will be the parent
                     parent_occ = occ
                     continue
                 rigid_group_occ_name = utils.rename_if_duplicate(original_group_name, self.joints_dict)
@@ -741,16 +748,27 @@ class Configurator:
                 elif self.links_by_token[component.entityToken] not in grounded_occ:
                     unreachable.add(component.name)
         if not_in_joints or unreachable:
-            error = "Not all components were included in the export:"
+            error = "FATAL ERROR: Not all components were included in the export:"
             if not_in_joints:
                 error += "Not a part of any joint or rigid group: " + ", ".join(not_in_joints) + "."
             if unreachable:
                 error += "Unreacheable from the grounded component via joints+links: " + ", ".join(unreachable) + "."
-            utils.fatal(error)
+            utils.log(error)
         missing_joints = set(self.joints_dict).difference(self.joints)
         if missing_joints:
-            utils.fatal("Lost joints: '" + "', '".join(missing_joints) + "'")
+            utils.log("\n\t".join(["FATAL ERROR: Lost joints: "] + [f"{self.joints_dict[joint].name} of type {self.joints_dict[joint].type} between {self.joints_dict[joint].parent} and {self.joints_dict[joint].child}" for joint in missing_joints]))
         extra_joints = set(self.joints).difference(self.joints_dict)
         if extra_joints:
-            utils.fatal("Extra joints: '" + "', '".join(extra_joints) + "'")
-            
+            utils.log("FATAL ERROR: Extra joints: '" + "', '".join(sorted(extra_joints)) + "'")
+        if not_in_joints or unreachable or missing_joints or extra_joints:
+            joint_children: Dict[str, List[parts.Joint]] = defaultdict(list)
+            for joint in self.joints.values():
+                joint_children[joint.parent].append(joint)
+            def print_tree(level: int, link: parts.Link):
+                utils.log("   "*level + f" - Link: {link.name}")
+                for j in joint_children[link.name]:
+                    utils.log("   " * (level + 1) + f" - Joint: {j.name}")
+                    print_tree(level+2, self.links[j.child])
+            utils.log("Reachable from the root:")
+            print_tree(1, self.links[base_link_name])
+            utils.fatal("Fusion structure is broken or misunderstoon by the exporter, giving up! See the full output in Text Commands console for more information.")

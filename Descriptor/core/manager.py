@@ -112,7 +112,8 @@ class Manager:
         dict
             mapping of joint names with parent-> child relationship
         '''        
-        
+        assert Manager.root is not None
+
         config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map)
         config.inertia_accuracy = self.inert_accuracy
         ## Return array of tuples (parent, child)
@@ -161,4 +162,7 @@ class Manager:
             utils.log("*** Generating mesh STLs ***")
             io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh, config.body_mapper, config.links_by_token, Manager._app)
         utils.log(f"*** Done! Time elapsed: {utils.time_elapsed():.1f}s ***")
+        if utils.all_warnings:
+            utils.log(f"There were {len(utils.all_warnings)} warnings!\n\t" + "\n\t".join(utils.all_warnings))
+            utils.all_warnings = []
 
