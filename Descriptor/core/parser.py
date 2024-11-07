@@ -530,13 +530,13 @@ class Configurator:
             utils.log(f"DEBUG: Processing rigid group {original_group_name}")
             try:
                 if group.isSuppressed:
-                    utils.log(f"Skipping suppressed rigid group {original_group_name}")
+                    utils.log(f"WARNING: Skipping suppressed rigid group {original_group_name} (child of {group.parentComponent.name})")
                     continue
                 if not group.isValid:
-                    utils.log(f"WARNING: skipping invalid rigid group {original_group_name}")
+                    utils.log(f"WARNING: skipping invalid rigid group {original_group_name} (child of {group.parentComponent.name})")
                     continue
-            except RuntimeError:
-                utils.log(f"WARNING: skipping invalid rigid group {original_group_name}")
+            except RuntimeError as e:
+                utils.log(f"WARNING: skipping invalid rigid group {original_group_name}: (child of {group.parentComponent.name}) {e}")
                 continue
             parent_occ: Optional[adsk.fusion.Occurrence] = None
             for occ in group.occurrences:

@@ -1,5 +1,7 @@
 import os.path, sys, fileinput
 from typing import Dict
+from xml.etree.ElementTree import Element, ElementTree, SubElement
+import xml.etree.ElementTree as ET
 import adsk, adsk.core, adsk.fusion
 
 from .parser import Configurator
@@ -148,19 +150,6 @@ class Writer:
         self.save_dir = save_dir
         self.config = config
 
-    def write_link(self):
-        ''' Write links information into self.f urdf '''
-
-        for _, link in self.config.links.items():  
-            self.f.write(f'{link.link_xml}\n')
-
-    def write_joint(self):
-        ''' Write joints and transmission information into self.f urdf '''
-      
-        for _, joint in self.config.joints.items():
-            self.f.write(f'{joint.joint_xml}\n')
-
-
     def write_urdf(self):
         ''' Write each component of the xml structure to file
 
@@ -178,40 +167,46 @@ class Writer:
         file_name = os.path.join(self.save_dir, f'{self.config.name}.xacro')  # the name of urdf file
         material_file_name = os.path.join(self.save_dir, f'materials.xacro')
 
-        with open(file_name, mode='w', encoding="utf-8") as self.f:
-            self.f.write('<?xml version="1.0" ?>\n')
-            self.f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro">\n'.format(self.config.name))
-            self.f.write('\n')
-            self.f.write('<xacro:include filename="$(find {})/urdf/materials.xacro" />'.format(self.config.name))
-            self.f.write('\n')
+        robot = Element("robot", {"name": self.config.name, "xmlns:xacro": "http://www.ros.org/wiki/xacro"})
+        SubElement(robot, "xacro:include", {"filename": f"$(find {self.config.name})/urdf/materials.xacro"})
 
-            # Add dummy link since KDL does not support a root link with an inertia
-            # From https://robotics.stackexchange.com/a/97510
-            self.f.write('<link name="dummy_link" />\n')
-            self.f.write('<joint name="dummy_link_joint" type="fixed">\n')
-            self.f.write('  <parent link="dummy_link" />\n')
-            assert self.config.base_link is not None
-            self.f.write(f'  <child link="{self.config.get_name(self.config.base_link)}" />\n')
-            self.f.write('</joint>\n')
+        # Add dummy link since KDL does not support a root link with an inertia
+        # From https://robotics.stackexchange.com/a/97510
+        SubElement(robot, "link", {"name": "dummy_link"})
+        assert self.config.base_link is not None
+        dummy_joint = SubElement(robot, "joint", {"name": "dummy_link_joint", "type": "fixed"})
+        SubElement(dummy_joint, "parent", {"link": "dummy_link"})
+        SubElement(dummy_joint, "child", {"link": self.config.get_name(self.config.base_link)})
 
-            self.write_link()
-            self.write_joint()
+        for _, link in self.config.links.items():
+            xml = link.link_xml()
+            if xml is not None:
+                robot.append(xml)
 
-            self.f.write('</robot>\n')
+        for _, joint in self.config.joints.items():
+            robot.append(joint.joint_xml())
+
+        tree = ElementTree(robot)
+        ET.indent(tree, space="   ")
+
+        with open(file_name, mode='wb') as f:
+            tree.write(f, "utf-8", xml_declaration=True)
+            f.write(b"\n")
 
         self.write_materials_xacro(material_file_name)
 
     def write_materials_xacro(self, material_file_name):
-        with open(material_file_name, mode='w') as f:
-            f.write('<?xml version="1.0" ?>\n')
-            f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro" >\n'.format(self.config.name))
-            f.write('\n')
-            for color in self.config.color_dict:
-                f.write(f'<material name="{color}">\n')
-                f.write(f'  <color rgba="{self.config.color_dict[color]}"/>\n')
-                f.write('</material>\n')
-            f.write('\n')
-            f.write('</robot>\n')
+        robot = Element("robot", {"name": self.config.name, "xmlns:xacro": "http://www.ros.org/wiki/xacro"})
+        for color in self.config.color_dict:
+            material = SubElement(robot, "material", {"name": color})
+            SubElement(material, "color", {"rgba": self.config.color_dict[color]})
+
+        tree = ElementTree(robot)
+        ET.indent(tree, space="   ")
+
+        with open(material_file_name, mode='wb') as f:
+            tree.write(f, "utf-8", xml_declaration=True)
+            f.write(b"\n")
 
 def write_hello_pybullet(robot_name, save_dir):
     ''' Writes a sample script which loads the URDF in pybullet

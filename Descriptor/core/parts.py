@@ -7,7 +7,7 @@ Created on Sun May 12 20:17:17 2019
 Modified by cadop Dec 19 2021
 """
 
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree import ElementTree
 from xml.dom import minidom
@@ -51,11 +51,10 @@ class Joint:
         self.axis = axis  # for 'revolute' and 'continuous'
         self.upper_limit = upper_limit  # for 'revolute' and 'prismatic'
         self.lower_limit = lower_limit  # for 'revolute' and 'prismatic'
-        
-    @property
-    def joint_xml(self):
+
+    def joint_xml(self) -> Element:
         """
-        Generate the joint_xml and hold it by self.joint_xml
+        Generate the joint xml
         """
 
         joint = Element('joint')
@@ -80,14 +79,9 @@ class Joint:
             limit.attrib = {'upper': str(self.upper_limit), 'lower': str(self.lower_limit),
                             'effort': f'{Joint.effort_limit}', 'velocity': f'{Joint.vel_limit}'}
 
-        rough_string = ElementTree.tostring(joint, 'utf-8')
-        reparsed = minidom.parseString(rough_string)
-        self._joint_xml = "\n".join(reparsed.toprettyxml(indent="  ").split("\n")[1:])
+        return joint
 
-        return self._joint_xml
-
-    @property
-    def transmission_xml(self):
+    def transmission_xml(self) -> Element:
         """
         Generate the tran_xml and hold it by self.tran_xml
         
@@ -117,11 +111,7 @@ class Joint:
         mechanicalReduction = SubElement(actuator, 'mechanicalReduction')
         mechanicalReduction.text = '1'
 
-        rough_string = ElementTree.tostring(tran, 'utf-8')
-        reparsed = minidom.parseString(rough_string)
-        self._tran_xml  = "\n".join(reparsed.toprettyxml(indent="  ").split("\n")[1:])
-
-        return self._tran_xml
+        return tran
 
 class Link:
 
@@ -167,8 +157,7 @@ class Link:
         self.visible = visible
 
         
-    @property
-    def link_xml(self):
+    def link_xml(self) -> Optional[Element]:
         """
         Generate the link_xml and hold it by self.link_xml
         """
@@ -176,7 +165,7 @@ class Link:
 
         # Only generate a link if there is an associated body
         if self.body_dict.get(self.name) is None:
-            return ""
+            return None
 
         link = Element('link')
         link.attrib = {'name':self.name}
@@ -234,7 +223,4 @@ class Link:
             mesh_c = SubElement(geometry_c, 'mesh')
             mesh_c.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(self.name)}.stl','scale':scale}
 
-        rough_string = ElementTree.tostring(link, 'utf-8')
-        reparsed = minidom.parseString(rough_string)
-        self._link_xml  = "\n".join(reparsed.toprettyxml(indent="  ").split("\n")[1:])
-        return self._link_xml
+        return link
