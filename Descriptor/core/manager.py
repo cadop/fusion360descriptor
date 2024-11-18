@@ -2,7 +2,7 @@ import time
 from typing import Dict, Optional
 import os
 import os.path
-import json
+import yaml
 
 import adsk.core
 import adsk.fusion
@@ -21,7 +21,7 @@ class Manager:
     _app: Optional[adsk.core.Application] = None
 
     def __init__(self, save_dir, robot_name, save_mesh, sub_mesh, mesh_resolution, inertia_precision,
-                target_units, target_platform, name_map) -> None:
+                target_units, target_platform, config_file) -> None:
         '''Initialization of Manager class 
 
         Parameters
@@ -82,9 +82,10 @@ class Manager:
         self.robot_name = robot_name
 
         self.name_map: Dict[str, str] = {}
-        if name_map:
-            with open(name_map, "r") as fp:
-                self.name_map = json.load(fp)
+        if config_file:
+            with open(config_file, "rb") as yml:
+                configuration = yaml.load(yml, yaml.SafeLoader)
+            self.name_map = configuration.get("NameMap", {})
 
         # Set directory 
         self._set_dir(save_dir)

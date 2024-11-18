@@ -4,6 +4,8 @@ from typing import Optional
 import adsk.core, adsk.fusion, traceback
 
 try:
+    from yaml import SafeLoader # Test whether it's there
+    _ = SafeLoader # Noop for import to not be unused
     from scipy.spatial.transform import Rotation # Test whether it's there
     _ = Rotation # Noop for import to not be unused
 except ModuleNotFoundError:
@@ -18,7 +20,7 @@ except ModuleNotFoundError:
             exec = os.path.dirname(exec)
         exec = os.path.join(exec, "bin", "python")
     subprocess.check_call([exec, '-m', 'ensurepip'])
-    subprocess.check_call([exec, '-m', 'pip', 'install', 'scipy'])
+    subprocess.check_call([exec, '-m', 'pip', 'install', 'scipy', 'pyyaml'])
 
 from . import utils
 from . import manager
@@ -47,8 +49,8 @@ def save_dir_dialog(ui: adsk.core.UserInterface) -> Optional[str]:
         return folderDlg.folder
     return None
 
-def json_file_dialog(ui: adsk.core.UserInterface) -> Optional[str]:     
-    '''display the dialog to pick a json file
+def yaml_file_dialog(ui: adsk.core.UserInterface) -> Optional[str]:
+    '''display the dialog to pick a yaml file
 
     Parameters
     ----------
@@ -63,8 +65,8 @@ def json_file_dialog(ui: adsk.core.UserInterface) -> Optional[str]:
 
     # Set styles of folder dialog.
     fileDlg = ui.createFileDialog()
-    fileDlg.filter = "Name Map JSON file (*.json)"
-    fileDlg.title = 'Name Mapping File Dialog' 
+    fileDlg.filter = "Configuration File (*.yaml)"
+    fileDlg.title = 'Configuration File Dialog' 
     fileDlg.isMultiSelectEnabled = False
     
     # Show folder dialog
@@ -87,7 +89,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             # Get settings of UI
             directory_path = inputs.itemById('directory_path')
-            name_map = inputs.itemById('name_map')
+            config = inputs.itemById('config')
             robot_name = inputs.itemById('robot_name')
             save_mesh = inputs.itemById('save_mesh')
             sub_mesh = inputs.itemById('sub_mesh')
@@ -99,7 +101,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             utils.log(f"DEBUG: UI: processing command: {cmdInput.id}")
 
             assert isinstance(directory_path, adsk.core.TextBoxCommandInput)
-            assert isinstance(name_map, adsk.core.TextBoxCommandInput)
+            assert isinstance(config, adsk.core.TextBoxCommandInput)
             assert isinstance(robot_name, adsk.core.TextBoxCommandInput)
             assert isinstance(save_mesh, adsk.core.BoolValueCommandInput)
             assert isinstance(sub_mesh, adsk.core.BoolValueCommandInput)
@@ -120,7 +122,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                                                    inertia_precision.selectedItem.name, 
                                                    target_units.selectedItem.name, 
                                                    target_platform.selectedItem.name,
-                                                   name_map.text)
+                                                   config.text)
                 
                 # Generate
                 document_manager.run()
@@ -129,7 +131,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 # Generate Hierarchy and Preview in panel
                 document_manager = manager.Manager(directory_path.text, robot_name.text, save_mesh.value, sub_mesh.value, mesh_resolution.selectedItem.name, 
                                                    inertia_precision.selectedItem.name, target_units.selectedItem.name, 
-                                                   target_platform.selectedItem.name, name_map.text)
+                                                   target_platform.selectedItem.name, config.text)
                 # # Generate
                 _joints = document_manager.preview()
 
@@ -144,16 +146,45 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
 
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
-                name_map_file = save_dir_dialog(self.ui)
-                if name_map_file is not None:
-                    directory_path.text = name_map_file
+                config_file = save_dir_dialog(self.ui)
+                if config_file is not None:
+                    directory_path.text = config_file
 
-            elif cmdInput.id == 'set_name_map':
+            elif cmdInput.id == 'set_config':
                 # User set the save directory
-                name_map_file = json_file_dialog(self.ui)
-                if name_map_file is not None:
-                    name_map.text = name_map_file
-
+                config_file = yaml_file_dialog(self.ui)
+                if config_file is not None:
+                    try:
+                        import yaml
+                        with open(config_file, "rb") as yml:
+                            configuration = yaml.load(yml, yaml.SafeLoader)
+                        if 'RobotName' in configuration:
+                            if not isinstance(configuration['RobotName'], str):
+                                raise ValueError ("RobotName should be a string")
+                            robot_name.text = configuration['RobotName']
+                        if 'SaveMesh' in configuration:
+                            if not isinstance(configuration['SaveMesh'], bool):
+                                raise ValueError ("SaveMesh should be a boolean")
+                            save_mesh.value = configuration['SaveMesh']
+                        if 'SubMesh' in configuration:
+                            if not isinstance(configuration['SubMesh'], bool):
+                                raise ValueError ("SubMesh should be a boolean")
+                            sub_mesh.value = configuration['SubMesh']
+                        for key, selector in [
+                            ('MeshResolution', mesh_resolution),
+                            ('InertiaPrecision', inertia_precision),
+                            ('TargetUnits', target_units),
+                            ('TargetPlatform', target_platform),
+                        ]:
+                            if key in configuration:
+                                names = [item.name for item in selector.listItems]
+                                if configuration[key] not in names:
+                                    raise ValueError (f"{key} should be one of {names}")
+                                for item in selector.listItems:
+                                    item.isSelected = (item.name == configuration[key])
+                        config.text = config_file
+                    except Exception as e:
+                        utils.log(f"ERROR: error loading configuration file {config_file}: {e}")
         except:
             if self.ui:
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
@@ -219,12 +250,12 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             btn = inputs.addBoolValueInput('save_dir', 'Set Save Directory', False)
             btn.isFullWidth = True
 
-            inputs.addTextBoxCommandInput('robot_name', 'Robot Name', manager.Manager.root.name.split()[0], 1, False)
-
-            inputs.addTextBoxCommandInput('name_map', 'Name Map File', '', 1, True)
+            inputs.addTextBoxCommandInput('config', 'Configuration File', '', 1, True)
             # Button to set the save directory
-            btn = inputs.addBoolValueInput('set_name_map', 'Select Name Map File', False)
+            btn = inputs.addBoolValueInput('set_config', 'Select Configuration File', False)
             btn.isFullWidth = True
+
+            inputs.addTextBoxCommandInput('robot_name', 'Robot Name', manager.Manager.root.name.split()[0], 1, False)
 
             # Add checkbox to generate/export the mesh or not
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
