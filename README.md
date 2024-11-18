@@ -22,13 +22,16 @@ It provides a simple GUI for running the script and choosing a few different set
 **Features**
 
 - GUI interface for settings
-- Uses the grounded base as root node
+- Uses the grounded base as root node, that organizes the UDRF tree by joint/link distance from root.
+- Handles rigid groups, coordinate transforms between origins, nested assemblies, etc
 - Allows switching between units
 - WYSIWYG stl exporting (exports model as you see on the screen) without needing to save design history or copy to a new file
 - Preview joint relationship before exporting
 - Export only URDF without Mesh (for fast viewing)
-- Set Component 1 of joint to mean Parent or Child
 - Can export component bodies separately as a visual element of URDF and a combined component as the collision
+- Can load export configuration from a Yaml file to speed up configuring the export.
+- Additional advanced options can be specified in the Yaml file, such as automatically mapping component and/or joint names to custom names in URDF.
+  This is helpful to e.g. keep the URDF names constant as the Fusion design is updated, so that ROS configuration/code does not have to be changed.
 
 <img src="imagesforgettingstarted/gui.gif" alt="drawing" width="800"/>
 
