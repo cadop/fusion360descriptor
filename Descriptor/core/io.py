@@ -13,7 +13,8 @@ def visible_to_stl(
         design: adsk.fusion.Design, 
         save_dir: str,
         root: adsk.fusion.Component, 
-        accuracy, body_dict, sub_mesh, body_mapper,
+        accuracy: adsk.fusion.MeshRefinementSettings, 
+        body_dict, sub_mesh, body_mapper,
         name_mapper: Dict[str, str],
         _app):  
     """
@@ -27,7 +28,7 @@ def visible_to_stl(
         directory path to save
     root: adsk.fusion.Component
         root component of the design
-    accuracy: int
+    accuracy: adsk.fusion.MeshRefinementSettings enum
         accuracy value to use for stl export
     component_map: list
         list of all bodies to use for stl export
@@ -71,7 +72,7 @@ def visible_to_stl(
         if body_mapper[oc.entityToken] == []:
             continue
         
-        component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
+        stl_exporter(exporter, accuracy, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
 
         if sub_mesh:
             # get the bodies associated with this top-level component (which will contain sub-components)
@@ -87,11 +88,11 @@ def visible_to_stl(
 
                     save_name = os.path.join(save_dir,f'{occName}_{body_name_cnt}')
 
-                    body_exporter(exporter, newRoot, body, save_name)
+                    stl_exporter(exporter, accuracy, newRoot, [body], save_name)
     newDoc.close(False)
 
 
-def component_exporter(exportMgr, newRoot, body_lst, filename):
+def stl_exporter(exportMgr, accuracy, newRoot, body_lst, filename):
     ''' Copy a component to a new document, save, then delete. 
 
     Modified from solution proposed by BrianEkins https://EkinsSolutions.com
@@ -120,27 +121,8 @@ def component_exporter(exportMgr, newRoot, body_lst, filename):
 
     bf.finishEdit()
     stlOptions = exportMgr.createSTLExportOptions(newRoot, f'{filename}.stl')
+    stlOptions.meshRefinement = accuracy
     exportMgr.execute(stlOptions)
-
-    bf.deleteMe()
-
-def body_exporter(exportMgr, newRoot, body, filename):
-    tBrep = adsk.fusion.TemporaryBRepManager.get()
-    
-    tBody = tBrep.copy(body)
-
-    bf = newRoot.features.baseFeatures.add()
-    bf.startEdit()
-    newRoot.bRepBodies.add(tBody, bf)
-    bf.finishEdit()
-
-    newBody = newRoot.bRepBodies[0]
-
-    stl_options = exportMgr.createSTLExportOptions(newBody, filename)
-    stl_options.sendToPrintUtility = False
-    stl_options.isBinaryFormat = True
-    # stl_options.meshRefinement = accuracy
-    exportMgr.execute(stl_options)                
 
     bf.deleteMe()
 
