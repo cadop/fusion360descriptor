@@ -97,6 +97,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             inertia_precision = inputs.itemById('inertia_precision')
             target_units = inputs.itemById('target_units')
             target_platform = inputs.itemById('target_platform')
+            preview_group = inputs.itemById('preview_group')
 
             utils.log(f"DEBUG: UI: processing command: {cmdInput.id}")
 
@@ -109,6 +110,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
             assert isinstance(inertia_precision, adsk.core.DropDownCommandInput)
             assert isinstance(target_units, adsk.core.DropDownCommandInput)
             assert isinstance(target_platform, adsk.core.DropDownCommandInput)
+            assert isinstance(preview_group, adsk.core.GroupCommandInput)
 
             if cmdInput.id == 'generate':
                 # User asked to generate using current settings
@@ -143,6 +145,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 for k, j in _joints.items():
                     _txt += f'{k} : {j.parent} -> {j.child}\n' 
                 joints_text.text = _txt
+                preview_group.isExpanded = True
 
             elif cmdInput.id == 'save_dir':
                 # User set the save directory
@@ -301,8 +304,9 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             tab_input = inputs.addTabCommandInput('tab_preview', 'Preview Tabs')
             tab_input_child = tab_input.children
             # Create group
-            input_group = tab_input_child.addGroupCommandInput("preview_group", "Preview")
-            textbox_group = input_group.children
+            preview_group = tab_input_child.addGroupCommandInput("preview_group", "Preview")
+            preview_group.isExpanded = False
+            textbox_group = preview_group.children
 
             # Create a textbox.
             txtbox = textbox_group.addTextBoxCommandInput('jointlist', 'Joint List', '', 8, True)
