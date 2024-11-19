@@ -238,8 +238,8 @@ class Configurator:
         self.links_by_token: Dict[str, str] = OrderedDict()
         self.links_by_name : Dict[str, adsk.fusion.Occurrence] = OrderedDict()
         self.joints_dict: Dict[str, JointInfo] = OrderedDict()
-        self.body_dict: Dict[str, List[adsk.fusion.BRepBody]] = OrderedDict()
-        self.material_dict: Dict[str, Dict[str, str]] = OrderedDict()
+        self.body_dict: Dict[str, List[Tuple[adsk.fusion.BRepBody, str]]] = OrderedDict()
+        self.material_dict: Dict[str, str] = OrderedDict()
         self.color_dict: Dict[str, str] = OrderedDict()
         self.links: Dict[str, parts.Link] = OrderedDict() # Link class
         self.joints: Dict[str, parts.Joint] = OrderedDict() # Joint class for writing to file
@@ -254,6 +254,7 @@ class Configurator:
         self.root_node: Optional[Hierarchy] = None
 
         self.name = name
+        self.mesh_folder = f'{name}/meshes/'
 
     def close_enough(self, a, b) -> bool:
         if isinstance(a, float) and isinstance(b, float):
@@ -304,7 +305,7 @@ class Configurator:
             children.update(v.children)
 
             top_level_body = [v.component.bRepBodies.item(x) for x in range(0, v.component.bRepBodies.count) ]
-            top_level_body = [x for x in top_level_body if x.isLightBulbOn]
+            top_level_body = [x for x in top_level_body if x.isVisible]
             
             # add to the body mapper
             if top_level_body != []:
@@ -314,7 +315,7 @@ class Configurator:
                 cur = children.pop()
                 children.update(cur.children)
                 sub_level_body = [cur.component.bRepBodies.item(x) for x in range(0, cur.component.bRepBodies.count) ]
-                sub_level_body = [x for x in sub_level_body if x.isLightBulbOn ]
+                sub_level_body = [x for x in sub_level_body if x.isVisible ]
                 
                 # add to this body mapper again 
                 self.body_mapper[cur.component.entityToken].extend(sub_level_body)
@@ -335,6 +336,7 @@ class Configurator:
 
         self._base()
         self._joints()
+        self._links()
         self._materials()
         self._build()
 
@@ -379,7 +381,7 @@ class Configurator:
                 # Check if this body is hidden
                 #  
                 # body = oc.bRepBodies.item(i)
-                if not body.isLightBulbOn:
+                if not body.isVisible:
                     mass -= body.physicalProperties.mass
 
         occs_dict['mass'] = mass
@@ -555,9 +557,34 @@ class Configurator:
                       f"child {occ_name} {vector_to_str(occ.transform2.translation)}")
                 self.joints_dict[rigid_group_occ_name] = JointInfo(name=rigid_group_occ_name, parent=parent_occ_name, child=occ_name)
 
+    def _links(self):
+        # Make sure no repeated body names
+        body_count = Counter()
+        
+        for oc in self._iterate_through_occurrences():
+            occ_name = self.get_name(oc)
+            oc_name = utils.format_name(occ_name)
+            self.body_dict[occ_name] = []
+            # body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
+
+            body_lst = self.body_mapper[oc.entityToken]
+            
+            if len(body_lst) > 0:
+                for body in body_lst:
+                    # Check if this body is hidden
+                    if body.isVisible:
+
+                        body_name = utils.format_name(body.name)
+                        body_name_cnt = f'{body_name}_{body_count[body_name]}'
+                        body_count[body_name] += 1
+
+                        unique_bodyname = f'{oc_name}_{body_name_cnt}'
+                        self.body_dict[occ_name].append((body, unique_bodyname))
+
     def __add_link(self, occ: adsk.fusion.Occurrence):
         inertia = self._get_inertia(occ)
-        urdf_origin = self.link_origins[inertia['name']]
+        name = inertia['name']
+        urdf_origin = self.link_origins[name]
         inv = urdf_origin.copy()
         assert inv.invert()
         #fusion_origin = occ.transform2.translation.asArray()
@@ -566,98 +593,62 @@ class Configurator:
                   f" (rpy={rpy_to_str(transforms.so3_to_euler(urdf_origin))})"
                   f" and inv at {vector_to_str(inv.translation)} (rpy={rpy_to_str(transforms.so3_to_euler(inv))})")
 
-        link = parts.Link(name = inertia['name'],
+        link = parts.Link(name = utils.format_name(name),
                         xyz = (u * self.cm for u in inv.translation.asArray()),
                         rpy = transforms.so3_to_euler(inv),
                         center_of_mass = inertia['center_of_mass'],
                         sub_folder = self.mesh_folder,
                         mass = inertia['mass'],
                         inertia_tensor = inertia['inertia'],
-                        body_dict = self.body_dict_urdf,
+                        bodies = [body_name for _, body_name in self.body_dict[name]],
                         sub_mesh = self.sub_mesh,
                         material_dict = self.material_dict,
-                        visible = occ.isLightBulbOn)
+                        visible = occ.isVisible)
         self.links[link.name] = link
 
-    def __get_appearance(self, occ: adsk.fusion.Occurrence):
-        # Prioritize appearance properties, but it could be null
-        appearance = None
-        if occ.appearance:
-            appearance = occ.appearance
-        elif occ.bRepBodies:
-            for body in occ.bRepBodies:
-                if body.appearance:
-                    appearance = body.appearance
-                    break
-        elif occ.component.material:
-            appearance = occ.component.material.appearance
-
+    def __get_material(self, appearance: Optional[adsk.core.Appearance]) -> str:
         # Material should always have an appearance, but just in case
         if appearance is not None:
             # Only supports one appearance per occurrence so return the first
             for prop in appearance.appearanceProperties:
                 if type(prop) == adsk.core.ColorProperty:
-                    return(appearance.name, prop)
-        return (None, None)
+                    prop_name = appearance.name
+                    color_name = utils.convert_german(prop_name)
+                    color_name = utils.format_name(color_name)
+                    self.color_dict[color_name] = f"{prop.value.red/255} {prop.value.green/255} {prop.value.blue/255} {prop.value.opacity/255}"
+                    return color_name
+        return "silver_default"
 
     def _materials(self) -> None:
         # Adapted from SpaceMaster85/fusion2urdf
         self.color_dict['silver_default'] = "0.700 0.700 0.700 1.000"
 
         for occ_name, occ in self.links_by_name.items():
-            occ_material_dict = {}
-            occ_material_dict['material'] = "silver_default"
-            prop_name, prop = self.__get_appearance(occ)
-
-            if prop:
-                color_name = utils.convert_german(prop_name)
-                color_name = utils.format_name(color_name)
-                occ_material_dict['material'] = color_name
-                self.color_dict[color_name] = f"{prop.value.red/255} {prop.value.green/255} {prop.value.blue/255} {prop.value.opacity/255}"
-            self.material_dict[utils.format_name(occ_name)] = occ_material_dict
+            oc_name = utils.format_name(occ_name)
+            if self.sub_mesh:
+                for body, body_name in self.body_dict[occ_name]:
+                    self.material_dict[body_name] = self.__get_material(body.appearance)
+            else:
+                # Prioritize appearance properties, but it could be null
+                appearance = None
+                if occ.appearance:
+                    appearance = occ.appearance
+                elif occ.bRepBodies:
+                    for body in occ.bRepBodies:
+                        if body.appearance:
+                            appearance = body.appearance
+                            break
+                elif occ.component.material:
+                    appearance = occ.component.material.appearance
+                self.material_dict[oc_name] = self.__get_material(appearance)
 
 
     def _build(self) -> None:
         ''' create links and joints by setting parent and child relationships and constructing
         the XML formats to be exported later'''
 
-        self.mesh_folder = f'{self.name}/meshes/'
-
-        #creates list of bodies that are visible
-
-        self.body_dict = defaultdict(list) # key : occurrence name -> value : list of bodies under that occurrence
-        self.body_dict_urdf = defaultdict(list) # list to send to parts.py
-        duplicate_bodies = defaultdict(int) # key : name -> value : # of instances
-
         # Location and XYZ of the URDF link origin w.r.t Fusion global frame in Fusion units
         self.link_origins: Dict[str, adsk.core.Matrix3D] = {}
-
-        oc_name = ''
-        # Make sure no repeated body names
-        body_count = Counter()
-        
-        for oc in self._iterate_through_occurrences():
-            occ_name = self.get_name(oc)
-            oc_name = utils.format_name(occ_name)
-            # self.body_dict[oc_name] = []
-            # body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
-
-            body_lst = self.body_mapper[oc.entityToken]
-            
-            if len(body_lst) > 0:
-                for body in body_lst:
-                    # Check if this body is hidden
-                    if body.isLightBulbOn:
-                        if body.name in duplicate_bodies:
-                            duplicate_bodies[body.name] +=1
-                        self.body_dict[oc_name].append(body)
-
-                        body_name = utils.format_name(body.name)
-                        body_name_cnt = f'{body_name}_{body_count[body_name]}'
-                        body_count[body_name] += 1
-
-                        unique_bodyname = f'{oc_name}_{body_name_cnt}'
-                        self.body_dict_urdf[oc_name].append(unique_bodyname)
 
         occurrences = defaultdict(list)
         for joint_name, joint_info in self.joints_dict.items():
@@ -742,7 +733,7 @@ class Configurator:
         not_in_joints = set()
         unreachable = set()
         for component in self._iterate_through_occurrences():
-            if component.isLightBulbOn and self.body_dict.get(self.name) is not None:
+            if component.isVisible and self.body_dict.get(self.name) is not None:
                 if component.entityToken not in self.links_by_token:
                     not_in_joints.add(component.name)
                 elif self.links_by_token[component.entityToken] not in grounded_occ:

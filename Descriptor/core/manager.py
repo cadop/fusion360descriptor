@@ -161,7 +161,7 @@ class Manager:
         # Custom STL Export
         if self.save_mesh:
             utils.log("*** Generating mesh STLs ***")
-            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, config.body_dict, self.sub_mesh, config.body_mapper, config.links_by_token, Manager._app)
+            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, self.sub_mesh, config.body_dict, config.links_by_token, Manager._app)
         utils.log(f"*** Done! Time elapsed: {utils.time_elapsed():.1f}s ***")
         if utils.all_warnings:
             utils.log(f"There were {len(utils.all_warnings)} warnings!\n\t" + "\n\t".join(utils.all_warnings))

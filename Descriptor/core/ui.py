@@ -152,6 +152,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                 config_file = save_dir_dialog(self.ui)
                 if config_file is not None:
                     directory_path.text = config_file
+                    directory_path.numRows = 2
 
             elif cmdInput.id == 'set_config':
                 # User set the save directory
@@ -186,6 +187,7 @@ class MyInputChangedHandler(adsk.core.InputChangedEventHandler):
                                 for item in selector.listItems:
                                     item.isSelected = (item.name == configuration[key])
                         config.text = config_file
+                        config.numRows = 2
                     except Exception as e:
                         utils.log(f"ERROR: error loading configuration file {config_file}: {e}")
         except:
@@ -248,12 +250,12 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             assert manager.Manager.root is not None
 
             # Show path to save
-            inputs.addTextBoxCommandInput('directory_path', 'Save Directory', 'C:', 2, True)
+            directory_path = inputs.addTextBoxCommandInput('directory_path', 'Save Directory', 'C:', 2, True)
             # Button to set the save directory
             btn = inputs.addBoolValueInput('save_dir', 'Set Save Directory', False)
             btn.isFullWidth = True
 
-            inputs.addTextBoxCommandInput('config', 'Configuration File', '', 1, True)
+            config_file = inputs.addTextBoxCommandInput('config', 'Configuration File (Optional)', '', 2, True)
             # Button to set the save directory
             btn = inputs.addBoolValueInput('set_config', 'Select Configuration File', False)
             btn.isFullWidth = True
@@ -264,7 +266,7 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             inputs.addBoolValueInput('save_mesh', 'Save Mesh', True)
 
             # Add checkbox to generate/export sub meshes or not
-            inputs.addBoolValueInput('sub_mesh', 'Sub Mesh', True)
+            inputs.addBoolValueInput('sub_mesh', 'Per-Body Visual Mesh', True)
 
             # Add dropdown to determine mesh export resolution
             di = inputs.addDropDownCommandInput('mesh_resolution', 'Mesh Resolution', adsk.core.DropDownStyles.TextListDropDownStyle)
@@ -316,6 +318,11 @@ class MyCreatedHandler(adsk.core.CommandCreatedEventHandler):
             btn = inputs.addBoolValueInput('generate', 'Generate', False)
             btn.isFullWidth = True
 
+            cmd.setDialogSize(500,0)
+
+            # After setDialogSize to accomodate longer dir and config paths, set them to 1 row each
+            directory_path.numRows = 1
+            config_file.numRows = 1
 
         except:
             if self.ui:

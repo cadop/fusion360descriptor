@@ -1,5 +1,5 @@
 import os.path, sys, fileinput
-from typing import Dict
+from typing import Dict, List, Tuple
 from xml.etree.ElementTree import Element, ElementTree, SubElement
 import xml.etree.ElementTree as ET
 import adsk, adsk.core, adsk.fusion
@@ -14,7 +14,8 @@ def visible_to_stl(
         save_dir: str,
         root: adsk.fusion.Component, 
         accuracy: adsk.fusion.MeshRefinementSettings, 
-        body_dict, sub_mesh, body_mapper,
+        sub_mesh: bool,
+        body_mapper: Dict[str, List[Tuple[adsk.fusion.BRepBody, str]]],
         name_mapper: Dict[str, str],
         _app):  
     """
@@ -37,9 +38,6 @@ def visible_to_stl(
     # create a single exportManager instance
     exporter = design.exportManager
 
-    # Setup new document for saving to
-    des: adsk.fusion.Design = _app.activeProduct
-
     newDoc: adsk.core.Document = _app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType, True) 
     newDes = newDoc.products.itemByProductType('DesignProductType')
     assert isinstance(newDes, adsk.fusion.Design)
@@ -50,45 +48,28 @@ def visible_to_stl(
     try: os.mkdir(save_dir)
     except: pass
 
-    # Export top-level occurrences
-    occ = root.allOccurrences
-    # hack for correct stl placement by turning off all visibility first
-    visible_components = []
-    for oc in occ:
-        if oc.isLightBulbOn:
-            visible_components.append(oc)
-        else:
+    for oc in root.allOccurrences:
+        if not oc.isVisible:
             utils.log(f"Skipping stl generation because occurrence is not visible: {name_mapper[oc.entityToken]}")
+            continue
 
-    # Make sure no repeated body names
-    body_count = Counter()
-
-    for oc in visible_components:
         # Create a new exporter in case its a memory thing
         exporter = design.exportManager
 
-        occName = utils.format_name(name_mapper[oc.entityToken])
+        name = name_mapper[oc.entityToken]
+        occName = utils.format_name(name)
         
-        if body_mapper[oc.entityToken] == []:
+        bodies = body_mapper[name]
+
+        if not bodies:
             continue
         
-        stl_exporter(exporter, accuracy, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
+        stl_exporter(exporter, accuracy, newRoot, [b for b,_ in bodies], os.path.join(save_dir, occName))
 
         if sub_mesh:
-            # get the bodies associated with this top-level component (which will contain sub-components)
-            bodies = body_mapper[oc.entityToken]
-
-            for body in bodies:
-                if body.isLightBulbOn:
-
-                    # Since there are alot of similar names, we need to store the parent component as well in the filename
-                    body_name = utils.format_name(body.name)
-                    body_name_cnt = f'{body_name}_{body_count[body_name]}'
-                    body_count[body_name] += 1
-
-                    save_name = os.path.join(save_dir,f'{occName}_{body_name_cnt}')
-
-                    stl_exporter(exporter, accuracy, newRoot, [body], save_name)
+            for body, body_name in bodies:
+                if body.isVisible:
+                    stl_exporter(exporter, accuracy, newRoot, [body], body_name)
     newDoc.close(False)
 
 
@@ -115,7 +96,6 @@ def stl_exporter(exportMgr, accuracy, newRoot, body_lst, filename):
     bf.startEdit()
 
     for body in body_lst:
-        if not body.isLightBulbOn: continue
         tBody = tBrep.copy(body)
         newRoot.bRepBodies.add(tBody, bf)
 

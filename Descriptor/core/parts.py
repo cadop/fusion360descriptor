@@ -117,7 +117,7 @@ class Link:
 
     scale = '0.001'
 
-    def __init__(self, name, xyz, rpy, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh, material_dict, visible):
+    def __init__(self, name, xyz, rpy, center_of_mass, sub_folder, mass, inertia_tensor, bodies, sub_mesh, material_dict, visible):
         """
         Parameters
         ----------
@@ -135,10 +135,8 @@ class Link:
             mass of the link
         inertia_tensor: [ixx, iyy, izz, ixy, iyz, ixz]
             tensor of the inertia
-        body_lst = [body1, body2, body3]
+        bodies = [body1, body2, body3]
             list of visible bodies
-        body_dict = {body.entityToken: name of occurrence}
-            dictionary of body entity tokens to the occurrence name
         """
 
         self.name = name
@@ -151,7 +149,7 @@ class Link:
         self.sub_folder = sub_folder
         self.mass = mass
         self.inertia_tensor = inertia_tensor
-        self.body_dict = body_dict
+        self.bodies = bodies
         self.sub_mesh = sub_mesh # if we want to export each body as a separate mesh
         self.material_dict = material_dict
         self.visible = visible
@@ -161,12 +159,6 @@ class Link:
         """
         Generate the link_xml and hold it by self.link_xml
         """
-        self.name = utils.format_name(self.name)
-
-        # Only generate a link if there is an associated body
-        if self.body_dict.get(self.name) is None:
-            return None
-
         link = Element('link')
         link.attrib = {'name':self.name}
         rpy = ' '.join([str(_) for _ in self.rpy])
@@ -183,19 +175,21 @@ class Link:
                         'izz':str(self.inertia_tensor[2]), 'ixy':str(self.inertia_tensor[3]),
                         'iyz':str(self.inertia_tensor[4]), 'ixz':str(self.inertia_tensor[5])}        
         
+        if not self.visible:
+            return link
+
         # visual
         if self.sub_mesh: # if we want to export each as a separate mesh
-            for body_name in self.body_dict[self.name]:
-                # body_name = utils.format_name(body_name)
+            for body_name in self.bodies:
                 visual = SubElement(link, 'visual')
                 origin_v = SubElement(visual, 'origin')
                 origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
                 geometry_v = SubElement(visual, 'geometry')
                 mesh_v = SubElement(geometry_v, 'mesh')
-                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(body_name)}.stl','scale':scale}
+                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':scale}
                 material = SubElement(visual, 'material')
-                material.attrib = {'name':'silver'}
-        elif self.visible:
+                material.attrib = {'name': self.material_dict[body_name]}
+        else:
             visual = SubElement(link, 'visual')
             origin_v = SubElement(visual, 'origin')
             origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
@@ -203,24 +197,15 @@ class Link:
             mesh_v = SubElement(geometry_v, 'mesh')
             mesh_v.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(self.name)}.stl','scale':scale}
             material = SubElement(visual, 'material')
-            material.attrib = {'name': self.material_dict[self.name]['material']}
+            material.attrib = {'name': self.material_dict[self.name]}
     
         
         # collision
-        if self.sub_mesh:
-            for collision_body in self.body_dict[self.name]:
-                collision = SubElement(link, 'collision')
-                origin_c = SubElement(collision, 'origin')
-                origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
-                geometry_c = SubElement(collision, 'geometry')
-                mesh_c = SubElement(geometry_c, 'mesh')
-                mesh_c.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(collision_body)}.stl','scale':scale}
-        elif self.visible:
-            collision = SubElement(link, 'collision')
-            origin_c = SubElement(collision, 'origin')
-            origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
-            geometry_c = SubElement(collision, 'geometry')
-            mesh_c = SubElement(geometry_c, 'mesh')
-            mesh_c.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(self.name)}.stl','scale':scale}
+        collision = SubElement(link, 'collision')
+        origin_c = SubElement(collision, 'origin')
+        origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
+        geometry_c = SubElement(collision, 'geometry')
+        mesh_c = SubElement(geometry_c, 'mesh')
+        mesh_c.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(self.name)}.stl','scale':scale}
 
         return link
