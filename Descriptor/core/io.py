@@ -48,29 +48,31 @@ def visible_to_stl(
     try: os.mkdir(save_dir)
     except: pass
 
-    for oc in root.allOccurrences:
-        if not oc.isVisible:
-            utils.log(f"Skipping stl generation because occurrence is not visible: {name_mapper[oc.entityToken]}")
-            continue
+    try:
+        for oc in root.allOccurrences:
+            if not oc.isVisible:
+                utils.log(f"Skipping stl generation because occurrence is not visible: {name_mapper[oc.entityToken]}")
+                continue
 
-        # Create a new exporter in case its a memory thing
-        exporter = design.exportManager
+            # Create a new exporter in case its a memory thing
+            exporter = design.exportManager
 
-        name = name_mapper[oc.entityToken]
-        occName = utils.format_name(name)
-        
-        bodies = body_mapper[name]
+            name = name_mapper[oc.entityToken]
+            occName = utils.format_name(name)
+            
+            bodies = body_mapper[name]
 
-        if not bodies:
-            continue
-        
-        stl_exporter(exporter, accuracy, newRoot, [b for b,_ in bodies], os.path.join(save_dir, occName))
+            if not bodies:
+                continue
+            
+            stl_exporter(exporter, accuracy, newRoot, [b for b,_ in bodies], os.path.join(save_dir, occName))
 
-        if sub_mesh:
-            for body, body_name in bodies:
-                if body.isVisible:
-                    stl_exporter(exporter, accuracy, newRoot, [body], body_name)
-    newDoc.close(False)
+            if sub_mesh:
+                for body, body_name in bodies:
+                    if body.isVisible:
+                        stl_exporter(exporter, accuracy, newRoot, [body], os.path.join(save_dir, body_name))
+    finally:
+        newDoc.close(False)
 
 
 def stl_exporter(exportMgr, accuracy, newRoot, body_lst, filename):
