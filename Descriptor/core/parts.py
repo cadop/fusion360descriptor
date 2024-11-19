@@ -179,7 +179,7 @@ class Link:
             return link
 
         # visual
-        if self.sub_mesh: # if we want to export each as a separate mesh
+        if self.sub_mesh and len(self.bodies) > 1: # if we want to export each as a separate mesh
             for body_name in self.bodies:
                 visual = SubElement(link, 'visual')
                 origin_v = SubElement(visual, 'origin')

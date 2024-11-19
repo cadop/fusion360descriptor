@@ -67,7 +67,7 @@ def visible_to_stl(
             
             stl_exporter(exporter, accuracy, newRoot, [b for b,_ in bodies], os.path.join(save_dir, occName))
 
-            if sub_mesh:
+            if sub_mesh and len(bodies) > 1:
                 for body, body_name in bodies:
                     if body.isVisible:
                         stl_exporter(exporter, accuracy, newRoot, [body], os.path.join(save_dir, body_name))

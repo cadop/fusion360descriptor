@@ -625,7 +625,7 @@ class Configurator:
 
         for occ_name, occ in self.links_by_name.items():
             oc_name = utils.format_name(occ_name)
-            if self.sub_mesh:
+            if self.sub_mesh and len(self.body_dict[occ_name]) > 1:
                 for body, body_name in self.body_dict[occ_name]:
                     self.material_dict[body_name] = self.__get_material(body.appearance)
             else:
