@@ -722,13 +722,15 @@ class Configurator:
                         child_name = joint.child
                         if child_name in grounded_occ:
                             continue
+                        flip_axis = True
                     else:
                         assert joint.child == occ_name
-                        if joint.parent not in grounded_occ:
-                            # Parent is further away from base_link than the child, swap them
-                            child_name = joint.parent
-                        else:
+                        if joint.parent in grounded_occ:
                             continue
+                        # Parent is further away from base_link than the child, swap them
+                        child_name = joint.parent
+                        flip_axis = False
+
 
                     parent_name, _, _ = self._get_merge(self.links_by_name[occ_name])
                     child_name, child_link_names, child_link_occs = self._get_merge(self.links_by_name[child_name])
@@ -755,7 +757,9 @@ class Configurator:
                         assert tt.invert()
                         axis = axis.copy()
                         assert axis.transformBy(tt)
-                        utils.log(f"DEBUG:    and using {ct_to_str(tt)} to update axis from {joint.axis.asArray()} to {axis.asArray()}")
+                        if flip_axis:
+                            assert axis.scaleBy(-1)
+                        utils.log(f"DEBUG:    and using {ct_to_str(tt)} and {flip_axis=} to update axis from {joint.axis.asArray()} to {axis.asArray()}")
 
                     for name in [child_name] + child_link_names:
                         self.link_origins[name] = child_origin
