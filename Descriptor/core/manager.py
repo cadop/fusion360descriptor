@@ -158,7 +158,7 @@ class Manager:
         writer = io.Writer(self.urdf_dir, config)
         writer.write_urdf()
 
-        with open(os.path.join(self.urdf_dir, "fustion2urdf.txt"), "wt") as f:
+        with open(os.path.join(self.urdf_dir, "fusion2urdf.txt"), "wt") as f:
             f.write(f"URDF structure created from Fusion Model {Manager.root.name}:\n")
             for s in config.tree_str:
                 f.write(s)

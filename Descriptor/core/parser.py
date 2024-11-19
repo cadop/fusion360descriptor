@@ -782,8 +782,6 @@ class Configurator:
         joint_children: Dict[str, List[parts.Joint]] = defaultdict(list)
         for joint in self.joints.values():
             joint_children[joint.parent].append(joint)
-        for link_name, joints in joint_children.items():
-            utils.log(f"Link: {link_name}, child joints: {[j.name for j in joints]}")
         tree_str = []
         def get_tree(level: int, link_name: str):
             extra = f" {self.merge_links[link_name]}" if link_name in self.merge_links else ""
