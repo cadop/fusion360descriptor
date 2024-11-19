@@ -7,12 +7,27 @@ Created on Sun May 12 20:17:17 2019
 Modified by cadop Dec 19 2021
 """
 
+import math
 from typing import List, Optional, Sequence
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree import ElementTree
 from xml.dom import minidom
 from . import utils
 
+MAX_ROUND_TO_ZERO = 1e-8 # in mm, radians
+HALF_PI = math.pi * 0.5
+def _round(val: float, unit: float) -> float:
+    units = val/unit
+    r = round(units)
+    if abs(units - r) <= MAX_ROUND_TO_ZERO:
+        return r * unit
+    return val
+
+def round_mm(val:float) -> float:
+    return _round(val, 0.001)
+
+def round_rads(val:float) -> float:
+    return _round(val, HALF_PI)
 class Joint:
 
     # Defaults for all joints. Need be be floats, not ints
@@ -42,13 +57,13 @@ class Joint:
         """
         self.name = name
         self.type = joint_type
-        self.xyz = xyz
-        self.rpy = rpy
+        self.xyz = [round_mm(x) for x in xyz]
+        self.rpy = [round_rads(r) for r in rpy]
         self.parent = parent
         self.child = child
         self._joint_xml = None
         self._tran_xml = None
-        self.axis = axis  # for 'revolute' and 'continuous'
+        self.axis = [round_mm(a) for a in axis]  # for 'revolute' and 'continuous'
         self.upper_limit = upper_limit  # for 'revolute' and 'prismatic'
         self.lower_limit = lower_limit  # for 'revolute' and 'prismatic'
 
@@ -141,10 +156,10 @@ class Link:
 
         self.name = name
         # xyz for visual
-        self.xyz = [x for x in xyz]
-        self.rpy = [x for x in rpy]
+        self.xyz = [round_mm(x) for x in xyz]
+        self.rpy = [round_rads(r) for r in rpy]
         # xyz for center of mass
-        self.center_of_mass = [x for x in center_of_mass]
+        self.center_of_mass = [round_mm(x) for x in center_of_mass]
         self._link_xml = None
         self.sub_folder = sub_folder
         self.mass = mass
