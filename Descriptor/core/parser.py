@@ -502,6 +502,7 @@ class Configurator:
                     joint_limit_min = joint.jointMotion.rotationLimits.minimumValue
                     
                     if abs(joint_limit_max - joint_limit_min) == 0:
+                        # Rotation is unlimited
                         joint_limit_min = -3.14159
                         joint_limit_max = 3.14159
                 elif isinstance(joint.jointMotion, adsk.fusion.SliderJointMotion):
@@ -743,8 +744,10 @@ class Configurator:
                         utils.log(f"DEBUG: for non-fixed joint {joint.name}, updating child origin from {child_origin.translation.asArray()} to {joint.origin.asArray()}")
                         child_origin = child_origin.copy()
                         child_origin.translation = joint.origin
-                        tt = t.copy()
+                        # The joint axis is specified in the joint (==child) frame
+                        tt = child_origin.copy()
                         tt.translation = adsk.core.Vector3D.create()
+                        assert tt.invert()
                         axis = axis.copy()
                         assert axis.transformBy(tt)
                         utils.log(f"DEBUG:    and updating axis from {joint.axis.asArray()} to {axis.asArray()}")
@@ -766,9 +769,9 @@ class Configurator:
                     utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {parent_name} at {vector_to_str(parent_origin.translation)} to {child_name} at {vector_to_str(child_origin.translation)} -> xyz={vector_to_str(xyz,5)} rpy={rpy_to_str(rpy)}")
 
                     self.joints[joint.name] = parts.Joint(name=joint.name , joint_type=joint.type, 
-                                        xyz=xyz, rpy=rpy, axis=axis.asArray(), 
+                                    xyz=xyz, rpy=rpy, axis=axis.asArray(), 
                                     parent=parent_name, child=child_name, 
-                                        upper_limit=joint.upper_limit, lower_limit=joint.lower_limit)
+                                    upper_limit=joint.upper_limit, lower_limit=joint.lower_limit)
                     
                     self.__add_link(child_name, child_link_occs)
                     new_boundary.update(child_link_names)
@@ -786,7 +789,7 @@ class Configurator:
             extra = f" {self.merge_links[link_name]}" if link_name in self.merge_links else ""
             tree_str.append("   "*level + f" - Link: {link_name}{extra}")
             for j in joint_children[link_name]:
-                tree_str.append("   " * (level + 1) + f" - Joint: {j.name}")
+                tree_str.append("   " * (level + 1) + f" - Joint [{j.type}]: {j.name}")
                 get_tree(level+2, j.child)
         get_tree(1, base_link_name)
 
