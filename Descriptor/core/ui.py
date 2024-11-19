@@ -365,7 +365,9 @@ def config_settings(ui: adsk.core.UserInterface, ui_handlers) -> bool:
         return True 
 
     except:
+        exn = traceback.format_exc()
+        utils.log(f"FATAL: {exn}")
         if ui:
-            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+            ui.messageBox(f'Failed:\n{exn}')
 
         return False

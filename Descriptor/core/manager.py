@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 import os
 import os.path
 import yaml
@@ -82,10 +82,20 @@ class Manager:
         self.robot_name = robot_name
 
         self.name_map: Dict[str, str] = {}
+        self.merge_links: Dict[str, List[str]] = {}
         if config_file:
             with open(config_file, "rb") as yml:
                 configuration = yaml.load(yml, yaml.SafeLoader)
+            if not isinstance(configuration, dict):
+                raise(ValueError(f"Malformed config '{config_file}': top level should be a dictionary"))
+            wrong_keys = set(configuration).difference([
+                "RobotName", "SaveMesh", "SubMesh", "MeshResolution", "InertiaPrecision",
+                "TargetUnits", "TargetPlatform", "NameMap", "MergeLinks",
+            ])
+            if wrong_keys:
+                raise(ValueError(f"Malformed config '{config_file}': unexpected top-level keys: {list(wrong_keys)}"))
             self.name_map = configuration.get("NameMap", {})
+            self.merge_links = configuration.get("MergeLinks", {})
 
         # Set directory 
         self._set_dir(save_dir)
@@ -115,7 +125,7 @@ class Manager:
         '''        
         assert Manager.root is not None
 
-        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links)
         config.inertia_accuracy = self.inert_accuracy
         ## Return array of tuples (parent, child)
         config.get_scene_configuration()
@@ -133,7 +143,7 @@ class Manager:
         if self._app is not None and self._app.activeViewport is not None:
             utils.viewport = self._app.activeViewport
         utils.log("*** Parsing ***")
-        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links)
         config.inertia_accuracy = self.inert_accuracy
         config.sub_mesh = self.sub_mesh
         utils.log("** Getting scene configuration **")
@@ -144,8 +154,15 @@ class Manager:
         # --------------------
         # Generate URDF
         utils.log(f"*** Generating URDF under {os.path.realpath(self.save_dir)} ***")
-        writer = io.Writer(self.save_dir, config)
+        self.urdf_dir = os.path.join(self.save_dir,'urdf')
+        writer = io.Writer(self.urdf_dir, config)
         writer.write_urdf()
+
+        with open(os.path.join(self.urdf_dir, "fustion2urdf.txt"), "wt") as f:
+            f.write(f"URDF structure created from Fusion Model {Manager.root.name}:\n")
+            for s in config.tree_str:
+                f.write(s)
+                f.write("\n")
 
         utils.log(f"*** Generating {self.target_platform} configuration")
         if self.target_platform == 'pyBullet':
@@ -161,7 +178,7 @@ class Manager:
         # Custom STL Export
         if self.save_mesh:
             utils.log("*** Generating mesh STLs ***")
-            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, self.sub_mesh, config.body_dict, config.links_by_token, Manager._app)
+            io.visible_to_stl(Manager.design, self.save_dir, Manager.root, self.mesh_accuracy, self.sub_mesh, config.body_dict, Manager._app)
         utils.log(f"*** Done! Time elapsed: {utils.time_elapsed():.1f}s ***")
         if utils.all_warnings:
             utils.log(f"There were {len(utils.all_warnings)} warnings!\n\t" + "\n\t".join(utils.all_warnings))

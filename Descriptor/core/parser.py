@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Literal, Optional, Sequence, Set, Tuple, Uni
 from dataclasses import dataclass, field
 
 import adsk.core, adsk.fusion
+import numpy as np
 from . import transforms
 from . import parts
 from . import utils
@@ -221,7 +222,7 @@ class Configurator:
         adsk.fusion.JointTypes.BallJointType: "Ball_unsupported",
     }
 
-    def __init__(self, root: adsk.fusion.Component, scale: float, cm: float, name: str, name_map: Dict[str, str]) -> None:
+    def __init__(self, root: adsk.fusion.Component, scale: float, cm: float, name: str, name_map: Dict[str, str], merge_links: Dict[str, List[str]]) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
         Parameters
         ----------
@@ -250,6 +251,7 @@ class Configurator:
         self.base_link: Optional[adsk.fusion.Occurrence] = None
         self.component_map: Dict[str, Hierarchy] = OrderedDict() # Entity tokens for each component
         self.name_map = name_map
+        self.merge_links = merge_links
 
         self.root_node: Optional[Hierarchy] = None
 
@@ -367,9 +369,6 @@ class Configurator:
         occs_dict = {}
 
         prop = oc.getPhysicalProperties(self.inertia_accuracy)
-        
-        occ_name = self.get_name(oc)
-        occs_dict['name'] = occ_name
 
         mass = prop.mass  # kg
 
@@ -396,7 +395,7 @@ class Configurator:
         # It is in cm, not in design units.
         occs_dict['center_of_mass'] = [c * self.cm for c in c_o_m.asArray()]
 
-        utils.log(f"DEBUG: {occ_name}: origin={vector_to_str(oc.transform2.translation)}, center_mass(global)={vector_to_str(prop.centerOfMass)}, center_mass(URDF)={occs_dict['center_of_mass']}")
+        utils.log(f"DEBUG: {oc.name}: origin={vector_to_str(oc.transform2.translation)}, center_mass(global)={vector_to_str(prop.centerOfMass)}, center_mass(URDF)={occs_dict['center_of_mass']}")
 
         moments = prop.getXYZMomentsOfInertia()
         if not moments[0]:
@@ -558,53 +557,86 @@ class Configurator:
                 self.joints_dict[rigid_group_occ_name] = JointInfo(name=rigid_group_occ_name, parent=parent_occ_name, child=occ_name)
 
     def _links(self):
-        # Make sure no repeated body names
-        body_count = Counter()
+        self.merged_links: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = {}
+
+        for name, names in self.merge_links.items():
+            if not names:
+                raise ValueError(f"Invalid MergeLinks YAML config setting: merged link '{name}' is empty, which is not allowed")
+            for n in names:
+                if n not in self.links_by_name:
+                    raise ValueError(f"Invalid MergeLinks YAML config setting: link '{n}' for merge linked '{name}' is not in the Fusion model")
+            if name in self.links_by_name and name not in names:
+                raise ValueError(f"Invalid MergeLinks YAML config setting: merged '{name}' clashes with existing Fusion link '{self.links_by_name[name].name}'; add the latter to NameMap in YAML to avoid the name clash")
+            val = name, names, [self.links_by_name[n] for n in names]
+            for name in names:
+                self.merged_links[name] = val
+
+        body_names: Dict[str, Tuple[()]] = {}
         
+        renames = set(self.name_map)
+
         for oc in self._iterate_through_occurrences():
-            occ_name = self.get_name(oc)
+            renames.difference_update([oc.name])
+            occ_name, _, occs = self._get_merge(oc)
+            if occ_name in self.body_dict:
+                continue
+
             oc_name = utils.format_name(occ_name)
             self.body_dict[occ_name] = []
-            # body_lst = self.component_map[oc.entityToken].get_flat_body() #gets list of all bodies in the occurrence
 
-            body_lst = self.body_mapper[oc.entityToken]
-            
-            if len(body_lst) > 0:
-                for body in body_lst:
+            for sub_oc in occs:                
+                sub_oc_name = utils.format_name(self.get_name(sub_oc))
+                if sub_oc_name != oc_name:
+                    sub_oc_name = f"{oc_name}__{sub_oc_name}"
+                for body in self.body_mapper[sub_oc.entityToken]:
                     # Check if this body is hidden
                     if body.isVisible:
-
-                        body_name = utils.format_name(body.name)
-                        body_name_cnt = f'{body_name}_{body_count[body_name]}'
-                        body_count[body_name] += 1
-
-                        unique_bodyname = f'{oc_name}_{body_name_cnt}'
+                        
+                        body_name = f"{sub_oc_name}__{utils.format_name(body.name)}"
+                        unique_bodyname = utils.rename_if_duplicate(body_name, body_names)
+                        body_names[unique_bodyname] = ()
                         self.body_dict[occ_name].append((body, unique_bodyname))
+        
+        if renames:
+            ValueError("Invalid NameMap YAML config setting: some of the links are not in Fusion: '" + "', '".join(renames) + "'")
 
-    def __add_link(self, occ: adsk.fusion.Occurrence):
-        inertia = self._get_inertia(occ)
-        name = inertia['name']
+    def __add_link(self, name: str, occs: List[adsk.fusion.Occurrence]):
         urdf_origin = self.link_origins[name]
         inv = urdf_origin.copy()
         assert inv.invert()
         #fusion_origin = occ.transform2.translation.asArray()
 
-        utils.log(f"DEBUG: link {inertia['name']} urdf_origin at {vector_to_str(urdf_origin.translation)}"
-                  f" (rpy={rpy_to_str(transforms.so3_to_euler(urdf_origin))})"
-                  f" and inv at {vector_to_str(inv.translation)} (rpy={rpy_to_str(transforms.so3_to_euler(inv))})")
+        mass = 0.0
+        visible = False
+        center_of_mass = np.zeros(3)
+        inertia_tensor = np.zeros(6)
+        for occ in occs:
+            inertia = self._get_inertia(occ)
+            utils.log(f"DEBUG: link {occ.name} urdf_origin at {vector_to_str(urdf_origin.translation)}"
+                    f" (rpy={rpy_to_str(transforms.so3_to_euler(urdf_origin))})"
+                    f" and inv at {vector_to_str(inv.translation)} (rpy={rpy_to_str(transforms.so3_to_euler(inv))})")
+            mass += inertia['mass']
+            visible += visible or occ.isVisible
+            center_of_mass += np.array(inertia['center_of_mass']) * inertia['mass']
+            inertia_tensor += np.array(inertia['inertia'])
+        if len(occs) == 1:
+            inertia_tensor = inertia['inertia']  # type: ignore
+            center_of_mass = inertia['center_of_mass']  # type: ignore
+        else:
+            inertia_tensor = list(inertia_tensor)
+            center_of_mass = list(center_of_mass/mass)
 
-        link = parts.Link(name = utils.format_name(name),
+        self.links[name] = parts.Link(name = utils.format_name(name),
                         xyz = (u * self.cm for u in inv.translation.asArray()),
                         rpy = transforms.so3_to_euler(inv),
-                        center_of_mass = inertia['center_of_mass'],
+                        center_of_mass = center_of_mass,
                         sub_folder = self.mesh_folder,
-                        mass = inertia['mass'],
-                        inertia_tensor = inertia['inertia'],
+                        mass = mass,
+                        inertia_tensor = inertia_tensor,
                         bodies = [body_name for _, body_name in self.body_dict[name]],
                         sub_mesh = self.sub_mesh,
                         material_dict = self.material_dict,
-                        visible = occ.isVisible)
-        self.links[link.name] = link
+                        visible = visible)
 
     def __get_material(self, appearance: Optional[adsk.core.Appearance]) -> str:
         # Material should always have an appearance, but just in case
@@ -623,12 +655,18 @@ class Configurator:
         # Adapted from SpaceMaster85/fusion2urdf
         self.color_dict['silver_default'] = "0.700 0.700 0.700 1.000"
 
-        for occ_name, occ in self.links_by_name.items():
-            oc_name = utils.format_name(occ_name)
-            if self.sub_mesh and len(self.body_dict[occ_name]) > 1:
-                for body, body_name in self.body_dict[occ_name]:
-                    self.material_dict[body_name] = self.__get_material(body.appearance)
-            else:
+        if self.sub_mesh:
+            for occ_name, bodies in self.body_dict.items():
+                if len(bodies) > 1:
+                    for body, body_name in bodies:
+                        self.material_dict[body_name] = self.__get_material(body.appearance)
+                else:
+                    appearance = self.__get_material(bodies[0][0].appearance) if bodies else 'silver_default'
+                    self.material_dict[utils.format_name(occ_name)] = appearance 
+        else:
+            for occ in self.links_by_name.values():
+                occ_name, _, occs = self._get_merge(occ)
+                occ = occs[0]
                 # Prioritize appearance properties, but it could be null
                 appearance = None
                 if occ.appearance:
@@ -640,8 +678,13 @@ class Configurator:
                             break
                 elif occ.component.material:
                     appearance = occ.component.material.appearance
-                self.material_dict[oc_name] = self.__get_material(appearance)
+                self.material_dict[utils.format_name(occ_name)] = self.__get_material(appearance)
 
+    def _get_merge(self, occ: adsk.fusion.Occurrence) -> Tuple[str, List[str], List[adsk.fusion.Occurrence]]:
+        name = self.get_name(occ)
+        if name in self.merged_links:
+            return self.merged_links[name]
+        return name, [name], [occ]
 
     def _build(self) -> None:
         ''' create links and joints by setting parent and child relationships and constructing
@@ -658,11 +701,12 @@ class Configurator:
             utils.log(f"DEBUG: {link_name} touches joints {joints}")
         # URDF origin at base link origin "by definition"
         assert self.base_link is not None
-        base_link_name = self.get_name(self.base_link)
-        grounded_occ = {base_link_name}
-        self.link_origins[base_link_name] = self.base_link.transform2
-        self.__add_link(self.base_link)
-        boundary = grounded_occ
+        base_link_name, base_link_names, base_link_occs = self._get_merge(self.base_link)
+        grounded_occ = set(base_link_names)
+        for name in [base_link_name] + base_link_names:
+            self.link_origins[name] = base_link_occs[0].transform2
+        self.__add_link(base_link_name, base_link_occs)
+        boundary = grounded_occ.copy()
         while boundary:
             new_boundary : Set[str] = set()
             for occ_name in boundary:
@@ -680,10 +724,11 @@ class Configurator:
                         else:
                             continue
 
-                    new_boundary.add(child_name)
+                    parent_name, _, _ = self._get_merge(self.links_by_name[occ_name])
+                    child_name, child_link_names, child_link_occs = self._get_merge(self.links_by_name[child_name])
 
-                    child_origin = self.links_by_name[child_name].transform2
-                    parent_origin = self.link_origins[occ_name]
+                    child_origin = child_link_occs[0].transform2
+                    parent_origin = self.link_origins[parent_name]
 
                     if utils.LOG_DEBUG and self.close_enough(parent_origin.getAsCoordinateSystem()[1:], adsk.core.Matrix3D.create().getAsCoordinateSystem()[1:]) and not self.close_enough(child_origin.getAsCoordinateSystem()[1:], adsk.core.Matrix3D.create().getAsCoordinateSystem()[1:]):
                         utils.log(f"***** !!!!! rotating off the global frame's orientation")
@@ -704,7 +749,8 @@ class Configurator:
                         assert axis.transformBy(tt)
                         utils.log(f"DEBUG:    and updating axis from {joint.axis.asArray()} to {axis.asArray()}")
 
-                    self.link_origins[child_name] = child_origin
+                    for name in [child_name] + child_link_names:
+                        self.link_origins[name] = child_origin
 
                     #transform = (*child_origin.getAsCoordinateSystem(), *parent_origin.getAsCoordinateSystem())
                     #transform = (*parent_origin.getAsCoordinateSystem(), *child_origin.getAsCoordinateSystem())
@@ -717,17 +763,32 @@ class Configurator:
                     xyz = [c * self.cm for c in ct.translation.asArray()]
                     rpy = transforms.so3_to_euler(ct)
 
-                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {occ_name} at {vector_to_str(parent_origin.translation)} to {child_name} at {vector_to_str(child_origin.translation)} -> xyz={vector_to_str(xyz,5)} rpy={rpy_to_str(rpy)}")
+                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {parent_name} at {vector_to_str(parent_origin.translation)} to {child_name} at {vector_to_str(child_origin.translation)} -> xyz={vector_to_str(xyz,5)} rpy={rpy_to_str(rpy)}")
 
                     self.joints[joint.name] = parts.Joint(name=joint.name , joint_type=joint.type, 
                                         xyz=xyz, rpy=rpy, axis=axis.asArray(), 
-                                        parent=occ_name, child=child_name, 
+                                    parent=parent_name, child=child_name, 
                                         upper_limit=joint.upper_limit, lower_limit=joint.lower_limit)
                     
-                    self.__add_link(self.links_by_name[child_name])
+                    self.__add_link(child_name, child_link_occs)
+                    new_boundary.update(child_link_names)
+                    grounded_occ.update(child_link_names)
 
-            grounded_occ.update(new_boundary)
             boundary = new_boundary
+
+        joint_children: Dict[str, List[parts.Joint]] = defaultdict(list)
+        for joint in self.joints.values():
+            joint_children[joint.parent].append(joint)
+        for link_name, joints in joint_children.items():
+            utils.log(f"Link: {link_name}, child joints: {[j.name for j in joints]}")
+        tree_str = []
+        def get_tree(level: int, link_name: str):
+            extra = f" {self.merge_links[link_name]}" if link_name in self.merge_links else ""
+            tree_str.append("   "*level + f" - Link: {link_name}{extra}")
+            for j in joint_children[link_name]:
+                tree_str.append("   " * (level + 1) + f" - Joint: {j.name}")
+                get_tree(level+2, j.child)
+        get_tree(1, base_link_name)
 
         # Sanity checks
         not_in_joints = set()
@@ -746,20 +807,18 @@ class Configurator:
                 error += "Unreacheable from the grounded component via joints+links: " + ", ".join(unreachable) + "."
             utils.log(error)
         missing_joints = set(self.joints_dict).difference(self.joints)
+        for joint_name in missing_joints.copy():
+            joint = self.joints_dict[joint_name]
+            if joint.type == "fixed" and joint.parent in self.merged_links and joint.child in self.merged_links and self.merged_links[joint.parent][0] == self.merged_links[joint.child][0]:
+                utils.log(f"DEBUG: Skipped Fixed Joint '{joint_name}' that is internal for merged link {self.merged_links[joint.parent][0]}")
+                missing_joints.remove(joint_name)
         if missing_joints:
             utils.log("\n\t".join(["FATAL ERROR: Lost joints: "] + [f"{self.joints_dict[joint].name} of type {self.joints_dict[joint].type} between {self.joints_dict[joint].parent} and {self.joints_dict[joint].child}" for joint in missing_joints]))
         extra_joints = set(self.joints).difference(self.joints_dict)
         if extra_joints:
             utils.log("FATAL ERROR: Extra joints: '" + "', '".join(sorted(extra_joints)) + "'")
         if not_in_joints or unreachable or missing_joints or extra_joints:
-            joint_children: Dict[str, List[parts.Joint]] = defaultdict(list)
-            for joint in self.joints.values():
-                joint_children[joint.parent].append(joint)
-            def print_tree(level: int, link: parts.Link):
-                utils.log("   "*level + f" - Link: {link.name}")
-                for j in joint_children[link.name]:
-                    utils.log("   " * (level + 1) + f" - Joint: {j.name}")
-                    print_tree(level+2, self.links[j.child])
             utils.log("Reachable from the root:")
-            print_tree(1, self.links[base_link_name])
+            utils.log("\n".join(tree_str))
             utils.fatal("Fusion structure is broken or misunderstoon by the exporter, giving up! See the full output in Text Commands console for more information.")
+        self.tree_str = tree_str

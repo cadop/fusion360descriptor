@@ -13,10 +13,9 @@ def visible_to_stl(
         design: adsk.fusion.Design, 
         save_dir: str,
         root: adsk.fusion.Component, 
-        accuracy: adsk.fusion.MeshRefinementSettings, 
+        accuracy: adsk.fusion.MeshRefinementSettings,
         sub_mesh: bool,
         body_mapper: Dict[str, List[Tuple[adsk.fusion.BRepBody, str]]],
-        name_mapper: Dict[str, str],
         _app):  
     """
     export top-level components as a single stl file into "save_dir/"
@@ -49,22 +48,14 @@ def visible_to_stl(
     except: pass
 
     try:
-        for oc in root.allOccurrences:
-            if not oc.isVisible:
-                utils.log(f"Skipping stl generation because occurrence is not visible: {name_mapper[oc.entityToken]}")
-                continue
-
-            # Create a new exporter in case its a memory thing
-            exporter = design.exportManager
-
-            name = name_mapper[oc.entityToken]
-            occName = utils.format_name(name)
-            
-            bodies = body_mapper[name]
-
+        for name, bodies in body_mapper.items():
             if not bodies:
                 continue
             
+            # Create a new exporter in case its a memory thing
+            exporter = design.exportManager
+
+            occName = utils.format_name(name)
             stl_exporter(exporter, accuracy, newRoot, [b for b,_ in bodies], os.path.join(save_dir, occName))
 
             if sub_mesh and len(bodies) > 1:
@@ -125,13 +116,12 @@ class Writer:
             root nodes instance of configurator class
         '''        
 
-        self.save_dir = os.path.join(self.save_dir,'urdf')
         try: os.mkdir(self.save_dir)
         except: pass
         file_name = os.path.join(self.save_dir, f'{self.config.name}.xacro')  # the name of urdf file
         material_file_name = os.path.join(self.save_dir, f'materials.xacro')
 
-        robot = Element("robot", {"name": self.config.name, "xmlns:xacro": "http://www.ros.org/wiki/xacro"})
+        robot = Element("robot", {"xmlns:xacro": "http://www.ros.org/wiki/xacro", "name": self.config.name})
         SubElement(robot, "xacro:include", {"filename": f"$(find {self.config.name})/urdf/materials.xacro"})
 
         # Add dummy link since KDL does not support a root link with an inertia

@@ -195,7 +195,7 @@ class Link:
             origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
             geometry_v = SubElement(visual, 'geometry')
             mesh_v = SubElement(geometry_v, 'mesh')
-            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(self.name)}.stl','scale':scale}
+            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':scale}
             material = SubElement(visual, 'material')
             material.attrib = {'name': self.material_dict[self.name]}
     
@@ -206,6 +206,6 @@ class Link:
         origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
         geometry_c = SubElement(collision, 'geometry')
         mesh_c = SubElement(geometry_c, 'mesh')
-        mesh_c.attrib = {'filename':f'package://{self.sub_folder}{utils.format_name(self.name)}.stl','scale':scale}
+        mesh_c.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':scale}
 
         return link
