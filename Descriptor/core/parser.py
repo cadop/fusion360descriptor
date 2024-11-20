@@ -60,16 +60,13 @@ class Hierarchy:
         child_map = {}
         parent_stack: Set["Hierarchy"] = set()
         parent_stack.update(self.get_children())
-        while len(parent_stack) != 0:
+        while parent_stack:
             # Pop an element form the stack (order shouldn't matter)
             tmp = parent_stack.pop()
             # Add this child to the map
             # use the entity token, more accurate than the name of the component (since there are multiple)
             child_map[tmp.component.entityToken] = tmp 
-            # Check if this child has children
-            if len(tmp.get_children())> 0:
-                # add them to the parent_stack
-                parent_stack.update(tmp.get_children())
+            parent_stack.update(tmp.get_children())
         return child_map
 
     def get_flat_body(self) -> List[adsk.fusion.BRepBody]:
@@ -120,21 +117,6 @@ class Hierarchy:
             flat_bodies.extend(body)
 
         return flat_bodies
-
-    def get_all_parents(self) -> List[str]:
-        ''' get all the parents of this instance '''
-
-        child_stack: Set[Hierarchy] = set()
-        child_stack.add(self)
-        parent_map: List[str] = []
-        while len(child_stack) != 0:
-            tmp = child_stack.pop()
-            if tmp.parent is None:
-                return parent_map
-            parent_map.append(tmp.parent.component.entityToken)    
-            child_stack.add(tmp.parent)
-
-        return parent_map
 
     @staticmethod
     def traverse(occurrences: adsk.fusion.OccurrenceList, parent: Optional["Hierarchy"] = None) -> "Hierarchy":
@@ -192,7 +174,7 @@ def get_origin(o: Optional[adsk.core.Base]) -> Union[adsk.core.Vector3D, None]:
     elif isinstance(o, adsk.fusion.JointOrigin):
         return get_origin(o.geometry)
     else:
-        raise ValueError(f"get_origin: unexpected {o} of type {type(o)}")
+        utils.fatal(f"parser.get_origin: unexpected {o} of type {type(o)}")
     
 def get_context_name(c: Optional[adsk.fusion.Occurrence]) -> str:
     return c.name if c is not None else 'ROOT level'
@@ -276,7 +258,7 @@ class Configurator:
         elif isinstance(a, adsk.core.Matrix3D) and isinstance(b, adsk.core.Matrix3D):
             return self.close_enough(a.asArray(), b.asArray())
         else:
-            raise ValueError(f"close_enough: {type(a)} and {type(b)}: not supported")
+            utils.fatal(f"parser.Configurator.close_enough: {type(a)} and {type(b)}: not supported")
         
     def get_scene_configuration(self):
         '''Build the graph of how the scene components are related
@@ -364,7 +346,7 @@ class Configurator:
         name = utils.rename_if_duplicate(self.name_map.get(oc.name, oc.name), self.links_by_name)
         self.links_by_name[name] = oc
         self.links_by_token[oc.entityToken] = name
-        utils.log(f"DEBUG: link '{oc.name}' token '{oc.entityToken}' became '{name}'")
+        utils.log(f"DEBUG: link '{oc.name}' ('{oc.fullPathName}') became '{name}'")
         return name   
     
     def _get_inertia(self, oc: adsk.fusion.Occurrence):
@@ -456,11 +438,12 @@ class Configurator:
                 continue
 
             name = utils.rename_if_duplicate(self.name_map.get(joint.name, joint.name), self.joints_dict)
-            if utils.LOG_DEBUG:
-                utils.log(f"... Processing joint {orig_name}->{name} of type {joint_type}, between {occ_one.name} and {occ_two.name}")
 
             parent = self.get_name(occ_one)
             child = self.get_name(occ_two)
+
+            if utils.LOG_DEBUG:
+                utils.log(f"... Processing joint {orig_name}->{name} of type {joint_type}, between {occ_one.name}->{parent} and {occ_two.name}->{child}")
 
             utils.log(f"DEBUG: Got from Fusion: {joint_type} {name} connecting")
             utils.log(f"DEBUG: ... {parent} @ {occ_one.transform2.translation.asArray()} and")
@@ -559,20 +542,51 @@ class Configurator:
                       f"parent {parent_occ_name} @ {vector_to_str(parent_occ.transform2.translation)} and" # type: ignore[undef]
                       f"child {occ_name} {vector_to_str(occ.transform2.translation)}")
                 self.joints_dict[rigid_group_occ_name] = JointInfo(name=rigid_group_occ_name, parent=parent_occ_name, child=occ_name)
+        
+        self.assemblies_by_name: Dict[str, adsk.fusion.Occurrence] = {}
+        self.assemblies_by_token: Dict[str, adsk.fusion.Occurrence] = {}
+        for occ in self.root.allOccurrences:
+            if occ.childOccurrences.count > 0:
+                # It's an assembly
+                if occ.entityToken in self.links_by_token:
+                    continue
+                name = utils.rename_if_duplicate(occ.name, self.assemblies_by_name)
+                self.assemblies_by_name[name] = occ
+                self.assemblies_by_token[occ.entityToken] = occ
+
+    def get_assembly_links(self, occ: adsk.fusion.Occurrence) -> List[str]:
+        result: List[str] = []
+        for child in occ.childOccurrences:
+            if child.entityToken in self.links_by_token:
+                result.append(self.links_by_token[child.entityToken])
+            elif child.entityToken in self.assemblies_by_token:
+                result += self.get_assembly_links(child)
+            else:
+                raise ValueError(f"descendant {child.fullPathName} is an orphan?")
+        return result
 
     def _links(self):
         self.merged_links: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = {}
 
         for name, names in self.merge_links.items():
             if not names:
-                raise ValueError(f"Invalid MergeLinks YAML config setting: merged link '{name}' is empty, which is not allowed")
+                utils.fatal(f"Invalid MergeLinks YAML config setting: merged link '{name}' is empty, which is not allowed")
+            link_names = names.copy()
             for n in names:
-                if n not in self.links_by_name:
-                    raise ValueError(f"Invalid MergeLinks YAML config setting: link '{n}' for merge linked '{name}' is not in the Fusion model")
+                if n in self.links_by_name:
+                    continue
+                if n in self.assemblies_by_name:
+                    link_names.remove(n)
+                    try:
+                        link_names += self.get_assembly_links(self.assemblies_by_name[n])
+                    except ValueError as e:
+                        utils.fatal(f"Invalid MergeLinks YAML config setting: assembly '{n}' for merged link '{name}' could not be processed: {e.args[0]}")
+                else:
+                    utils.fatal(f"Invalid MergeLinks YAML config setting: link '{n}' for merged link '{name}' is not in the Fusion model")
             if name in self.links_by_name and name not in names:
-                raise ValueError(f"Invalid MergeLinks YAML config setting: merged '{name}' clashes with existing Fusion link '{self.links_by_name[name].name}'; add the latter to NameMap in YAML to avoid the name clash")
-            val = name, names, [self.links_by_name[n] for n in names]
-            for name in names:
+                utils.fatal(f"Invalid MergeLinks YAML config setting: merged '{name}' clashes with existing Fusion link '{self.links_by_name[name].fullPathName}'; add the latter to NameMap in YAML to avoid the name clash")
+            val = name, link_names, [self.links_by_name[n] for n in link_names]
+            for name in link_names:
                 self.merged_links[name] = val
 
         body_names: Dict[str, Tuple[()]] = {}
@@ -805,13 +819,13 @@ class Configurator:
         unreachable = set()
         for occ in self._iterate_through_occurrences():
             if occ.isVisible and self.body_dict.get(self.name) is not None:
-                if occ.entityToken not in self.links_by_token:
-                    not_in_joints.add(occ.name)
-                elif self.links_by_token[occ.entityToken] not in grounded_occ:
-                    unreachable.add(occ.name)
+                if occ.fullPathName not in self.links_by_token:
+                    not_in_joints.add(occ.fullPathName)
+                elif self.links_by_token[occ.fullPathName] not in grounded_occ:
+                    unreachable.add(occ.fullPathName)
         for occ in self.root.allOccurrences:
             if any (b.isVisible and not b.entityToken in self.bodies_collected for b in occ.bRepBodies):
-                unreachable.add(occ.name)
+                unreachable.add(occ.fullPathName)
         if not_in_joints or unreachable:
             error = "FATAL ERROR: Not all occurrences were included in the export:"
             if not_in_joints:
