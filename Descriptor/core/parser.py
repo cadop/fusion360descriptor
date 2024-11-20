@@ -79,7 +79,7 @@ class Hierarchy:
         child_set = list(self.get_all_children().values())
 
         if len(child_set) == 0:
-            body_list.append([self.component.bRepBodies.item(x) for x in range(0, self.component.bRepBodies.count) ])
+            body_list.append(list(self.component.bRepBodies))
 
         child_list = [x.children for x in child_set if len(x.children)>0]
         childs : List[Hierarchy] = []
@@ -96,7 +96,7 @@ class Hierarchy:
             closed_set.add(tmp)
             # Get any bodies directly associated with this component
             if tmp.component.bRepBodies.count > 0:
-                body_list.append([tmp.component.bRepBodies.item(x) for x in range(0, tmp.component.bRepBodies.count) ])
+                body_list.append(list(tmp.component.bRepBodies))
 
             # Check if this child has children
             if len(tmp.children)> 0:
@@ -601,6 +601,7 @@ class Configurator:
 
             oc_name = utils.format_name(occ_name)
             self.body_dict[occ_name] = []
+            bodies = set()
 
             for sub_oc in occs:                
                 sub_oc_name = utils.format_name(self.get_name(sub_oc))
@@ -608,12 +609,12 @@ class Configurator:
                     sub_oc_name = f"{oc_name}__{sub_oc_name}"
                 for body in self.body_mapper[sub_oc.entityToken]:
                     # Check if this body is hidden
-                    if body.isVisible:
-                        
+                    if body.isVisible and body.entityToken not in bodies:
                         body_name = f"{sub_oc_name}__{utils.format_name(body.name)}"
                         unique_bodyname = utils.rename_if_duplicate(body_name, body_names)
                         body_names[unique_bodyname] = ()
                         self.body_dict[occ_name].append((body, unique_bodyname))
+                        bodies.add(body.entityToken)
         
         if renames:
             ValueError("Invalid NameMap YAML config setting: some of the links are not in Fusion: '" + "', '".join(renames) + "'")
