@@ -130,7 +130,7 @@ class Writer:
         assert self.config.base_link is not None
         dummy_joint = SubElement(robot, "joint", {"name": "dummy_link_joint", "type": "fixed"})
         SubElement(dummy_joint, "parent", {"link": "dummy_link"})
-        SubElement(dummy_joint, "child", {"link": self.config.get_name(self.config.base_link)})
+        SubElement(dummy_joint, "child", {"link": self.config.base_link_name})
 
         for _, link in self.config.links.items():
             xml = link.link_xml()

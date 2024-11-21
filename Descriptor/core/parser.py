@@ -720,13 +720,13 @@ class Configurator:
             occurrences[joint_info.child].append(joint_name)
         for link_name, joints in occurrences.items():
             utils.log(f"DEBUG: {link_name} touches joints {joints}")
-        # URDF origin at base link origin "by definition"
         assert self.base_link is not None
-        base_link_name, base_link_names, base_link_occs = self._get_merge(self.base_link)
+        self.base_link_name, base_link_names, base_link_occs = self._get_merge(self.base_link)
         grounded_occ = set(base_link_names)
-        for name in [base_link_name] + base_link_names:
+        for name in [self.base_link_name] + base_link_names:
+            # URDF origin at base link origin "by definition"
             self.link_origins[name] = base_link_occs[0].transform2
-        self.__add_link(base_link_name, base_link_occs)
+        self.__add_link(self.base_link_name, base_link_occs)
         boundary = grounded_occ.copy()
         while boundary:
             new_boundary : Set[str] = set()
@@ -813,7 +813,7 @@ class Configurator:
             for j in joint_children[link_name]:
                 tree_str.append("   " * (level + 1) + f" - Joint [{j.type}]: {j.name}")
                 get_tree(level+2, j.child)
-        get_tree(1, base_link_name)
+        get_tree(1, self.base_link_name)
 
         # Sanity checks
         not_in_joints = set()
