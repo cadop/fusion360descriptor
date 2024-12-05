@@ -11,7 +11,7 @@ import numpy as np
 from . import transforms
 from . import parts
 from . import utils
-from collections import Counter, OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict
 
 @dataclass(frozen=True, kw_only=True, eq=False)
 class JointInfo:
@@ -587,10 +587,13 @@ class Configurator:
                     utils.fatal(f"Invalid MergeLinks YAML config setting: link '{n}' for merged link '{name}' is not in the Fusion model")
             if name in self.links_by_name and name not in names:
                 utils.fatal(f"Invalid MergeLinks YAML config setting: merged '{name}' clashes with existing Fusion link '{self.links_by_name[name].fullPathName}'; add the latter to NameMap in YAML to avoid the name clash")
+            link_names = list(OrderedDict.fromkeys(link_names)) # Remove duplicates
             val = name, link_names, [self.links_by_name[n] for n in link_names]
             utils.log(f"Merged link {name} <- occurrences {link_names}")
-            for name in link_names:
-                self.merged_links[name] = val
+            for link_name in link_names:
+                if link_name in self.merged_links:
+                    utils.fatal(f"Invalid MergeLinks YAML config setting: {link_name} is included in two merged links: '{name}' and '{self.merged_links[link_name][0]}'")
+                self.merged_links[link_name] = val
 
         body_names: Dict[str, Tuple[()]] = {}
         
