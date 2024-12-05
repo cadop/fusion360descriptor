@@ -106,10 +106,9 @@ def stl_exporter(exportMgr, accuracy, newRoot, body_lst, filename):
 
 class Writer:
 
-    def __init__(self, save_dir: str, config: Configurator, extra_links: Sequence[str]) -> None:
+    def __init__(self, save_dir: str, config: Configurator) -> None:
         self.save_dir = save_dir
         self.config = config
-        self.extra_links = set(extra_links)
 
     def write_urdf(self) -> None:
         """Write each component of the xml structure to file
@@ -127,17 +126,17 @@ class Writer:
         except:
             pass
         file_name = os.path.join(self.save_dir, f"{self.config.name}.xacro")  # the name of urdf file
-        if self.extra_links:
-            file_name_full = os.path.join(self.save_dir, f"{self.config.name}-full.xacro")
-            self.write_xacro(file_name_full, self.config.links, self.config.joints)
-            main_links = set(self.config.links).difference(self.extra_links)
+        if self.config.extra_links:
+            main_links = set(self.config.links).difference(self.config.extra_links)
             links = {link: self.config.links[link] for link in main_links}
             joints = {
                 joint: self.config.joints[joint]
                 for joint in self.config.joints
-                if self.config.joints[joint].child not in self.extra_links
+                if self.config.joints[joint].child not in self.config.extra_links
             }
             self.write_xacro(file_name, links, joints)
+            file_name_full = os.path.join(self.save_dir, f"{self.config.name}-full.xacro")
+            self.write_xacro(file_name_full, {link: self.config.links[link] for link in self.config.extra_links}, {})
         else:
             self.write_xacro(file_name, self.config.links, self.config.joints)
 

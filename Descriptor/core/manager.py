@@ -131,7 +131,7 @@ class Manager:
         '''        
         assert Manager.root is not None
 
-        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links, self.locations)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links, self.locations, self.extra_links)
         config.inertia_accuracy = self.inert_accuracy
         ## Return array of tuples (parent, child)
         config.get_scene_configuration()
@@ -149,7 +149,7 @@ class Manager:
         if self._app is not None and self._app.activeViewport is not None:
             utils.viewport = self._app.activeViewport
         utils.log("*** Parsing ***")
-        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links, self.locations)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links, self.locations, self.extra_links)
         config.inertia_accuracy = self.inert_accuracy
         config.sub_mesh = self.sub_mesh
         utils.log("** Getting scene configuration **")
@@ -161,7 +161,7 @@ class Manager:
         # Generate URDF
         utils.log(f"*** Generating URDF under {os.path.realpath(self.save_dir)} ***")
         self.urdf_dir = os.path.join(self.save_dir,'urdf')
-        writer = io.Writer(self.urdf_dir, config, self.extra_links)
+        writer = io.Writer(self.urdf_dir, config)
         writer.write_urdf()
 
         if config.locs:

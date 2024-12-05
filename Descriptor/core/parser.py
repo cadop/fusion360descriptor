@@ -205,7 +205,7 @@ class Configurator:
         adsk.fusion.JointTypes.BallJointType: "Ball_unsupported",
     }
 
-    def __init__(self, root: adsk.fusion.Component, scale: float, cm: float, name: str, name_map: Dict[str, str], merge_links: Dict[str, List[str]], locations: Dict[str, Dict[str, str]]) -> None:
+    def __init__(self, root: adsk.fusion.Component, scale: float, cm: float, name: str, name_map: Dict[str, str], merge_links: Dict[str, List[str]], locations: Dict[str, Dict[str, str]], extra_links: Sequence[str]) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
         Parameters
         ----------
@@ -238,6 +238,7 @@ class Configurator:
         self.name_map = name_map
         self.merge_links = merge_links
         self.locations = locations
+        self.extra_links = set(extra_links)
 
         self.root_node: Optional[Hierarchy] = None
 
@@ -812,6 +813,23 @@ class Configurator:
                     grounded_occ.update(child_link_names)
 
             boundary = new_boundary
+        
+        disconnected_external = []
+        for name in self.extra_links:
+            if name not in self.links:
+                if name not in self.merge_links and name not in self.links_by_name:
+                    utils.fatal(f"Link '{name}' from the 'Extras:' section of the configuration file is not known")
+                if name in self.merge_links:
+                    names = self.merge_links[name]
+                    _, _, occs = self.merged_links[names[0]]
+                    for oc in occs:
+                        self.link_origins[self.get_name(oc)] = occs[0].transform2
+                else:
+                    occs = [self.links_by_name[name]]
+                self.link_origins[name] = occs[0].transform2
+                self.__add_link(name, occs)
+                disconnected_external.append(name)
+            
 
         joint_children: Dict[str, List[parts.Joint]] = defaultdict(list)
         for joint in self.joints.values():
@@ -824,6 +842,10 @@ class Configurator:
                 tree_str.append("   " * (level + 1) + f" - Joint [{j.type}]: {j.name}")
                 get_tree(level+2, j.child)
         get_tree(1, self.base_link_name)
+        if disconnected_external:
+            tree_str.append("     - \"Extras\" links:")
+            for extra in disconnected_external:
+                get_tree(2, extra)
 
         # Sanity checks
         not_in_joints = set()
