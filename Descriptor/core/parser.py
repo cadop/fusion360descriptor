@@ -563,7 +563,7 @@ class Configurator:
             if child.entityToken in self.assemblies_by_token:
                 result += self.get_assembly_links(child, orphan_ok)
             elif not orphan_ok:
-                raise ValueError(f"descendant {child.fullPathName} is an orphan?")
+                result.append(self.get_name(child))
         utils.log(f"DEBUG: get_assembly_links({occ.name}) = {result}")
         return result
 
@@ -810,21 +810,6 @@ class Configurator:
 
             boundary = new_boundary
 
-        for link, locations in self.locations.items():
-            if link not in self.link_origins:
-                utils.fatal(f"Link {link} specified in the config file 'Locations:' section does not exist. Make sure to use the URDF name (e.g. as set via MergeLink) rather than the Fusion one")
-            origin = self.link_origins[link]
-            t = origin.copy()
-            assert t.invert()
-            self.locs[link] = []
-            for loc_name, loc_occurrence in locations.items():
-                if loc_occurrence not in self.links_by_name:
-                    utils.fatal(f"Occurrence {loc_occurrence} specified in the config file 'Locations:' section for link {link} subframe {loc_name} does not exist. Make sure to use the Fusion name of the occurrence")
-                occ = self.links_by_name[loc_occurrence]
-                ct = occ.transform2.copy()
-                assert ct.transformBy(t)
-                self.locs[link].append(parts.Location(loc_name, [c * self.cm for c in ct.translation.asArray()], rpy = transforms.so3_to_euler(ct)))
-
         joint_children: Dict[str, List[parts.Joint]] = defaultdict(list)
         for joint in self.joints.values():
             joint_children[joint.parent].append(joint)
@@ -878,3 +863,18 @@ class Configurator:
             utils.log("\n".join(tree_str))
             utils.fatal("Fusion structure is broken or misunderstoon by the exporter, giving up! See the full output in Text Commands console for more information.")
         self.tree_str = tree_str
+
+        for link, locations in self.locations.items():
+            if link not in self.link_origins:
+                utils.fatal(f"Link {link} specified in the config file 'Locations:' section does not exist. Make sure to use the URDF name (e.g. as set via MergeLink) rather than the Fusion one")
+            origin = self.link_origins[link]
+            t = origin.copy()
+            assert t.invert()
+            self.locs[link] = []
+            for loc_name, loc_occurrence in locations.items():
+                if loc_occurrence not in self.links_by_name:
+                    utils.fatal(f"Occurrence {loc_occurrence} specified in the config file 'Locations:' section for link {link} subframe {loc_name} does not exist. Make sure to use the Fusion name of the occurrence")
+                occ = self.links_by_name[loc_occurrence]
+                ct = occ.transform2.copy()
+                assert ct.transformBy(t)
+                self.locs[link].append(parts.Location(loc_name, [c * self.cm for c in ct.translation.asArray()], rpy = transforms.so3_to_euler(ct)))
