@@ -14,21 +14,28 @@ from xml.etree import ElementTree
 from xml.dom import minidom
 from . import utils
 
-MAX_ROUND_TO_ZERO = 1e-8 # in mm, radians
+MAX_ROUND_TO_ZERO = 5e-11 # in mm, radians
 HALF_PI = math.pi * 0.5
 def _round(val: float, unit: float) -> float:
     units = val/unit
-    r = round(units)
-    if abs(units - r) <= MAX_ROUND_TO_ZERO:
-        return r * unit
+    r = round(units) * unit
+    if abs(val - r) <= MAX_ROUND_TO_ZERO:
+        return r
     return val
 
 def round_mm(val:float) -> float:
-    return _round(val, 0.001)
+    return _round(val, 0.0001)
 
 def round_rads(val:float) -> float:
     return _round(val, HALF_PI)
-class Joint:
+
+class Location:
+    def __init__(self, name: str, xyz: Sequence[float], rpy: Sequence[float]):
+        self.name = name
+        self.xyz = [round_mm(x) for x in xyz]
+        self.rpy = [round_rads(r) for r in rpy]
+
+class Joint(Location):
 
     # Defaults for all joints. Need be be floats, not ints
     effort_limit = 100.0
@@ -55,10 +62,8 @@ class Joint:
         tran_xml: str
             generated xml describing about the transmission
         """
-        self.name = name
+        super().__init__(name, xyz, rpy)
         self.type = joint_type
-        self.xyz = [round_mm(x) for x in xyz]
-        self.rpy = [round_rads(r) for r in rpy]
         self.parent = parent
         self.child = child
         self._joint_xml = None
@@ -128,7 +133,7 @@ class Joint:
 
         return tran
 
-class Link:
+class Link (Location):
 
     scale = '0.001'
 
@@ -154,10 +159,7 @@ class Link:
             list of visible bodies
         """
 
-        self.name = name
-        # xyz for visual
-        self.xyz = [round_mm(x) for x in xyz]
-        self.rpy = [round_rads(r) for r in rpy]
+        super().__init__(name, xyz, rpy)
         # xyz for center of mass
         self.center_of_mass = [round_mm(x) for x in center_of_mass]
         self._link_xml = None

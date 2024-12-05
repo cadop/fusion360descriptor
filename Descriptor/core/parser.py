@@ -205,7 +205,7 @@ class Configurator:
         adsk.fusion.JointTypes.BallJointType: "Ball_unsupported",
     }
 
-    def __init__(self, root: adsk.fusion.Component, scale: float, cm: float, name: str, name_map: Dict[str, str], merge_links: Dict[str, List[str]]) -> None:
+    def __init__(self, root: adsk.fusion.Component, scale: float, cm: float, name: str, name_map: Dict[str, str], merge_links: Dict[str, List[str]], locations: Dict[str, Dict[str, str]]) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
         Parameters
         ----------
@@ -227,6 +227,7 @@ class Configurator:
         self.color_dict: Dict[str, str] = OrderedDict()
         self.links: Dict[str, parts.Link] = OrderedDict() # Link class
         self.joints: Dict[str, parts.Joint] = OrderedDict() # Joint class for writing to file
+        self.locs: Dict[str, List[parts.Location]] = OrderedDict()
         self.scale = scale # Convert autodesk units to meters (or whatever simulator takes)
         self.cm = cm # Convert cm units to meters (or whatever simulator takes)
         parts.Link.scale = str(self.scale)
@@ -236,6 +237,7 @@ class Configurator:
         self.bodies_collected: Set[str] = set() # For later sanity checking - all bodies passed to URDF
         self.name_map = name_map
         self.merge_links = merge_links
+        self.locations = locations
 
         self.root_node: Optional[Hierarchy] = None
 
@@ -548,21 +550,21 @@ class Configurator:
         for occ in self.root.allOccurrences:
             if occ.childOccurrences.count > 0:
                 # It's an assembly
-                if occ.entityToken in self.links_by_token:
-                    continue
                 name = utils.rename_if_duplicate(occ.name, self.assemblies_by_name)
                 self.assemblies_by_name[name] = occ
                 self.assemblies_by_token[occ.entityToken] = occ
 
-    def get_assembly_links(self, occ: adsk.fusion.Occurrence) -> List[str]:
+    def get_assembly_links(self, occ: adsk.fusion.Occurrence, orphan_ok: bool) -> List[str]:
         result: List[str] = []
         for child in occ.childOccurrences:
             if child.entityToken in self.links_by_token:
                 result.append(self.links_by_token[child.entityToken])
-            elif child.entityToken in self.assemblies_by_token:
-                result += self.get_assembly_links(child)
-            else:
+                orphan_ok = True
+            if child.entityToken in self.assemblies_by_token:
+                result += self.get_assembly_links(child, orphan_ok)
+            elif not orphan_ok:
                 raise ValueError(f"descendant {child.fullPathName} is an orphan?")
+        utils.log(f"DEBUG: get_assembly_links({occ.name}) = {result}")
         return result
 
     def _links(self):
@@ -573,19 +575,20 @@ class Configurator:
                 utils.fatal(f"Invalid MergeLinks YAML config setting: merged link '{name}' is empty, which is not allowed")
             link_names = names.copy()
             for n in names:
-                if n in self.links_by_name:
-                    continue
                 if n in self.assemblies_by_name:
-                    link_names.remove(n)
+                    orphan_ok = self.assemblies_by_name[n].entityToken in self.links_by_token
+                    if not orphan_ok:
+                        link_names.remove(n)
                     try:
-                        link_names += self.get_assembly_links(self.assemblies_by_name[n])
+                        link_names += self.get_assembly_links(self.assemblies_by_name[n], orphan_ok)
                     except ValueError as e:
                         utils.fatal(f"Invalid MergeLinks YAML config setting: assembly '{n}' for merged link '{name}' could not be processed: {e.args[0]}")
-                else:
+                elif n not in self.links_by_name:
                     utils.fatal(f"Invalid MergeLinks YAML config setting: link '{n}' for merged link '{name}' is not in the Fusion model")
             if name in self.links_by_name and name not in names:
                 utils.fatal(f"Invalid MergeLinks YAML config setting: merged '{name}' clashes with existing Fusion link '{self.links_by_name[name].fullPathName}'; add the latter to NameMap in YAML to avoid the name clash")
             val = name, link_names, [self.links_by_name[n] for n in link_names]
+            utils.log(f"Merged link {name} <- occurrences {link_names}")
             for name in link_names:
                 self.merged_links[name] = val
 
@@ -728,6 +731,7 @@ class Configurator:
             self.link_origins[name] = base_link_occs[0].transform2
         self.__add_link(self.base_link_name, base_link_occs)
         boundary = grounded_occ.copy()
+        fixed_links: Dict[Tuple[str,str], str] = {}
         while boundary:
             new_boundary : Set[str] = set()
             for occ_name in boundary:
@@ -762,7 +766,10 @@ class Configurator:
 
                     axis = joint.axis
                     
-                    if joint.type != "fixed":
+                    if joint.type == "fixed":
+                        fixed_links[(child_name, parent_name)] = joint.name
+                        fixed_links[(parent_name, child_name)] = joint.name
+                    else:
                         utils.log(f"DEBUG: for non-fixed joint {joint.name}, updating child origin from {ct_to_str(child_origin)} to {joint.origin.asArray()}")
                         child_origin = child_origin.copy()
                         child_origin.translation = joint.origin
@@ -803,6 +810,21 @@ class Configurator:
 
             boundary = new_boundary
 
+        for link, locations in self.locations.items():
+            if link not in self.link_origins:
+                utils.fatal(f"Link {link} specified in the config file 'Locations:' section does not exist. Make sure to use the URDF name (e.g. as set via MergeLink) rather than the Fusion one")
+            origin = self.link_origins[link]
+            t = origin.copy()
+            assert t.invert()
+            self.locs[link] = []
+            for loc_name, loc_occurrence in locations.items():
+                if loc_occurrence not in self.links_by_name:
+                    utils.fatal(f"Occurrence {loc_occurrence} specified in the config file 'Locations:' section for link {link} subframe {loc_name} does not exist. Make sure to use the Fusion name of the occurrence")
+                occ = self.links_by_name[loc_occurrence]
+                ct = occ.transform2.copy()
+                assert ct.transformBy(t)
+                self.locs[link].append(parts.Location(loc_name, [c * self.cm for c in ct.translation.asArray()], rpy = transforms.so3_to_euler(ct)))
+
         joint_children: Dict[str, List[parts.Joint]] = defaultdict(list)
         for joint in self.joints.values():
             joint_children[joint.parent].append(joint)
@@ -837,9 +859,15 @@ class Configurator:
         missing_joints = set(self.joints_dict).difference(self.joints)
         for joint_name in missing_joints.copy():
             joint = self.joints_dict[joint_name]
-            if joint.type == "fixed" and joint.parent in self.merged_links and joint.child in self.merged_links and self.merged_links[joint.parent][0] == self.merged_links[joint.child][0]:
-                utils.log(f"DEBUG: Skipped Fixed Joint '{joint_name}' that is internal for merged link {self.merged_links[joint.parent][0]}")
-                missing_joints.remove(joint_name)
+            if joint.type == "fixed":
+                parent_name, _, _ = self._get_merge(self.links_by_name[joint.parent])
+                child_name, _, _ = self._get_merge(self.links_by_name[joint.child])
+                if parent_name == child_name:
+                    utils.log(f"DEBUG: Skipped Fixed Joint '{joint_name}' that is internal for merged link {self.merged_links[joint.parent][0]}")
+                    missing_joints.remove(joint_name)
+                elif (parent_name, child_name) in fixed_links:
+                    utils.log(f"DEBUG: Skipped Fixed Joint '{joint_name}' that is duplicative of `{fixed_links[(parent_name, child_name)]}")
+                    missing_joints.remove(joint_name)
         if missing_joints:
             utils.log("\n\t".join(["FATAL ERROR: Lost joints: "] + [f"{self.joints_dict[joint].name} of type {self.joints_dict[joint].type} between {self.joints_dict[joint].parent} and {self.joints_dict[joint].child}" for joint in missing_joints]))
         extra_joints = set(self.joints).difference(self.joints_dict)

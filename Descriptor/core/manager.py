@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import time
 from typing import Dict, List, Optional
 import os
@@ -83,6 +84,8 @@ class Manager:
 
         self.name_map: Dict[str, str] = {}
         self.merge_links: Dict[str, List[str]] = {}
+        self.extra_links: List[str] = []
+        self.locations: Dict[str, Dict[str,str]] = {}
         if config_file:
             with open(config_file, "rb") as yml:
                 configuration = yaml.load(yml, yaml.SafeLoader)
@@ -91,11 +94,14 @@ class Manager:
             wrong_keys = set(configuration).difference([
                 "RobotName", "SaveMesh", "SubMesh", "MeshResolution", "InertiaPrecision",
                 "TargetUnits", "TargetPlatform", "NameMap", "MergeLinks",
+                "Locations", "Extras",
             ])
             if wrong_keys:
                 raise(ValueError(f"Malformed config '{config_file}': unexpected top-level keys: {list(wrong_keys)}"))
             self.name_map = configuration.get("NameMap", {})
             self.merge_links = configuration.get("MergeLinks", {})
+            self.extra_links = configuration.get("Extras", [])
+            self.locations = configuration.get("Locations", {})
 
         # Set directory 
         self._set_dir(save_dir)
@@ -125,7 +131,7 @@ class Manager:
         '''        
         assert Manager.root is not None
 
-        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links, self.locations)
         config.inertia_accuracy = self.inert_accuracy
         ## Return array of tuples (parent, child)
         config.get_scene_configuration()
@@ -143,7 +149,7 @@ class Manager:
         if self._app is not None and self._app.activeViewport is not None:
             utils.viewport = self._app.activeViewport
         utils.log("*** Parsing ***")
-        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links)
+        config = parser.Configurator(Manager.root, self.scale, self.cm, self.robot_name, self.name_map, self.merge_links, self.locations)
         config.inertia_accuracy = self.inert_accuracy
         config.sub_mesh = self.sub_mesh
         utils.log("** Getting scene configuration **")
@@ -155,8 +161,13 @@ class Manager:
         # Generate URDF
         utils.log(f"*** Generating URDF under {os.path.realpath(self.save_dir)} ***")
         self.urdf_dir = os.path.join(self.save_dir,'urdf')
-        writer = io.Writer(self.urdf_dir, config)
+        writer = io.Writer(self.urdf_dir, config, self.extra_links)
         writer.write_urdf()
+
+        if config.locs:
+            dict = {l: {loc.name: {"xyz": loc.xyz, "rpy": loc.rpy} for loc in locs} for l, locs in config.locs.items()}
+            with open(os.path.join(self.urdf_dir, "locations.yaml"), "wt") as f:
+                yaml.dump(dict, f, yaml.SafeDumper, default_flow_style=None, sort_keys=False, indent=3)
 
         with open(os.path.join(self.urdf_dir, "fusion2urdf.txt"), "wt") as f:
             f.write(f"URDF structure created from Fusion Model {Manager.root.name}:\n")
