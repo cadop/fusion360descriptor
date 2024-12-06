@@ -205,7 +205,7 @@ class Configurator:
         adsk.fusion.JointTypes.BallJointType: "Ball_unsupported",
     }
 
-    def __init__(self, root: adsk.fusion.Component, scale: float, cm: float, name: str, name_map: Dict[str, str], merge_links: Dict[str, List[str]], locations: Dict[str, Dict[str, str]], extra_links: Sequence[str]) -> None:
+    def __init__(self, root: adsk.fusion.Component, scale: float, cm: float, name: str, name_map: Dict[str, str], merge_links: Dict[str, List[str]], locations: Dict[str, Dict[str, str]], extra_links: Sequence[str], root_name: Optional[str]) -> None:
         ''' Initializes Configurator class to handle building hierarchy and parsing
         Parameters
         ----------
@@ -241,6 +241,7 @@ class Configurator:
         self.extra_links = set(extra_links)
 
         self.root_node: Optional[Hierarchy] = None
+        self.root_name = root_name
 
         self.name = name
         self.mesh_folder = f'{name}/meshes/'
@@ -333,14 +334,19 @@ class Configurator:
         ''' Get the base link '''
         for oc in self._iterate_through_occurrences():
             # Get only the first grounded link
-            if oc.isGrounded:
+            if (
+                (self.root_name is None and oc.isGrounded) or 
+                (self.root_name is not None and self.root_name == oc.name) or 
+                (self.root_name is not None and self.root_name in self.merge_links and self.merge_links[self.root_name][0] == oc.name)
+            ):
                 # We must store this object because we cannot occurrences
                 self.base_link = oc
                 break
         if self.base_link is None:
-            # TODO: Improve handling if there is no grounded occurrence
-            print("ERROR: Failed to find a grounded occurrence for base_link")
-            exit("Failed to find a grounded occurrence for base_link")
+            if self.root_name is None:
+                utils.fatal("Failed to find a grounded occurrence for URDF root. Make one of the Fusion occurrences grounded or specify 'Root: name' in the configuration file")
+            else:
+                utils.fatal(f"Occurrence or merge link '{self.root_name}' specified in the 'Root:' section of the configuration file not found in the design")
         self.get_name(self.base_link)
 
     def get_name(self, oc: adsk.fusion.Occurrence) -> str:
