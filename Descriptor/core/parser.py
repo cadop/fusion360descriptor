@@ -897,9 +897,12 @@ class Configurator:
             assert t.invert()
             self.locs[link] = []
             for loc_name, loc_occurrence in locations.items():
-                if loc_occurrence not in self.links_by_name:
-                    utils.fatal(f"Occurrence {loc_occurrence} specified in the config file 'Locations:' section for link {link} subframe {loc_name} does not exist. Make sure to use the Fusion name of the occurrence")
-                occ = self.links_by_name[loc_occurrence]
-                ct = occ.transform2.copy()
+                if loc_occurrence in self.links_by_name:
+                    occ = self.links_by_name[loc_occurrence]
+                    ct = occ.transform2.copy()
+                elif loc_occurrence in self.merge_links:
+                    ct = self.link_origins[loc_occurrence].copy()
+                else:
+                    utils.fatal(f"Name '{loc_occurrence}' specified in the config file 'Locations:' section for link {link} subframe {loc_name} is neither a Fusion name of an occurrence, or a name of a MergedLink")
                 assert ct.transformBy(t)
                 self.locs[link].append(parts.Location(loc_name, [c * self.cm for c in ct.translation.asArray()], rpy = transforms.so3_to_euler(ct)))
