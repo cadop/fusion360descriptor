@@ -575,7 +575,8 @@ class Configurator:
         return result
 
     def _links(self):
-        self.merged_links: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = {}
+        self.merged_links_by_link: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = {}
+        self.merged_links_by_name: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = {}
 
         for name, names in self.merge_links.items():
             if not names:
@@ -597,10 +598,11 @@ class Configurator:
             link_names = list(OrderedDict.fromkeys(link_names)) # Remove duplicates
             val = name, link_names, [self.links_by_name[n] for n in link_names]
             utils.log(f"Merged link {name} <- occurrences {link_names}")
+            self.merged_links_by_name[name] = val
             for link_name in link_names:
-                if link_name in self.merged_links:
-                    utils.fatal(f"Invalid MergeLinks YAML config setting: {link_name} is included in two merged links: '{name}' and '{self.merged_links[link_name][0]}'")
-                self.merged_links[link_name] = val
+                if link_name in self.merged_links_by_link:
+                    utils.fatal(f"Invalid MergeLinks YAML config setting: {link_name} is included in two merged links: '{name}' and '{self.merged_links_by_link[link_name][0]}'")
+                self.merged_links_by_link[link_name] = val
 
         body_names: Dict[str, Tuple[()]] = {}
         
@@ -716,8 +718,8 @@ class Configurator:
 
     def _get_merge(self, occ: adsk.fusion.Occurrence) -> Tuple[str, List[str], List[adsk.fusion.Occurrence]]:
         name = self.get_name(occ)
-        if name in self.merged_links:
-            return self.merged_links[name]
+        if name in self.merged_links_by_link:
+            return self.merged_links_by_link[name]
         return name, [name], [occ]
 
     def _build(self) -> None:
@@ -822,19 +824,17 @@ class Configurator:
         
         disconnected_external = []
         for name in self.extra_links:
-            if name not in self.links:
-                if name not in self.merge_links and name not in self.links_by_name:
-                    utils.fatal(f"Link '{name}' from the 'Extras:' section of the configuration file is not known")
-                if name in self.merge_links:
-                    names = self.merge_links[name]
-                    _, _, occs = self.merged_links[names[0]]
-                    for oc in occs:
-                        self.link_origins[self.get_name(oc)] = occs[0].transform2
-                else:
-                    occs = [self.links_by_name[name]]
-                self.link_origins[name] = occs[0].transform2
-                self.__add_link(name, occs)
-                disconnected_external.append(name)
+            if name in self.links_by_name:
+                utils.fatal(f"Link '{name}' from the 'Extras:' section of the configuration file is not known")
+            if name in self.merge_links:
+                _, _, occs = self.merged_links_by_name[name]
+                for oc in occs:
+                    self.link_origins[self.get_name(oc)] = occs[0].transform2
+            else:
+                occs = [self.links_by_name[name]]
+            self.link_origins[name] = occs[0].transform2
+            self.__add_link(name, occs)
+            disconnected_external.append(name)
             
 
         joint_children: Dict[str, List[parts.Joint]] = defaultdict(list)
@@ -879,7 +879,7 @@ class Configurator:
                 parent_name, _, _ = self._get_merge(self.links_by_name[joint.parent])
                 child_name, _, _ = self._get_merge(self.links_by_name[joint.child])
                 if parent_name == child_name:
-                    utils.log(f"DEBUG: Skipped Fixed Joint '{joint_name}' that is internal for merged link {self.merged_links[joint.parent][0]}")
+                    utils.log(f"DEBUG: Skipped Fixed Joint '{joint_name}' that is internal for merged link {self.merged_links_by_link[joint.parent][0]}")
                     missing_joints.remove(joint_name)
                 elif (parent_name, child_name) in fixed_links:
                     utils.log(f"DEBUG: Skipped Fixed Joint '{joint_name}' that is duplicative of `{fixed_links[(parent_name, child_name)]}")
