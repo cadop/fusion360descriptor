@@ -552,27 +552,74 @@ class Configurator:
                       f"child {occ_name} {vector_to_str(occ.transform2.translation)}")
                 self.joints_dict[rigid_group_occ_name] = JointInfo(name=rigid_group_occ_name, parent=parent_occ_name, child=occ_name)
         
-        self.assemblies_by_name: Dict[str, adsk.fusion.Occurrence] = {}
-        self.assemblies_by_token: Dict[str, adsk.fusion.Occurrence] = {}
+        self.assembly_tokens: Set[str] = set()
         for occ in self.root.allOccurrences:
             if occ.childOccurrences.count > 0:
                 # It's an assembly
-                name = utils.rename_if_duplicate(occ.name, self.assemblies_by_name)
-                self.assemblies_by_name[name] = occ
-                self.assemblies_by_token[occ.entityToken] = occ
+                self.assembly_tokens.add(occ.entityToken)
 
-    def get_assembly_links(self, occ: adsk.fusion.Occurrence, orphan_ok: bool) -> List[str]:
+    def get_assembly_links(self, occ: adsk.fusion.Occurrence, parent_included: bool) -> List[str]:
         result: List[str] = []
         for child in occ.childOccurrences:
-            if child.entityToken in self.links_by_token:
+            child_included = child.entityToken in self.links_by_token
+            if child_included:
                 result.append(self.links_by_token[child.entityToken])
-                orphan_ok = True
-            if child.entityToken in self.assemblies_by_token:
-                result += self.get_assembly_links(child, orphan_ok)
-            elif not orphan_ok:
+            child_included = parent_included or child_included
+            if child.entityToken in self.assembly_tokens:
+                result += self.get_assembly_links(child, child_included)
+            elif not child_included:
                 result.append(self.get_name(child))
         utils.log(f"DEBUG: get_assembly_links({occ.name}) = {result}")
         return result
+    
+    @staticmethod
+    def _mk_pattern(name: str) -> Union[str, Tuple[str,str]]:
+        c = name.count("*")
+        if c > 1:
+            utils.fatal(f"Occurrance name pattern '{name}' is invalid: only one '*' is supported")
+        if c:
+            pref, suff = name.split("*", 1)
+            return (pref, suff)
+        return name
+    
+    @staticmethod
+    def _match(candidate: str, pattern: Union[str, Tuple[str,str]]) -> bool:
+        if isinstance(pattern, str):
+            return candidate == pattern
+        pref, suff = pattern
+        return len(candidate) >= len(pref) + len(suff) and candidate.startswith(pref) and candidate.endswith(suff)
+
+    def _resolve_name(self, name:str) -> adsk.fusion.Occurrence:
+        if "+" in name:
+            name_parts = name.split("+")
+            l = len(name_parts)
+            patts = [self._mk_pattern(p) for p in name_parts]
+            candidate: Optional[adsk.fusion.Occurrence]= None
+            for occ in self._iterate_through_occurrences():
+                path = occ.fullPathName.split("+")
+                if len(path) < l:
+                    continue
+                mismatch = False
+                for (cand, patt) in zip(path[-l:], patts):
+                    if not self._match(cand, patt):
+                        mismatch = True
+                        break
+                if mismatch:
+                    continue
+                if candidate is None:
+                    candidate = occ
+                else:
+                    utils.fatal(f"Name/pattern '{name}' in configuration file matches at least two occurrences: '{candidate.fullPathName}' and '{occ.fullPathName}', update to be more specific")
+            if not candidate:
+                utils.fatal(f"Name/pattern '{name}' in configuration file does not match any occurrences")
+            return candidate
+        patt = self._mk_pattern(name)
+        candidates = [occ for occ in self._iterate_through_occurrences() if self._match(occ.name, patt)]
+        if not candidates:
+            utils.fatal(f"Name/pattern '{name}' in configuration file does not match any occurrences")
+        if len(candidates) > 1:
+            utils.fatal(f"Name/pattern '{name}' in configuration file matches at least two occurrences: '{candidates[0].fullPathName}' and '{candidates[1].fullPathName}', update to be more specific")
+        return candidates[0]
 
     def _links(self):
         self.merged_links_by_link: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = {}
@@ -581,18 +628,16 @@ class Configurator:
         for name, names in self.merge_links.items():
             if not names:
                 utils.fatal(f"Invalid MergeLinks YAML config setting: merged link '{name}' is empty, which is not allowed")
-            link_names = names.copy()
+            link_names = []
             for n in names:
-                if n in self.assemblies_by_name:
-                    orphan_ok = self.assemblies_by_name[n].entityToken in self.links_by_token
-                    if not orphan_ok:
-                        link_names.remove(n)
+                occ = self._resolve_name(n)
+                if occ.entityToken in self.links_by_token or occ.entityToken in self.assembly_tokens:
+                    link_names.append(self.get_name(occ))
+                if occ.entityToken in self.assembly_tokens:
                     try:
-                        link_names += self.get_assembly_links(self.assemblies_by_name[n], orphan_ok)
+                        link_names += self.get_assembly_links(occ, occ.entityToken in self.links_by_token)
                     except ValueError as e:
                         utils.fatal(f"Invalid MergeLinks YAML config setting: assembly '{n}' for merged link '{name}' could not be processed: {e.args[0]}")
-                elif n not in self.links_by_name:
-                    utils.fatal(f"Invalid MergeLinks YAML config setting: link '{n}' for merged link '{name}' is not in the Fusion model")
             if name in self.links_by_name and name not in names:
                 utils.fatal(f"Invalid MergeLinks YAML config setting: merged '{name}' clashes with existing Fusion link '{self.links_by_name[name].fullPathName}'; add the latter to NameMap in YAML to avoid the name clash")
             link_names = list(OrderedDict.fromkeys(link_names)) # Remove duplicates
@@ -903,12 +948,9 @@ class Configurator:
             assert t.invert()
             self.locs[link] = []
             for loc_name, loc_occurrence in locations.items():
-                if loc_occurrence in self.links_by_name:
-                    occ = self.links_by_name[loc_occurrence]
-                    ct = occ.transform2.copy()
-                elif loc_occurrence in self.merge_links:
+                if loc_occurrence in self.merge_links:
                     ct = self.link_origins[loc_occurrence].copy()
                 else:
-                    utils.fatal(f"Name '{loc_occurrence}' specified in the config file 'Locations:' section for link {link} subframe {loc_name} is neither a Fusion name of an occurrence, or a name of a MergedLink")
+                    ct = self._resolve_name(loc_occurrence).transform2.copy()
                 assert ct.transformBy(t)
                 self.locs[link].append(parts.Location(loc_name, [c * self.cm for c in ct.translation.asArray()], rpy = transforms.so3_to_euler(ct)))
