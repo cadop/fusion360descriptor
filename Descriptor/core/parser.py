@@ -57,16 +57,16 @@ class Hierarchy:
     def get_all_children(self) -> Dict[str, "Hierarchy"]:
         ''' get all children and sub children of this instance '''
 
-        child_map = {}
-        parent_stack: Set["Hierarchy"] = set()
-        parent_stack.update(self.get_children())
+        child_map = OrderedDict()
+        parent_stack: List["Hierarchy"] = []
+        parent_stack += self.get_children()
         while parent_stack:
             # Pop an element form the stack (order shouldn't matter)
-            tmp = parent_stack.pop()
+            tmp = parent_stack.pop(0)
             # Add this child to the map
             # use the entity token, more accurate than the name of the component (since there are multiple)
             child_map[tmp.component.entityToken] = tmp 
-            parent_stack.update(tmp.get_children())
+            parent_stack += tmp.get_children()
         return child_map
 
     def get_flat_body(self) -> List[adsk.fusion.BRepBody]:
@@ -74,7 +74,6 @@ class Hierarchy:
 
         child_list = []
         body_list: List[List[adsk.fusion.BRepBody]] = []
-        parent_stack = set()
 
         child_set = list(self.get_all_children().values())
 
@@ -82,12 +81,11 @@ class Hierarchy:
             body_list.append(list(self.component.bRepBodies))
 
         child_list = [x.children for x in child_set if len(x.children)>0]
-        childs : List[Hierarchy] = []
+        parent_stack : List[Hierarchy] = []
         for c in child_list:
             for _c in c:
-                childs.append(_c)
+                parent_stack.append(_c)
 
-        parent_stack.update(childs)
         closed_set = set()
 
         while len(parent_stack) != 0:
@@ -104,13 +102,10 @@ class Hierarchy:
                 child_set = list(self.get_all_children().values())
 
                 child_list = [x.children for x in child_set if len(x.children)>0]
-                childs = []
                 for c in child_list:
                     for _c in c:
                         if _c not in closed_set:
-                            childs.append(_c)
-
-                parent_stack.update(childs)
+                            parent_stack.append(_c)
 
         flat_bodies: List[adsk.fusion.BRepBody] = []
         for body in body_list:
@@ -215,7 +210,6 @@ class Configurator:
         # Export top-level occurrences
         self.root = root
         self.occ = root.occurrences.asList
-        self.inertial_dict = {}
         self.inertia_accuracy = adsk.fusion.CalculationAccuracy.LowCalculationAccuracy
 
         self.sub_mesh = False
@@ -622,8 +616,8 @@ class Configurator:
         return candidates[0]
 
     def _links(self):
-        self.merged_links_by_link: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = {}
-        self.merged_links_by_name: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = {}
+        self.merged_links_by_link: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = OrderedDict()
+        self.merged_links_by_name: Dict[str, Tuple[str, List[str], List[adsk.fusion.Occurrence]]] = OrderedDict()
 
         for name, names in self.merge_links.items():
             if not names:
@@ -649,7 +643,7 @@ class Configurator:
                     utils.fatal(f"Invalid MergeLinks YAML config setting: {link_name} is included in two merged links: '{name}' and '{self.merged_links_by_link[link_name][0]}'")
                 self.merged_links_by_link[link_name] = val
 
-        body_names: Dict[str, Tuple[()]] = {}
+        body_names: Dict[str, Tuple[()]] = OrderedDict()
         
         renames = set(self.name_map)
 
