@@ -1,8 +1,10 @@
 from collections import OrderedDict
-import time
+from datetime import datetime
+import subprocess
 from typing import Dict, List, Optional
 import os
 import os.path
+import zoneinfo
 import yaml
 
 import adsk.core
@@ -139,6 +141,37 @@ class Manager:
         config.get_scene_configuration()
         return config.get_joint_preview()
 
+    @staticmethod
+    def get_git_info() -> str:
+        my_dir = os.path.abspath(os.path.dirname(__file__))
+        git = ["git", "-C", my_dir]
+        def call_git(cmd: List[str]) -> str:
+            cmd = git + cmd
+            out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+            return out.decode("utf-8").strip()
+        try:
+            if call_git(['rev-parse', '--is-inside-work-tree']) != "true":
+                return ""
+            url = ""
+            try:
+                branch = call_git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'])
+                if "/" in branch:
+                    remote = branch.split('/')[0]
+                    url = call_git(['remote', 'get-url', remote])
+            except subprocess.CalledProcessError:
+                pass
+            commit_hash = call_git(["rev-parse", "HEAD"])
+            commit_timestamp = call_git(["log", "-1", "--format=%ct"])
+            commit_author = call_git(["log", "-1", "--format=%an"])
+            commit_datetime = datetime.fromtimestamp(int(commit_timestamp), tz=zoneinfo.ZoneInfo("UTC"))
+            commit_date = commit_datetime.astimezone().strftime("%A, %B %d, %Y at %I:%M %p %Z")
+            if url:
+                repo_name = url
+            else:
+                repo_name = os.path.basename(os.path.dirname(os.path.dirname(my_dir)))
+            return f"{repo_name} rev {commit_hash} dated {commit_date} by {commit_author}"
+        except subprocess.CalledProcessError:
+            return ""
 
     def run(self):
         ''' process the scene, including writing to directory and
@@ -172,7 +205,10 @@ class Manager:
                 yaml.dump(dict, f, yaml.SafeDumper, default_flow_style=None, sort_keys=False, indent=3)
 
         with open(os.path.join(self.urdf_dir, "fusion2urdf.txt"), "wt") as f:
-            f.write(f"URDF structure created from Fusion Model {Manager.root.name}:\n")
+            git_info = self.get_git_info()
+            if git_info:
+                git_info = f"\n\tusing {git_info}"
+            f.write(f"URDF structure created from Fusion Model {Manager.root.name}{git_info}:\n")
             for s in config.tree_str:
                 f.write(s)
                 f.write("\n")
