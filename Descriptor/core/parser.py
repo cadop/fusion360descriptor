@@ -866,10 +866,14 @@ class Configurator:
             if name in self.links_by_name:
                 utils.fatal(f"Link '{name}' from the 'Extras:' section of the configuration file is not known")
             if name in self.merge_links:
-                _, _, occs = self.merged_links_by_name[name]
+                name2, _, occs = self.merged_links_by_name[name]
+                if name2 == self.base_link_name:
+                    utils.fatal(f"Link '{name2}' is the root link, but declared as an extra (that is, not a part of the main URDF)")
                 for oc in occs:
                     self.link_origins[self.get_name(oc)] = occs[0].transform2
             else:
+                if name == self.base_link_name:
+                    utils.fatal(f"Link '{name}' is the root link, but declared as an extra (that is, not a part of the main URDF)")
                 occs = [self.links_by_name[name]]
             self.link_origins[name] = occs[0].transform2
             self.__add_link(name, occs)
