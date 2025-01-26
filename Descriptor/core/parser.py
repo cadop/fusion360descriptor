@@ -863,8 +863,6 @@ class Configurator:
         
         disconnected_external = []
         for name in self.extra_links:
-            if name in self.links_by_name:
-                utils.fatal(f"Link '{name}' from the 'Extras:' section of the configuration file is not known")
             if name in self.merge_links:
                 name2, _, occs = self.merged_links_by_name[name]
                 if name2 == self.base_link_name:
@@ -874,6 +872,8 @@ class Configurator:
             else:
                 if name == self.base_link_name:
                     utils.fatal(f"Link '{name}' is the root link, but declared as an extra (that is, not a part of the main URDF)")
+                elif name not in self.links_by_name:
+                    utils.fatal(f"Link '{name}' from the 'Extras:' section of the configuration file is not known")
                 occs = [self.links_by_name[name]]
             self.link_origins[name] = occs[0].transform2
             self.__add_link(name, occs)
@@ -884,17 +884,18 @@ class Configurator:
         for joint in self.joints.values():
             joint_children[joint.parent].append(joint)
         tree_str = []
-        def get_tree(level: int, link_name: str):
+        def get_tree(level: int, link_name: str, exclude: Set[str]):
             extra = f" {self.merge_links[link_name]}" if link_name in self.merge_links else ""
             tree_str.append("   "*level + f" - Link: {link_name}{extra}")
             for j in joint_children[link_name]:
-                tree_str.append("   " * (level + 1) + f" - Joint [{j.type}]: {j.name}")
-                get_tree(level+2, j.child)
-        get_tree(1, self.base_link_name)
+                if j.child not in exclude:
+                    tree_str.append("   " * (level + 1) + f" - Joint [{j.type}]: {j.name}")
+                    get_tree(level+2, j.child, exclude)
+        get_tree(1, self.base_link_name, set(disconnected_external))
         if disconnected_external:
             tree_str.append("     - \"Extras\" links:")
             for extra in disconnected_external:
-                get_tree(2, extra)
+                get_tree(2, extra, set(self.link_origins).difference(disconnected_external))
 
         # Sanity checks
         not_in_joints = set()
