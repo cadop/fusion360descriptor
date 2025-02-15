@@ -232,7 +232,7 @@ class Configurator:
         self.name_map = name_map
         self.merge_links = merge_links
         self.locations = locations
-        self.extra_links = set(extra_links)
+        self.extra_links = extra_links
 
         self.root_node: Optional[Hierarchy] = None
         self.root_name = root_name
@@ -768,8 +768,10 @@ class Configurator:
         # Location and XYZ of the URDF link origin w.r.t Fusion global frame in Fusion units
         self.link_origins: Dict[str, adsk.core.Matrix3D] = {}
 
-        occurrences = defaultdict(list)
+        occurrences: Dict[str, List[str]] = OrderedDict()
         for joint_name, joint_info in self.joints_dict.items():
+            occurrences.setdefault(joint_info.parent, [])
+            occurrences.setdefault(joint_info.child, [])
             occurrences[joint_info.parent].append(joint_name)
             occurrences[joint_info.child].append(joint_name)
         for link_name, joints in occurrences.items():
@@ -786,7 +788,7 @@ class Configurator:
         while boundary:
             new_boundary : Set[str] = set()
             for occ_name in boundary:
-                for joint_name in occurrences[occ_name]:
+                for joint_name in occurrences.get(occ_name, ()):
                     joint = self.joints_dict[joint_name]
                     if joint.parent == occ_name:
                         child_name = joint.child
@@ -880,14 +882,15 @@ class Configurator:
             disconnected_external.append(name)
             
 
-        joint_children: Dict[str, List[parts.Joint]] = defaultdict(list)
+        joint_children: Dict[str, List[parts.Joint]] = OrderedDict()
         for joint in self.joints.values():
+            joint_children.setdefault(joint.parent, [])
             joint_children[joint.parent].append(joint)
         tree_str = []
         def get_tree(level: int, link_name: str, exclude: Set[str]):
             extra = f" {self.merge_links[link_name]}" if link_name in self.merge_links else ""
             tree_str.append("   "*level + f" - Link: {link_name}{extra}")
-            for j in joint_children[link_name]:
+            for j in joint_children.get(link_name, ()):
                 if j.child not in exclude:
                     tree_str.append("   " * (level + 1) + f" - Joint [{j.type}]: {j.name}")
                     get_tree(level+2, j.child, exclude)

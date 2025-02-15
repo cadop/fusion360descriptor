@@ -127,8 +127,9 @@ class Writer:
             pass
         file_name = os.path.join(self.save_dir, f"{self.config.name}.xacro")  # the name of urdf file
         if self.config.extra_links:
-            main_links = set(self.config.links).difference(self.config.extra_links)
-            links = {link: self.config.links[link] for link in main_links}
+            links = self.config.links.copy()
+            for link in self.config.extra_links:
+                del links[link]
             joints = {
                 joint: self.config.joints[joint]
                 for joint in self.config.joints
