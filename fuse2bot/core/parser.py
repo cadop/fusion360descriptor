@@ -180,7 +180,7 @@ class Configurator:
         self.joints_dict = {}
         self.body_dict = {}
         self.links = {} # Link class
-        self.parallel_links = [] # Store all the links identified having more than one parent
+        self.virtual_links = [] # Store all the links identified having more than one parent
         self.corrected_positions = {} # store their corrected positions
         self.joints = {} # Joint class for writing to file
         self.joint_order = ('p','c') # Order of joints defined by components
@@ -491,22 +491,35 @@ class Configurator:
         for k, joint in self.joints_dict.items():
             name = joint['child']
 
-            center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
-            link = parts.Link(name=name, 
-                            xyz=(joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
-                            center_of_mass=center_of_mass,
-                            sub_folder=mesh_folder, 
-                            mass=self.inertial_dict[name]['mass'],
-                            inertia_tensor=self.inertial_dict[name]['inertia'],
-                            body_dict = body_dict_urdf,
-                            sub_mesh = self.sub_mesh)
+            # check if the link is already known
+            if self.links.get(name) is not None:
+                print(f"Problem detected with this link: {name}")
+                name_virtual = name + '_virtual'
+                self.virtual_links.append(name_virtual)
+                joint['child'] = name_virtual
+                # self.corrected_positions[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])
+
+                center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
+                link = parts.Link(name=name_virtual, 
+                                xyz=(joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
+                                center_of_mass=center_of_mass,
+                                sub_folder=mesh_folder, 
+                                mass=0,
+                                inertia_tensor=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                                body_dict = body_dict_urdf,
+                                sub_mesh = self.sub_mesh)
+            else:
+                center_of_mass = [ i-j for i, j in zip(self.inertial_dict[name]['center_of_mass'], joint['xyz'])]
+                link = parts.Link(name=name, 
+                                xyz=(joint['xyz'][0], joint['xyz'][1], joint['xyz'][2]),
+                                center_of_mass=center_of_mass,
+                                sub_folder=mesh_folder, 
+                                mass=self.inertial_dict[name]['mass'],
+                                inertia_tensor=self.inertial_dict[name]['inertia'],
+                                body_dict = body_dict_urdf,
+                                sub_mesh = self.sub_mesh)
 
             self.links_xyz_dict[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])   
-
-            if self.links.get(link.name) is not None:
-                print(f"Problem detected with this link: {link.name}")
-                self.parallel_links.append(link.name)
-                self.corrected_positions[link.name] = (link.xyz[0], link.xyz[1], link.xyz[2])
             self.links[link.name] = link
 
 
@@ -515,20 +528,40 @@ class Configurator:
         ''' create joints by setting parent and child relationships and constructing
         the XML formats to be exported later '''
 
-        fixed = False
         for k, j in self.joints_dict.items():
 
             xyz = []
-            positions = self.links_xyz_dict[j['child']]
-            if j['child'] in self.parallel_links:
-                if not fixed:
-                    positions = self.corrected_positions[j['child']]
-            for p,c in zip(self.links_xyz_dict[j['parent']], positions):
+            for p,c in zip(self.links_xyz_dict[j['parent']], self.links_xyz_dict[j['child']]):
                 xyz.append(p - c)
-            
+
             joint = parts.Joint(name=k , joint_type=j['type'], 
                                 xyz=xyz, axis=j['axis'], 
                                 parent=j['parent'], child=j['child'], 
                                 upper_limit=j['upper_limit'], lower_limit=j['lower_limit'])
-
+            
             self.joints[k] = joint
+
+            # create rigid joint
+            if j['child'] in self.virtual_links:
+                # get the real link name
+                real_link = j['child'].replace('_virtual', '')
+
+                # compute the xyz offset between real link and virtual link
+                xyz_fixed = []
+                for p, c in zip(self.links_xyz_dict[real_link], self.links_xyz_dict[j['child']]):
+                    xyz_fixed.append(p - c)
+
+                # create a rigid revolute joint instead of a fixed joint
+                fixed_joint = parts.Joint(
+                    name=f"Virtual_{real_link}_anchor",
+                    joint_type="revolute",  # <-- change from 'fixed' to 'revolute'
+                    xyz=xyz_fixed,
+                    axis=[1, 0, 0],         # pick any valid axis, [1,0,0] is fine
+                    parent=real_link,
+                    child=j['child'],
+                    upper_limit=0.001,      # very small allowed rotation
+                    lower_limit=-0.001,     # very small allowed rotation
+                )
+
+                # add the fixed joint to self.joints
+                self.joints[fixed_joint.name] = fixed_joint

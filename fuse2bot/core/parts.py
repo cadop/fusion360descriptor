@@ -200,7 +200,7 @@ class Link:
             origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
             geometry_v = SubElement(visual, 'geometry')
             mesh_v = SubElement(geometry_v, 'mesh')
-            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
+            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name.replace('_virtual', '')}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
             material = SubElement(visual, 'material')
             material.attrib = {'name':'silver'}
     
@@ -211,7 +211,7 @@ class Link:
         origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
         geometry_c = SubElement(collision, 'geometry')
         mesh_c = SubElement(geometry_c, 'mesh')
-        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':'0.001 0.001 0.001'}
+        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name.replace('_virtual', '') + '.stl','scale':'0.001 0.001 0.001'}
 
         rough_string = ElementTree.tostring(link, 'utf-8')
         reparsed = minidom.parseString(rough_string)
