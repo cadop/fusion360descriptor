@@ -9,6 +9,8 @@ Installation & Running
 - Click on the green + to add the script into Fusion 360.
 - Add the **Descriptor** folder from the zip file to the scripts. You may have to unzip the file after downloading from Github
 - Click on **Descriptor** then click on **Run**. The GUI will appear.
+- Rather than configuring the export manually in the GUI, you can create a YAML configuration file to control the export. A number of more
+  advanced features are only available via the configuraiton file. See `configuration_sample.yaml` for more information.
 
 
 To open the URDF file in PyBullet, do the following:

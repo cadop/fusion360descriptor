@@ -119,7 +119,11 @@ Step-by-Step Guide
 - Add the **Descriptor** folder from the zip file to the scripts.
 - Click on **Descriptor** then click on **Run**. The GUI will appear.
 - Add a save directory for the output and select the desired options.
+- Note: rather than selecting the desired export options manually in the GUI (and having to re-enter them every time you want to re-export),
+  you can create a YAML configuration file to control the export. Also, a number of more advanced features are only available via the
+  configuraiton file. See `configuration_sample.yaml` for more information.
 
 <img src="imagesforgettingstarted/13.jpg" alt="drawing" width="400"/>
 
 - Click on **Generate**. The output can be found where the save directory is.
+

@@ -1,0 +1,60 @@
+### Values to fill into the UI dialog
+RobotName: my_great_robot
+SaveMesh: true
+SubMesh: true
+MeshResolution: Low
+InertiaPrecision: Low
+TargetUnits: m
+TargetPlatform: MoveIt
+
+### Additional URDF conversion options
+# Rename links and/or joints.
+# Maps Fusion names for occurrences and joints into URDF names for links and joints
+# For links, MergeLinks chould also be used instead (and would probably be better).
+NameMap:
+    my_big_slider: Slider
+    Rigid-Pulley-Spindle: Rev
+
+# If specified, serves as the root of the URDF regardless of what's grounded in Fusion
+Root: Robot_Base
+
+# Merge several Fusion occurrences into a single URDF link
+# Can name either indivicual occurrences, or complete assemblies.
+# When an assembly occurrence is mentioned, all components in that assmembly will be included,
+# but it's not an error and would not change the result if some of the occurrences for components
+# and/or subassemblies are also specified explicitly.
+# The origin of the first occurrence specified would be used as the origin for the URDF link
+# (except for links immedeately downstream from a non-fixed joint - there the joint origin
+# would be the link origin, but the orientation would still follow that of the first occurrence).
+# The name of occurrences/assemblies can be specifies as follows:
+# - Literal name
+# - Occurence name pattern with exactly one wildcard symbol "*" (wildcard matches any substring)
+# - as a +-deliminated full path suffix, each element potentially containing a single wildcard
+# In each case, there should be exactly one occurrence matching the specification
+MergeLinks:
+    Robot_Base:
+        - Optical Breadboard - 1000x1000 v*
+        - Post:1
+        - Second optical breadboard v*
+        - Slider Assembly v*+SliderBase v*
+    AddOnComponent1:
+        - Slider Assembly v*+*+AddOn v*
+
+# Use this to specify parts of the Design that should be exported, but not included in the
+# main urdf/<robot_name>.xacro. If present, that these links and the joints that connect
+# them to the rest of the robot would not be included in urdf/<robot_name>.xacro, and
+# a urdf/<robot_name>-full.xacro would be created containing the full set. This is useful
+# e.g. when these extra links are meant to be used as an AttachedCollisionObject with MoveIT
+# These links should not have any downstream joints/links.
+Extras:
+    - AddOnComponent1
+    - AddOnComponent2
+
+# When present and non-empty, will generate a urdf/locations.yaml containing specified locations w.r.t
+# specified links. For each UDFL link, specify the locations.yaml and the Fusion occurrence to take the origin from
+# This is helpful if you want to e.g. use MoveIt and specify some parts of your Fusion model as "attached" objects
+# in your scene, rather than a part of your robot (note: you will need to write your own code to set that up).
+Locations:
+    AddOnComponent1:
+        Base: Slider Assembly v*+*+AddOn v*+Base*
+        Tip: Slider Assembly v*+*+AddOn v*+Tip*
