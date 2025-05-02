@@ -1,5 +1,6 @@
+import math
 import time
-from typing import Any, Dict, List, NoReturn, Optional
+from typing import Any, Dict, List, NoReturn, Optional, Sequence, Tuple, Union
 import adsk.core
 from .transforms import so3_to_euler
 
@@ -65,3 +66,19 @@ def fatal(msg: str) -> NoReturn:
 
 def mat_str(m: adsk.core.Matrix3D) -> str:
     return f"xyz={m.translation.asArray()} rpy={so3_to_euler(m)}"
+
+def vector_to_str(v: Union[adsk.core.Vector3D, adsk.core.Point3D, Sequence[float]], prec: int = 2) -> str:
+    """Turn a verctor into a debug printout"""
+    if isinstance(v, (adsk.core.Vector3D, adsk.core.Point3D)):
+        v = v.asArray()
+    return f"[{', '.join(f'{x:.{prec}f}' for x in v)}]"
+
+def rpy_to_str(rpy: Tuple[float, float, float]) -> str:
+    return f"({', '.join(str(int(x/math.pi*180)) for x in rpy)})"
+
+def ct_to_str(ct: adsk.core.Matrix3D) -> str:
+    """Turn a coordinate transform matrix into a debug printout"""
+    rpy = so3_to_euler(ct)
+    return (f"@{vector_to_str(ct.translation)}"
+            f" rpy={rpy_to_str(rpy)}"
+            f" ({' '.join(('[' + ','.join(str(int(x)) for x in v.asArray()) + ']') for v in ct.getAsCoordinateSystem()[1:])})")

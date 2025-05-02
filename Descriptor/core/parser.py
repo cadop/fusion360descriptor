@@ -2,8 +2,7 @@
 module to parse fusion file 
 '''
 
-import math
-from typing import Any, Dict, Iterable, List, Literal, Optional, Sequence, Set, Tuple, Union, cast
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
 from dataclasses import dataclass, field
 
 import adsk.core, adsk.fusion
@@ -142,22 +141,6 @@ class Hierarchy:
             if occ.childOccurrences:
                 Hierarchy.traverse(occ.childOccurrences, parent=cur)
         return cur  # type: ignore[undef]
-
-def vector_to_str(v: Union[adsk.core.Vector3D, adsk.core.Point3D, Sequence[float]], prec: int = 2) -> str:
-    """Turn a verctor into a debug printout"""
-    if isinstance(v, (adsk.core.Vector3D, adsk.core.Point3D)):
-        v = v.asArray()
-    return f"[{', '.join(f'{x:.{prec}f}' for x in v)}]"
-
-def rpy_to_str(rpy: Tuple[float, float, float]) -> str:
-    return f"({', '.join(str(int(x/math.pi*180)) for x in rpy)})"
-
-def ct_to_str(ct: adsk.core.Matrix3D) -> str:
-    """Turn a coordinate transform matrix into a debug printout"""
-    rpy = transforms.so3_to_euler(ct)
-    return (f"@{vector_to_str(ct.translation)}"
-            f" rpy={rpy_to_str(rpy)}"
-            f" ({' '.join(('[' + ','.join(str(int(x)) for x in v.asArray()) + ']') for v in ct.getAsCoordinateSystem()[1:])})")
 
 def get_origin(o: Optional[adsk.core.Base]) -> Union[adsk.core.Vector3D, None]:
     if isinstance(o, adsk.fusion.JointGeometry):
@@ -380,7 +363,10 @@ class Configurator:
         # It is in cm, not in design units.
         occs_dict['center_of_mass'] = [c * self.cm for c in c_o_m.asArray()]
 
-        utils.log(f"DEBUG: {oc.name}: origin={vector_to_str(oc.transform2.translation)}, center_mass(global)={vector_to_str(prop.centerOfMass)}, center_mass(URDF)={occs_dict['center_of_mass']}")
+        utils.log(
+            f"DEBUG: {oc.name}: origin={utils.vector_to_str(oc.transform2.translation)},"
+            f" center_mass(global)={utils.vector_to_str(prop.centerOfMass)},"
+            f" center_mass(URDF)={occs_dict['center_of_mass']}")
 
         moments = prop.getXYZMomentsOfInertia()
         if not moments[0]:
@@ -463,8 +449,8 @@ class Configurator:
                 except RuntimeError:
                     geom_two_origin = None
 
-                utils.log(f"DEBUG: ... Origin 1: {vector_to_str(geom_one_origin) if geom_one_origin is not None else None}")
-                utils.log(f"DEBUG: ... Origin 2: {vector_to_str(geom_two_origin) if geom_two_origin is not None else None}")
+                utils.log(f"DEBUG: ... Origin 1: {utils.vector_to_str(geom_one_origin) if geom_one_origin is not None else None}")
+                utils.log(f"DEBUG: ... Origin 2: {utils.vector_to_str(geom_two_origin) if geom_two_origin is not None else None}")
 
                 if occ_one.assemblyContext != occ_two.assemblyContext:
                     utils.log(f"DEBUG: Non-fixed joint {name} crosses the assembly context boundary:"
@@ -539,9 +525,10 @@ class Configurator:
 
                 parent_occ_name = self.get_name(parent_occ)  # type: ignore[undef]
                 occ_name = self.get_name(occ)
-                print(f"Got from Fusion: {rigid_group_occ_name}, connecting",
-                      f"parent {parent_occ_name} @ {vector_to_str(parent_occ.transform2.translation)} and" # type: ignore[undef]
-                      f"child {occ_name} {vector_to_str(occ.transform2.translation)}")
+                utils.log(
+                    f"DEBUG: Got from Fusion: {rigid_group_occ_name}, connecting",
+                    f"parent {parent_occ_name} @ {utils.vector_to_str(parent_occ.transform2.translation)} and" # type: ignore[undef]
+                    f"child {occ_name} {utils.vector_to_str(occ.transform2.translation)}")
                 self.joints_dict[rigid_group_occ_name] = JointInfo(name=rigid_group_occ_name, parent=parent_occ_name, child=occ_name)
         
         self.assembly_tokens: Set[str] = set()
@@ -683,9 +670,9 @@ class Configurator:
         inertia_tensor = np.zeros(6)
         for occ in occs:
             inertia = self._get_inertia(occ)
-            utils.log(f"DEBUG: link {occ.name} urdf_origin at {vector_to_str(urdf_origin.translation)}"
-                    f" (rpy={rpy_to_str(transforms.so3_to_euler(urdf_origin))})"
-                    f" and inv at {vector_to_str(inv.translation)} (rpy={rpy_to_str(transforms.so3_to_euler(inv))})")
+            utils.log(f"DEBUG: link {occ.name} urdf_origin at {utils.vector_to_str(urdf_origin.translation)}"
+                    f" (rpy={utils.rpy_to_str(transforms.so3_to_euler(urdf_origin))})"
+                    f" and inv at {utils.vector_to_str(inv.translation)} (rpy={utils.rpy_to_str(transforms.so3_to_euler(inv))})")
             mass += inertia['mass']
             visible += visible or occ.isVisible
             center_of_mass += np.array(inertia['center_of_mass']) * inertia['mass']
@@ -821,7 +808,7 @@ class Configurator:
                         fixed_links[(child_name, parent_name)] = joint.name
                         fixed_links[(parent_name, child_name)] = joint.name
                     else:
-                        utils.log(f"DEBUG: for non-fixed joint {joint.name}, updating child origin from {ct_to_str(child_origin)} to {joint.origin.asArray()}")
+                        utils.log(f"DEBUG: for non-fixed joint {joint.name}, updating child origin from {utils.ct_to_str(child_origin)} to {joint.origin.asArray()}")
                         child_origin = child_origin.copy()
                         child_origin.translation = joint.origin
                         # The joint axis is specified in the joint (==child) frame
@@ -832,7 +819,7 @@ class Configurator:
                         assert axis.transformBy(tt)
                         if flip_axis:
                             assert axis.scaleBy(-1)
-                        utils.log(f"DEBUG:    and using {ct_to_str(tt)} and {flip_axis=} to update axis from {joint.axis.asArray()} to {axis.asArray()}")
+                        utils.log(f"DEBUG:    and using {utils.ct_to_str(tt)} and {flip_axis=} to update axis from {joint.axis.asArray()} to {axis.asArray()}")
 
                     for name in [child_name] + child_link_names:
                         self.link_origins[name] = child_origin
@@ -848,7 +835,11 @@ class Configurator:
                     xyz = [c * self.cm for c in ct.translation.asArray()]
                     rpy = transforms.so3_to_euler(ct)
 
-                    utils.log(f"DEBUG: joint {joint.name} (type {joint.type}) from {parent_name} at {vector_to_str(parent_origin.translation)} to {child_name} at {vector_to_str(child_origin.translation)} -> xyz={vector_to_str(xyz,5)} rpy={rpy_to_str(rpy)}")
+                    utils.log(
+                        f"DEBUG: joint {joint.name} (type {joint.type})"
+                        f" from {parent_name} at {utils.vector_to_str(parent_origin.translation)}"
+                        f" to {child_name} at {utils.vector_to_str(child_origin.translation)}"
+                        f" -> xyz={utils.vector_to_str(xyz,5)} rpy={utils.rpy_to_str(rpy)}")
 
                     self.joints[joint.name] = parts.Joint(name=joint.name , joint_type=joint.type, 
                                     xyz=xyz, rpy=rpy, axis=axis.asArray(), 
