@@ -822,11 +822,6 @@ class Configurator:
                     for name in [child_name] + child_link_names:
                         self.link_origins[name] = child_origin
 
-                    #transform = (*child_origin.getAsCoordinateSystem(), *parent_origin.getAsCoordinateSystem())
-                    #transform = (*parent_origin.getAsCoordinateSystem(), *child_origin.getAsCoordinateSystem())
-                    #t = adsk.core.Matrix3D.create()
-                    #assert t.setToAlignCoordinateSystems(*transform)
-
                     ct = child_origin.copy()
                     assert ct.transformBy(t)
 
