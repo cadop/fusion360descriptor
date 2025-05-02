@@ -269,8 +269,7 @@ class Configurator:
             children = set()
             children.update(v.children)
 
-            top_level_body = [v.component.bRepBodies.item(x) for x in range(0, v.component.bRepBodies.count) ]
-            top_level_body = [x for x in top_level_body if x.isVisible]
+            top_level_body = [x for x in v.component.bRepBodies if x.isVisible]
             
             # add to the body mapper
             if top_level_body != []:
@@ -279,8 +278,7 @@ class Configurator:
             while children:
                 cur = children.pop()
                 children.update(cur.children)
-                sub_level_body = [cur.component.bRepBodies.item(x) for x in range(0, cur.component.bRepBodies.count) ]
-                sub_level_body = [x for x in sub_level_body if x.isVisible ]
+                sub_level_body = [x for x in cur.component.bRepBodies if x.isVisible]
                 
                 # add to this body mapper again 
                 self.body_mapper[cur.component.entityToken].extend(sub_level_body)
