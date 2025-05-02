@@ -42,14 +42,12 @@ class Hierarchy:
         self.children: List["Hierarchy"] = []
         self.component: adsk.fusion.Occurrence = component
         self.name: str = component.name
-        self.parent: Optional["Hierarchy"] = None
         Hierarchy.total_components += 1
         if utils.LOG_DEBUG:
             utils.log(f"... {Hierarchy.total_components}. Collected {self.name}...")
 
     def _add_child(self, c: "Hierarchy") -> None:
         self.children.append(c)
-        c.parent = self 
 
     def get_children(self) -> List["Hierarchy"]:
         return self.children        
