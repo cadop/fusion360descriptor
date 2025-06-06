@@ -305,21 +305,23 @@ class Configurator:
 
     def _base(self):
         ''' Get the base link '''
-        for oc in self._iterate_through_occurrences():
-            # Get only the first grounded link
-            if (
-                (self.root_name is None and oc.isGrounded) or 
-                (self.root_name is not None and self.root_name == oc.name) or 
-                (self.root_name is not None and self.root_name in self.merge_links and self.merge_links[self.root_name][0] == oc.name)
-            ):
-                # We must store this object because we cannot occurrences
-                self.base_link = oc
-                break
-        if self.base_link is None:
-            if self.root_name is None:
-                utils.fatal("Failed to find a grounded occurrence for URDF root. Make one of the Fusion occurrences grounded or specify 'Root: name' in the configuration file")
-            else:
-                utils.fatal(f"Occurrence or merge link '{self.root_name}' specified in the 'Root:' section of the configuration file not found in the design")
+        if self.root_name is not None and self.root_name in self.merge_links:
+            self.base_link = self._resolve_name(self.merge_links[self.root_name][0])
+        else:
+            for oc in self._iterate_through_occurrences():
+                # Get only the first grounded link
+                if (
+                    (self.root_name is None and oc.isGrounded) or
+                    (self.root_name is not None and self.root_name == oc.name)
+                ):
+                    # We must store this object because we cannot occurrences
+                    self.base_link = oc
+                    break
+            if self.base_link is None:
+                if self.root_name is None:
+                    utils.fatal("Failed to find a grounded occurrence for URDF root. Make one of the Fusion occurrences grounded or specify 'Root: name' in the configuration file")
+                else:
+                    utils.fatal(f"Occurrence '{self.root_name}' specified in the 'Root:' section of the configuration file not found in the design")
         self.get_name(self.base_link)
 
     def get_name(self, oc: adsk.fusion.Occurrence) -> str:

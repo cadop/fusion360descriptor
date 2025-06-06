@@ -102,9 +102,17 @@ class Manager:
             if wrong_keys:
                 raise(ValueError(f"Malformed config '{config_file}': unexpected top-level keys: {list(wrong_keys)}"))
             self.name_map = configuration.get("NameMap", {})
+            if self.name_map is None:
+                self.name_map = {}
             self.merge_links = configuration.get("MergeLinks", {})
+            if self.merge_links is None:
+                self.merge_links = {}
             self.extra_links = configuration.get("Extras", [])
+            if self.extra_links is None:
+                self.extra_links = []
             self.locations = configuration.get("Locations", {})
+            if self.locations is None:
+                self.locations = {}
             self.root_name = configuration.get("Root")
 
         # Set directory 

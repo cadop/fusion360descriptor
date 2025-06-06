@@ -16,6 +16,8 @@ NameMap:
     Rigid-Pulley-Spindle: Rev
 
 # If specified, serves as the root of the URDF regardless of what's grounded in Fusion
+# Can be either a name of the Fusion occurance (has to be a literal match), or a name
+# of a link from the MergeLinks section below.
 Root: Robot_Base
 
 # Merge several Fusion occurrences into a single URDF link
