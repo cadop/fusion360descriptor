@@ -390,14 +390,27 @@ class Configurator:
         for joint in self.root.allJoints:
             if joint.healthState in [adsk.fusion.FeatureHealthStates.SuppressedFeatureHealthState, adsk.fusion.FeatureHealthStates.RolledBackFeatureHealthState]:
                 continue
-            if isinstance(joint.jointMotion, adsk.fusion.RevoluteJointMotion):
-                if joint.jointMotion.rotationValue != 0.0:
-                    utils.log(f"WARNING: joint {joint.name} was not at 0, rotating it to 0")
-                    joint.jointMotion.rotationValue = 0.0
-            elif isinstance(joint.jointMotion, adsk.fusion.SliderJointMotion):
-                if joint.jointMotion.slideValue != 0.0:
-                    utils.log(f"WARNING: joint {joint.name} was not at 0, sliding it to 0")
-                    joint.jointMotion.slideValue = 0.0
+            try:
+                if isinstance(joint.jointMotion, adsk.fusion.RevoluteJointMotion):
+                    if joint.jointMotion.rotationValue != 0.0:
+                        utils.log(f"WARNING: joint {joint.name} was not at 0, rotating it to 0")
+                        joint.jointMotion.rotationValue = 0.0
+                elif isinstance(joint.jointMotion, adsk.fusion.SliderJointMotion):
+                    if joint.jointMotion.slideValue != 0.0:
+                        utils.log(f"WARNING: joint {joint.name} was not at 0, sliding it to 0")
+                        joint.jointMotion.slideValue = 0.0
+            except Exception as e:
+                try:
+                    o1 = joint.occurrenceOne.fullPathName
+                except:
+                    o1 = "Unknown"
+                try:
+                    o2 = joint.occurrenceTwo.fullPathName
+                except:
+                    o2 = "Unknown"
+                utils.fatal(
+                    f"Fusion errored out trying to operate on `jointMotion` of joint {joint.name}"
+                    f" (between {o1} and {o2}, child of {joint.parentComponent.name}) with Health State {joint.healthState}: {e}")
 
         for joint in sorted(self.root.allJoints, key=lambda joint: joint.name):
             if joint.healthState in [adsk.fusion.FeatureHealthStates.SuppressedFeatureHealthState, adsk.fusion.FeatureHealthStates.RolledBackFeatureHealthState]:
@@ -405,7 +418,15 @@ class Configurator:
                 continue
 
             if joint.healthState != adsk.fusion.FeatureHealthStates.HealthyFeatureHealthState:
-                utils.fatal(f"Joint {joint.name} (child of {joint.parentComponent.name}) is in unexpected Health State {joint.healthState}, {joint.errorOrWarningMessage=}")
+                try:
+                    o1 = joint.occurrenceOne.fullPathName
+                except:
+                    o1 = "Unknown"
+                try:
+                    o2 = joint.occurrenceTwo.fullPathName
+                except:
+                    o2 = "Unknown"
+                utils.fatal(f"Joint {joint.name} (between {o1} and {o2}, child of {joint.parentComponent.name}) is in unexpected Health State {joint.healthState}, {joint.errorOrWarningMessage=}")
 
             orig_name = joint.name
             # Rename if the joint already exists in our dictionary
