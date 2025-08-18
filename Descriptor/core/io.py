@@ -1,14 +1,27 @@
-import os
+import os.path, sys, fileinput
+from typing import Dict, List, Sequence, Tuple
+from xml.etree.ElementTree import Element, ElementTree, SubElement
+import xml.etree.ElementTree as ET
 import adsk, adsk.core, adsk.fusion
-from . import parts
-from . import parser
-from . import manager
-from collections import Counter, defaultdict
 
-def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_mapper, _app):  
+from .parser import Configurator
+from .parts import Joint, Link
+from . import utils
+from shutil import copytree
+
+
+def visible_to_stl(
+    design: adsk.fusion.Design,
+    save_dir: str,
+    root: adsk.fusion.Component,
+    accuracy: adsk.fusion.MeshRefinementSettings,
+    sub_mesh: bool,
+    body_mapper: Dict[str, List[Tuple[adsk.fusion.BRepBody, str]]],
+    _app,
+):
     """
     export top-level components as a single stl file into "save_dir/"
-    
+
     Parameters
     ----------
     design: adsk.fusion.Design
@@ -17,65 +30,48 @@ def visible_to_stl(design, save_dir, root, accuracy, body_dict, sub_mesh, body_m
         directory path to save
     root: adsk.fusion.Component
         root component of the design
-    accuracy: int
+    accuracy: adsk.fusion.MeshRefinementSettings enum
         accuracy value to use for stl export
     component_map: list
         list of all bodies to use for stl export
     """
-          
+
     # create a single exportManager instance
     exporter = design.exportManager
 
-    # Setup new document for saving to
-    des: adsk.fusion.Design = _app.activeProduct
-
-    newDoc: adsk.core.Document = _app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType, True) 
-    newDes: adsk.fusion.Design = newDoc.products.itemByProductType('DesignProductType')
+    newDoc: adsk.core.Document = _app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType, True)
+    newDes = newDoc.products.itemByProductType("DesignProductType")
+    assert isinstance(newDes, adsk.fusion.Design)
     newRoot = newDes.rootComponent
 
     # get the script location
-    save_dir = os.path.join(save_dir,'meshes')
-    try: os.mkdir(save_dir)
-    except: pass
+    save_dir = os.path.join(save_dir, "meshes")
+    try:
+        os.mkdir(save_dir)
+    except:
+        pass
 
-    # Export top-level occurrences
-    occ = root.occurrences.asList
-    # hack for correct stl placement by turning off all visibility first
-    visible_components = []
-    for oc in occ:
-        if oc.isLightBulbOn:
-            visible_components.append(oc)
+    try:
+        for name, bodies in body_mapper.items():
+            if not bodies:
+                continue
 
-    # Make sure no repeated body names
-    body_count = Counter()
+            # Create a new exporter in case its a memory thing
+            exporter = design.exportManager
 
-    for oc in visible_components:
-        # Create a new exporter in case its a memory thing
-        exporter = design.exportManager
+            occName = utils.format_name(name)
+            stl_exporter(exporter, accuracy, newRoot, [b for b, _ in bodies], os.path.join(save_dir, occName))
 
-        occName = oc.name.replace(':', '_').replace(' ','')
-        
-        component_exporter(exporter, newRoot, body_mapper[oc.entityToken], os.path.join(save_dir,f'{occName}'))
-
-        if sub_mesh:
-            # get the bodies associated with this top-level component (which will contain sub-components)
-            bodies = body_mapper[oc.entityToken]
-
-            for body in bodies:
-                if body.isLightBulbOn:
-
-                    # Since there are alot of similar names, we need to store the parent component as well in the filename
-                    body_name = body.name.replace(':','_').replace(' ','')
-                    body_name_cnt = f'{body_name}_{body_count[body_name]}'
-                    body_count[body_name] += 1
-
-                    save_name = os.path.join(save_dir,f'{occName}_{body_name_cnt}')
-
-                    body_exporter(exporter, newRoot, body, save_name)
+            if sub_mesh and len(bodies) > 1:
+                for body, body_name in bodies:
+                    if body.isVisible:
+                        stl_exporter(exporter, accuracy, newRoot, [body], os.path.join(save_dir, body_name))
+    finally:
+        newDoc.close(False)
 
 
-def component_exporter(exportMgr, newRoot, body_lst, filename):
-    ''' Copy a component to a new document, save, then delete. 
+def stl_exporter(exportMgr, accuracy, newRoot, body_lst, filename):
+    """Copy a component to a new document, save, then delete.
 
     Modified from solution proposed by BrianEkins https://EkinsSolutions.com
 
@@ -89,7 +85,7 @@ def component_exporter(exportMgr, newRoot, body_lst, filename):
         _description_
     filename : _type_
         _description_
-    '''
+    """
 
     tBrep = adsk.fusion.TemporaryBRepManager.get()
 
@@ -97,76 +93,25 @@ def component_exporter(exportMgr, newRoot, body_lst, filename):
     bf.startEdit()
 
     for body in body_lst:
-        if not body.isLightBulbOn: continue
         tBody = tBrep.copy(body)
         newRoot.bRepBodies.add(tBody, bf)
 
     bf.finishEdit()
-    stlOptions = exportMgr.createSTLExportOptions(newRoot, f'{filename}.stl')
+    stlOptions = exportMgr.createSTLExportOptions(newRoot, f"{filename}.stl")
+    stlOptions.meshRefinement = accuracy
     exportMgr.execute(stlOptions)
 
     bf.deleteMe()
 
-def body_exporter(exportMgr, newRoot, body, filename):
-    tBrep = adsk.fusion.TemporaryBRepManager.get()
-    
-    tBody = tBrep.copy(body)
-
-    bf = newRoot.features.baseFeatures.add()
-    bf.startEdit()
-    newRoot.bRepBodies.add(tBody, bf)
-    bf.finishEdit()
-
-    newBody = newRoot.bRepBodies[0]
-
-    stl_options = exportMgr.createSTLExportOptions(newBody, filename)
-    stl_options.sendToPrintUtility = False
-    stl_options.isBinaryFormat = True
-    # stl_options.meshRefinement = accuracy
-    exportMgr.execute(stl_options)                
-
-    bf.deleteMe()
 
 class Writer:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, save_dir: str, config: Configurator) -> None:
+        self.save_dir = save_dir
+        self.config = config
 
-    def write_link(self, config, file_name):
-        ''' Write links information into urdf file_name
-        
-        Parameters
-        ----------
-        config : Configurator
-            root nodes instance of configurator class
-        file_name: str
-            urdf full path
-
-        '''
-
-        with open(file_name, mode='a', encoding="utf-8") as f:
-            for _, link in config.links.items():  
-                f.write(f'{link.link_xml}\n')
-
-    def write_joint(self, file_name, config):
-        ''' Write joints and transmission information into urdf file_name
-            
-        Parameters
-        ----------
-        file_name: str
-            urdf full path
-        config : Configurator
-            root nodes instance of configurator class
-
-        '''
-        
-        with open(file_name, mode='a', encoding="utf-8") as f:
-            for _, joint in config.joints.items():
-                f.write(f'{joint.joint_xml}\n')
-
-
-    def write_urdf(self, save_dir, config):
-        ''' Write each component of the xml structure to file
+    def write_urdf(self) -> None:
+        """Write each component of the xml structure to file
 
         Parameters
         ----------
@@ -174,28 +119,74 @@ class Writer:
             path to save file
         config : Configurator
             root nodes instance of configurator class
-        '''        
+        """
 
-        save_dir = os.path.join(save_dir,'urdf')
-        try: os.mkdir(save_dir)
-        except: pass
-        file_name = os.path.join(save_dir, f'{config.name}.urdf')  # the name of urdf file
+        try:
+            os.mkdir(self.save_dir)
+        except:
+            pass
+        file_name = os.path.join(self.save_dir, f"{self.config.name}.xacro")  # the name of urdf file
+        if self.config.extra_links:
+            links = self.config.links.copy()
+            for link in self.config.extra_links:
+                del links[link]
+            joints = {
+                joint: self.config.joints[joint]
+                for joint in self.config.joints
+                if self.config.joints[joint].child not in self.config.extra_links
+            }
+            self.write_xacro(file_name, links, joints)
+            file_name_full = os.path.join(self.save_dir, f"{self.config.name}-full.xacro")
+            self.write_xacro(file_name_full, {link: self.config.links[link] for link in self.config.extra_links}, {})
+        else:
+            self.write_xacro(file_name, self.config.links, self.config.joints)
 
-        with open(file_name, mode='w', encoding="utf-8") as f:
-            f.write('<?xml version="1.0" ?>\n')
-            f.write(f'<robot name="{config.name}">\n\n')
-            f.write('<material name="silver">\n')
-            f.write('  <color rgba="0.700 0.700 0.700 1.000"/>\n')
-            f.write('</material>\n\n')
+        material_file_name = os.path.join(self.save_dir, f"materials.xacro")
+        self.write_materials_xacro(material_file_name)
 
-        self.write_link(config, file_name)
-        self.write_joint(file_name, config)
+    def write_materials_xacro(self, material_file_name) -> None:
+        robot = Element("robot", {"name": self.config.name, "xmlns:xacro": "http://www.ros.org/wiki/xacro"})
+        for color in self.config.color_dict:
+            material = SubElement(robot, "material", {"name": color})
+            SubElement(material, "color", {"rgba": self.config.color_dict[color]})
 
-        with open(file_name, mode='a') as f:
-            f.write('</robot>\n')
+        tree = ElementTree(robot)
+        ET.indent(tree, space="   ")
 
-def write_hello_pybullet(robot_name, save_dir):
-    ''' Writes a sample script which loads the URDF in pybullet
+        with open(material_file_name, mode="wb") as f:
+            tree.write(f, "utf-8", xml_declaration=True)
+            f.write(b"\n")
+
+    def write_xacro(self, file_name: str, links: Dict[str, Link], joints: Dict[str, Joint]) -> None:
+        robot = Element("robot", {"xmlns:xacro": "http://www.ros.org/wiki/xacro", "name": self.config.name})
+        SubElement(robot, "xacro:include", {"filename": f"$(find {self.config.name})/urdf/materials.xacro"})
+
+        # Add dummy link since KDL does not support a root link with an inertia
+        # From https://robotics.stackexchange.com/a/97510
+        SubElement(robot, "link", {"name": "dummy_link"})
+        assert self.config.base_link is not None
+        dummy_joint = SubElement(robot, "joint", {"name": "dummy_link_joint", "type": "fixed"})
+        SubElement(dummy_joint, "parent", {"link": "dummy_link"})
+        SubElement(dummy_joint, "child", {"link": self.config.base_link_name})
+
+        for _, link in links.items():
+            xml = link.link_xml()
+            if xml is not None:
+                robot.append(xml)
+
+        for _, joint in joints.items():
+            robot.append(joint.joint_xml())
+
+        tree = ElementTree(robot)
+        ET.indent(tree, space="   ")
+
+        with open(file_name, mode="wb") as f:
+            tree.write(f, "utf-8", xml_declaration=True)
+            f.write(b"\n")
+
+
+def write_hello_pybullet(robot_name, save_dir) -> None:
+    """Writes a sample script which loads the URDF in pybullet
 
     Modified from https://github.com/yanshil/Fusion2PyBullet
 
@@ -205,10 +196,10 @@ def write_hello_pybullet(robot_name, save_dir):
         name to use for directory
     save_dir : str
         path to store file
-    '''    
+    """
 
-    robot_urdf = f'{robot_name}.urdf' ## basename of robot.urdf
-    file_name = os.path.join(save_dir,'hello_bullet.py')
+    robot_urdf = f"{robot_name}.urdf"  ## basename of robot.urdf
+    file_name = os.path.join(save_dir, "hello_bullet.py")
     hello_pybullet = """
 import pybullet as p
 import os
@@ -234,7 +225,78 @@ cubePos, cubeOrn = p.getBasePositionAndOrientation(robotId)
 print(cubePos,cubeOrn)
 p.disconnect()
 """
-    hello_pybullet = hello_pybullet.replace('TEMPLATE.urdf', robot_urdf)
-    with open(file_name, mode='w') as f:
+    hello_pybullet = hello_pybullet.replace("TEMPLATE.urdf", robot_urdf)
+    with open(file_name, mode="w") as f:
         f.write(hello_pybullet)
-        f.write('\n')
+        f.write("\n")
+
+
+def copy_ros2(save_dir, package_name) -> None:
+    # Use current directory to find `package_ros2`
+    package_ros2_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__))) + "/package_ros2/"
+    copy_package(save_dir, package_ros2_path)
+    update_cmakelists(save_dir, package_name)
+    update_package_xml(save_dir, package_name)
+    update_package_name(save_dir + "/launch/robot_description.launch.py", package_name)
+
+
+def copy_gazebo(save_dir, package_name) -> None:
+    # Use current directory to find `gazebo_package`
+    gazebo_package_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__))) + "/gazebo_package/"
+    copy_package(save_dir, gazebo_package_path)
+    update_cmakelists(save_dir, package_name)
+    update_package_xml(save_dir, package_name)
+    update_package_name(save_dir + "/launch/robot_description.launch.py", package_name)  # Also include rviz alone
+    update_package_name(save_dir + "/launch/gazebo.launch.py", package_name)
+
+
+def copy_moveit(save_dir, package_name) -> None:
+    # Use current directory to find `moveit_package`
+    moveit_package_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__))) + "/moveit_package/"
+    copy_package(save_dir, moveit_package_path)
+    update_cmakelists(save_dir, package_name)
+    update_package_xml(save_dir, package_name)
+    update_package_name(save_dir + "/launch/setup_assistant.launch.py", package_name)
+
+
+def copy_package(save_dir, package_dir) -> None:
+    try:
+        os.mkdir(save_dir + "/launch")
+    except:
+        pass
+    try:
+        os.mkdir(save_dir + "/urdf")
+    except:
+        pass
+    copytree(package_dir, save_dir, dirs_exist_ok=True)
+
+
+def update_cmakelists(save_dir, package_name) -> None:
+    file_name = save_dir + "/CMakeLists.txt"
+
+    for line in fileinput.input(file_name, inplace=True):
+        if "project(fusion2urdf)" in line:
+            sys.stdout.write("project(" + package_name + ")\n")
+        else:
+            sys.stdout.write(line)
+
+
+def update_package_name(file_name, package_name) -> None:
+    # Replace 'fusion2urdf' with the package_name
+    for line in fileinput.input(file_name, inplace=True):
+        if "fusion2urdf" in line:
+            sys.stdout.write(line.replace("fusion2urdf", package_name))
+        else:
+            sys.stdout.write(line)
+
+
+def update_package_xml(save_dir, package_name) -> None:
+    file_name = save_dir + "/package.xml"
+
+    for line in fileinput.input(file_name, inplace=True):
+        if "<name>" in line:
+            sys.stdout.write("  <name>" + package_name + "</name>\n")
+        elif "<description>" in line:
+            sys.stdout.write("<description>The " + package_name + " package</description>\n")
+        else:
+            sys.stdout.write(line)

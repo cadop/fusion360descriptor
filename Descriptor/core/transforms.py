@@ -1,4 +1,27 @@
+from typing import Tuple
+import adsk.core
 
+import numpy as np
+from scipy.spatial.transform import Rotation   
+
+def so3_to_euler(mat: adsk.core.Matrix3D) -> Tuple[float, float, float]:
+    """Converts an SO3 rotation matrix to Euler angles
+
+    Args:
+        so3: Matrix3D coordinate transform
+
+    Returns:
+        tuple of Euler angles (size 3)
+
+    """
+    so3 = np.zeros((3,3))
+    for i in range(3):
+        for j in range(3):
+            so3[i,j] = mat.getCell(i,j)
+    ### first transform the matrix to euler angles
+    r =  Rotation.from_matrix(so3)
+    yaw, pitch, roll = r.as_euler("ZYX", degrees=False)
+    return (float(roll), float(pitch), float(yaw))
 
 def origin2center_of_mass(inertia, center_of_mass, mass):
     """

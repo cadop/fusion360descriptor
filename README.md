@@ -22,13 +22,16 @@ It provides a simple GUI for running the script and choosing a few different set
 **Features**
 
 - GUI interface for settings
-- Uses the grounded base as root node
+- Uses the grounded base as root node, that organizes the UDRF tree by joint/link distance from root.
+- Handles rigid groups, coordinate transforms between origins, nested assemblies, etc
 - Allows switching between units
 - WYSIWYG stl exporting (exports model as you see on the screen) without needing to save design history or copy to a new file
 - Preview joint relationship before exporting
 - Export only URDF without Mesh (for fast viewing)
-- Set Component 1 of joint to mean Parent or Child
 - Can export component bodies separately as a visual element of URDF and a combined component as the collision
+- Can load export configuration from a Yaml file to speed up configuring the export.
+- Additional advanced options can be specified in the Yaml file, such as automatically mapping component and/or joint names to custom names in URDF.
+  This is helpful to e.g. keep the URDF names constant as the Fusion design is updated, so that ROS configuration/code does not have to be changed.
 
 <img src="imagesforgettingstarted/gui.gif" alt="drawing" width="800"/>
 
@@ -116,7 +119,11 @@ Step-by-Step Guide
 - Add the **Descriptor** folder from the zip file to the scripts.
 - Click on **Descriptor** then click on **Run**. The GUI will appear.
 - Add a save directory for the output and select the desired options.
+- Note: rather than selecting the desired export options manually in the GUI (and having to re-enter them every time you want to re-export),
+  you can create a YAML configuration file to control the export. Also, a number of more advanced features are only available via the
+  configuraiton file. See `configuration_sample.yaml` for more information.
 
 <img src="imagesforgettingstarted/13.jpg" alt="drawing" width="400"/>
 
 - Click on **Generate**. The output can be found where the save directory is.
+

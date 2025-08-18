@@ -7,17 +7,41 @@ Created on Sun May 12 20:17:17 2019
 Modified by cadop Dec 19 2021
 """
 
+import math
+from typing import List, Optional, Sequence
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree import ElementTree
 from xml.dom import minidom
+from . import utils
 
-class Joint:
+MAX_ROUND_TO_ZERO = 5e-11 # in mm, radians
+HALF_PI = math.pi * 0.5
+def _round(val: float, unit: float) -> float:
+    units = val/unit
+    r = round(units) * unit
+    if abs(val - r) <= MAX_ROUND_TO_ZERO:
+        return r
+    return val
 
-    # Defaults for all joints 
-    effort_limit = 100
-    vel_limit = 100
+def round_mm(val:float) -> float:
+    return _round(val, 0.0001)
 
-    def __init__(self, name, xyz, axis, parent, child, joint_type, upper_limit, lower_limit):
+def round_rads(val:float) -> float:
+    return _round(val, HALF_PI)
+
+class Location:
+    def __init__(self, name: str, xyz: Sequence[float], rpy: Sequence[float]):
+        self.name = name
+        self.xyz = [round_mm(x) for x in xyz]
+        self.rpy = [round_rads(r) for r in rpy]
+
+class Joint(Location):
+
+    # Defaults for all joints. Need be be floats, not ints
+    effort_limit = 100.0
+    vel_limit = 100.0
+
+    def __init__(self, name: str, xyz: Sequence[float], rpy: Sequence[float], axis: Sequence[float], parent: str, child:str, joint_type: str, upper_limit: float, lower_limit: float):
         """
         Attributes
         ----------
@@ -38,35 +62,33 @@ class Joint:
         tran_xml: str
             generated xml describing about the transmission
         """
-        self.name = name
+        super().__init__(name, xyz, rpy)
         self.type = joint_type
-        self.xyz = xyz
         self.parent = parent
         self.child = child
         self._joint_xml = None
         self._tran_xml = None
-        self.axis = axis  # for 'revolute' and 'continuous'
+        self.axis = [round_mm(a) for a in axis]  # for 'revolute' and 'continuous'
         self.upper_limit = upper_limit  # for 'revolute' and 'prismatic'
         self.lower_limit = lower_limit  # for 'revolute' and 'prismatic'
-        
-    @property
-    def joint_xml(self):
+
+    def joint_xml(self) -> Element:
         """
-        Generate the joint_xml and hold it by self.joint_xml
+        Generate the joint xml
         """
 
         joint = Element('joint')
-        joint.attrib = {'name':self.name.replace(':','_').replace(' ',''), 'type':self.type}
+        joint.attrib = {'name':utils.format_name(self.name), 'type':self.type}
 
         origin = SubElement(joint, 'origin')
-        origin.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+        origin.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':' '.join([str(_) for _ in self.rpy])}
 
         parent = SubElement(joint, 'parent')
-        self.parent = self.parent.replace(':','_').replace(' ','')
+        self.parent = utils.format_name(self.parent)
         parent.attrib = {'link':self.parent}
 
         child = SubElement(joint, 'child')
-        self.child = self.child.replace(':','_').replace(' ','')
+        self.child = utils.format_name(self.child)
         child.attrib = {'link':self.child}
 
         if self.type == 'revolute' or self.type == 'continuous' or self.type == 'prismatic':        
@@ -77,14 +99,9 @@ class Joint:
             limit.attrib = {'upper': str(self.upper_limit), 'lower': str(self.lower_limit),
                             'effort': f'{Joint.effort_limit}', 'velocity': f'{Joint.vel_limit}'}
 
-        rough_string = ElementTree.tostring(joint, 'utf-8')
-        reparsed = minidom.parseString(rough_string)
-        self._joint_xml = "\n".join(reparsed.toprettyxml(indent="  ").split("\n")[1:])
+        return joint
 
-        return self._joint_xml
-
-    @property
-    def transmission_xml(self):
+    def transmission_xml(self) -> Element:
         """
         Generate the tran_xml and hold it by self.tran_xml
         
@@ -97,34 +114,30 @@ class Joint:
         """        
         
         tran = Element('transmission')
-        tran.attrib = {'name':self.name.replace(':','_').replace(' ','') + '_tran'}
+        tran.attrib = {'name':utils.format_name(self.name) + '_tran'}
         
         joint_type = SubElement(tran, 'type')
         joint_type.text = 'transmission_interface/SimpleTransmission'
         
         joint = SubElement(tran, 'joint')
-        joint.attrib = {'name':self.name.replace(':','_').replace(' ','')}
+        joint.attrib = {'name':utils.format_name(self.name)}
         hardwareInterface_joint = SubElement(joint, 'hardwareInterface')
         hardwareInterface_joint.text = 'hardware_interface/EffortJointInterface'
         
         actuator = SubElement(tran, 'actuator')
-        actuator.attrib = {'name':self.name.replace(':','_').replace(' ','') + '_actr'}
+        actuator.attrib = {'name':utils.format_name(self.name) + '_actr'}
         hardwareInterface_actr = SubElement(actuator, 'hardwareInterface')
         hardwareInterface_actr.text = 'hardware_interface/EffortJointInterface'
         mechanicalReduction = SubElement(actuator, 'mechanicalReduction')
         mechanicalReduction.text = '1'
 
-        rough_string = ElementTree.tostring(tran, 'utf-8')
-        reparsed = minidom.parseString(rough_string)
-        self._tran_xml  = "\n".join(reparsed.toprettyxml(indent="  ").split("\n")[1:])
+        return tran
 
-        return self._tran_xml
+class Link (Location):
 
-class Link:
+    scale = '0.001'
 
-    mesh_scale = '0.001'
-
-    def __init__(self, name, xyz, center_of_mass, sub_folder, mass, inertia_tensor, body_dict, sub_mesh):
+    def __init__(self, name, xyz, rpy, center_of_mass, sub_folder, mass, inertia_tensor, bodies, sub_mesh, material_dict, visible):
         """
         Parameters
         ----------
@@ -142,78 +155,74 @@ class Link:
             mass of the link
         inertia_tensor: [ixx, iyy, izz, ixy, iyz, ixz]
             tensor of the inertia
-        body_lst = [body1, body2, body3]
+        bodies = [body1, body2, body3]
             list of visible bodies
-        body_dict = {body.entityToken: name of occurrence}
-            dictionary of body entity tokens to the occurrence name
         """
 
-        self.name = name
-        # xyz for visual
-        self.xyz = [-(_) for _ in xyz]  # reverse the sign of xyz
+        super().__init__(name, xyz, rpy)
         # xyz for center of mass
-        self.center_of_mass = [x for x in center_of_mass]
+        self.center_of_mass = [round_mm(x) for x in center_of_mass]
         self._link_xml = None
         self.sub_folder = sub_folder
         self.mass = mass
         self.inertia_tensor = inertia_tensor
-        self.body_dict = body_dict
+        self.bodies = bodies
         self.sub_mesh = sub_mesh # if we want to export each body as a separate mesh
+        self.material_dict = material_dict
+        self.visible = visible
 
         
-    @property
-    def link_xml(self):
+    def link_xml(self) -> Optional[Element]:
         """
         Generate the link_xml and hold it by self.link_xml
         """
-        
         link = Element('link')
-        self.name = self.name.replace(':','_').replace(' ','')
         link.attrib = {'name':self.name}
-        
+        rpy = ' '.join([str(_) for _ in self.rpy])
+        scale = ' '.join([self.scale]*3)
+
         #inertial
         inertial = SubElement(link, 'inertial')
         origin_i = SubElement(inertial, 'origin')
-        origin_i.attrib = {'xyz':' '.join([str(_) for _ in self.center_of_mass]), 'rpy':'0 0 0'}       
+        origin_i.attrib = {'xyz':' '.join([str(_) for _ in self.center_of_mass]), 'rpy':rpy}       
         mass = SubElement(inertial, 'mass')
         mass.attrib = {'value':str(self.mass)}
         inertia = SubElement(inertial, 'inertia')
         inertia.attrib = {'ixx':str(self.inertia_tensor[0]), 'iyy':str(self.inertia_tensor[1]),
-                          'izz':str(self.inertia_tensor[2]), 'ixy':str(self.inertia_tensor[3]),
-                          'iyz':str(self.inertia_tensor[4]), 'ixz':str(self.inertia_tensor[5])}        
+                        'izz':str(self.inertia_tensor[2]), 'ixy':str(self.inertia_tensor[3]),
+                        'iyz':str(self.inertia_tensor[4]), 'ixz':str(self.inertia_tensor[5])}        
         
+        if not self.visible:
+            return link
+
         # visual
-        if self.sub_mesh: # if we want to export each as a separate mesh
-            for body_name in self.body_dict[self.name]:
-                # body_name = body_name.replace(':','_').replace(' ','')
+        if self.sub_mesh and len(self.bodies) > 1: # if we want to export each as a separate mesh
+            for body_name in self.bodies:
                 visual = SubElement(link, 'visual')
                 origin_v = SubElement(visual, 'origin')
-                origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+                origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
                 geometry_v = SubElement(visual, 'geometry')
                 mesh_v = SubElement(geometry_v, 'mesh')
-                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
+                mesh_v.attrib = {'filename':f'package://{self.sub_folder}{body_name}.stl','scale':scale}
                 material = SubElement(visual, 'material')
-                material.attrib = {'name':'silver'}
+                material.attrib = {'name': self.material_dict[body_name]}
         else:
             visual = SubElement(link, 'visual')
             origin_v = SubElement(visual, 'origin')
-            origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+            origin_v.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
             geometry_v = SubElement(visual, 'geometry')
             mesh_v = SubElement(geometry_v, 'mesh')
-            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':f'{Link.mesh_scale} {Link.mesh_scale} {Link.mesh_scale}'}
+            mesh_v.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':scale}
             material = SubElement(visual, 'material')
-            material.attrib = {'name':'silver'}
+            material.attrib = {'name': self.material_dict[self.name]}
     
         
         # collision
         collision = SubElement(link, 'collision')
         origin_c = SubElement(collision, 'origin')
-        origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':'0 0 0'}
+        origin_c.attrib = {'xyz':' '.join([str(_) for _ in self.xyz]), 'rpy':rpy}
         geometry_c = SubElement(collision, 'geometry')
         mesh_c = SubElement(geometry_c, 'mesh')
-        mesh_c.attrib = {'filename':'package://' + self.sub_folder + self.name + '.stl','scale':'0.001 0.001 0.001'}
+        mesh_c.attrib = {'filename':f'package://{self.sub_folder}{self.name}.stl','scale':scale}
 
-        rough_string = ElementTree.tostring(link, 'utf-8')
-        reparsed = minidom.parseString(rough_string)
-        self._link_xml  = "\n".join(reparsed.toprettyxml(indent="  ").split("\n")[1:])
-        return self._link_xml
+        return link
