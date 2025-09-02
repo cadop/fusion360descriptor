@@ -36,7 +36,7 @@ It provides a simple GUI for running the script and choosing a few different set
 <img src="imagesforgettingstarted/gui.gif" alt="drawing" width="800"/>
 
 ## License
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE.md).
 
 Installation & Running
 -----------------
