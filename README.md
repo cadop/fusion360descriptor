@@ -22,6 +22,7 @@ It provides a simple GUI for running the script and choosing a few different set
 - GUI interface for settings
 - Uses the grounded base as root node, that organizes the URDF tree by joint/link distance from root.
 - Handles rigid groups, coordinate transforms between origins, nested assemblies, etc
+- Supports both regular Joints and As-built Joints, including joints inside sub-assemblies that are instanced multiple times
 - Allows switching between units
 - WYSIWYG stl exporting (exports model as you see on the screen) without needing to save design history or copy to a new file
 - Preview joint relationship before exporting

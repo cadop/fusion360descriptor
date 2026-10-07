@@ -155,6 +155,83 @@ def get_origin(o: Optional[adsk.core.Base]) -> Union[adsk.core.Vector3D, None]:
 def get_context_name(c: Optional[adsk.fusion.Occurrence]) -> str:
     return c.name if c is not None else 'ROOT level'
 
+class AsBuiltJointAdapter:
+    ''' Wraps an AsBuiltJoint so it can be processed like a regular Joint.
+
+    As-built joints have a single `geometry` and no `healthState`. Also, for as-built joints inside
+    sub-assemblies, Fusion returns the occurrences in the context of the joint's own component rather
+    than the root (so every instance of a sub-assembly resolves to the same occurrences). Occurrences,
+    origin and axis are therefore taken from the native joint and mapped through `assemblyContext`.'''
+
+    def __init__(self, joint: adsk.fusion.AsBuiltJoint, occurrences_by_path: Dict[str, adsk.fusion.Occurrence]) -> None:
+        self._joint = joint
+        self._native = joint.nativeObject or joint
+        self._context = joint.assemblyContext
+        self._occurrences_by_path = occurrences_by_path
+
+    def __getattr__(self, name):
+        return getattr(self._joint, name)
+
+    def _to_root_occurrence(self, occ: Optional[adsk.fusion.Occurrence]) -> Optional[adsk.fusion.Occurrence]:
+        if occ is None or self._context is None:
+            return occ
+        path = f"{self._context.fullPathName}+{occ.fullPathName}"
+        root_occ = self._occurrences_by_path.get(path)
+        if root_occ is None:
+            utils.fatal(f"As-built joint {self._joint.name}: could not find occurrence '{path}' in the design")
+        return root_occ
+
+    def _context_transform(self, rotation_only: bool) -> Optional[adsk.core.Matrix3D]:
+        if self._context is None:
+            return None
+        t = self._context.transform2.copy()
+        if rotation_only:
+            t.translation = adsk.core.Vector3D.create()
+        return t
+
+    @property
+    def occurrenceOne(self):
+        return self._to_root_occurrence(self._native.occurrenceOne)
+
+    @property
+    def occurrenceTwo(self):
+        return self._to_root_occurrence(self._native.occurrenceTwo)
+
+    @property
+    def healthState(self):
+        if self._joint.isSuppressed:
+            return adsk.fusion.FeatureHealthStates.SuppressedFeatureHealthState
+        return adsk.fusion.FeatureHealthStates.HealthyFeatureHealthState
+
+    @property
+    def errorOrWarningMessage(self) -> str:
+        return ""
+
+    def root_origin(self) -> Optional[adsk.core.Vector3D]:
+        ''' Joint origin in the root component frame '''
+        geometry = self._native.geometry
+        if geometry is None:
+            return None
+        origin = geometry.origin.copy()
+        t = self._context_transform(rotation_only=False)
+        if t is not None:
+            assert origin.transformBy(t)
+        return origin.asVector()
+
+    def root_axis(self) -> adsk.core.Vector3D:
+        ''' Joint rotation axis / slide direction in the root component frame '''
+        motion = self._native.jointMotion
+        if isinstance(motion, adsk.fusion.RevoluteJointMotion):
+            axis = motion.rotationAxisVector.copy()
+        elif isinstance(motion, adsk.fusion.SliderJointMotion):
+            axis = motion.slideDirectionVector.copy()
+        else:
+            return adsk.core.Vector3D.create()
+        t = self._context_transform(rotation_only=True)
+        if t is not None:
+            assert axis.transformBy(t)
+        return axis
+
 def getMatrixFromRoot(occ: Optional[adsk.fusion.Occurrence]) -> adsk.core.Matrix3D:
     """
     Given an occurence, return its coordinate transform w.r.t the global frame
@@ -387,7 +464,11 @@ class Configurator:
         (along with its relationship)
         '''
 
-        for joint in self.root.allJoints:
+        occurrences_by_path = {occ.fullPathName: occ for occ in self.root.allOccurrences}
+        all_joints = list(self.root.allJoints) + [AsBuiltJointAdapter(j, occurrences_by_path) for j in self.root.allAsBuiltJoints]
+        utils.log(f"* Found {len(self.root.allJoints)} joints and {len(self.root.allAsBuiltJoints)} as-built joints *")
+
+        for joint in all_joints:
             if joint.healthState in [adsk.fusion.FeatureHealthStates.SuppressedFeatureHealthState, adsk.fusion.FeatureHealthStates.RolledBackFeatureHealthState]:
                 continue
             try:
@@ -412,7 +493,7 @@ class Configurator:
                     f"Fusion errored out trying to operate on `jointMotion` of joint {joint.name}"
                     f" (between {o1} and {o2}, child of {joint.parentComponent.name}) with Health State {joint.healthState}: {e}")
 
-        for joint in sorted(self.root.allJoints, key=lambda joint: joint.name):
+        for joint in sorted(all_joints, key=lambda joint: joint.name):
             if joint.healthState in [adsk.fusion.FeatureHealthStates.SuppressedFeatureHealthState, adsk.fusion.FeatureHealthStates.RolledBackFeatureHealthState]:
                 utils.log(f"Skipping joint {joint.name} (child of {joint.parentComponent.name}) as it is suppressed or rolled back")
                 continue
@@ -461,14 +542,17 @@ class Configurator:
                 info = JointInfo(name=name, child=child, parent=parent)
 
             else:
-                try:
-                    geom_one_origin = get_origin(joint.geometryOrOriginOne)
-                except RuntimeError:
-                    geom_one_origin = None
-                try:
-                    geom_two_origin = get_origin(joint.geometryOrOriginTwo)
-                except RuntimeError:
-                    geom_two_origin = None
+                if isinstance(joint, AsBuiltJointAdapter):
+                    geom_one_origin = geom_two_origin = joint.root_origin()
+                else:
+                    try:
+                        geom_one_origin = get_origin(joint.geometryOrOriginOne)
+                    except RuntimeError:
+                        geom_one_origin = None
+                    try:
+                        geom_two_origin = get_origin(joint.geometryOrOriginTwo)
+                    except RuntimeError:
+                        geom_two_origin = None
 
                 utils.log(f"DEBUG: ... Origin 1: {utils.vector_to_str(geom_one_origin) if geom_one_origin is not None else None}")
                 utils.log(f"DEBUG: ... Origin 2: {utils.vector_to_str(geom_two_origin) if geom_two_origin is not None else None}")
@@ -513,6 +597,9 @@ class Configurator:
                     joint_vector = adsk.core.Vector3D.create()
                     joint_limit_max = 0.0
                     joint_limit_min = 0.0
+
+                if isinstance(joint, AsBuiltJointAdapter):
+                    joint_vector = joint.root_axis()
 
                 info = JointInfo(
                     name=name, child=child, parent=parent, origin=geom_one_origin, type=joint_type,
@@ -925,6 +1012,16 @@ class Configurator:
                 error += "Unreacheable from the grounded occurrence via joints+links: " + ", ".join(unreachable) + "."
             utils.log(error)
         missing_joints = set(self.joints_dict).difference(self.joints)
+        # Links connected through fixed joints form one rigid body; a fixed joint between two links of the
+        # same rigid body is a redundant constraint (e.g. overlapping rigid groups), not a lost joint
+        rigid_root: Dict[str, str] = {}
+        def find_rigid_root(n: str) -> str:
+            while rigid_root.get(n, n) != n:
+                n = rigid_root[n]
+            return n
+        for j in self.joints.values():
+            if j.type == "fixed":
+                rigid_root[find_rigid_root(j.child)] = find_rigid_root(j.parent)
         for joint_name in missing_joints.copy():
             joint = self.joints_dict[joint_name]
             if joint.type == "fixed":
@@ -935,6 +1032,9 @@ class Configurator:
                     missing_joints.remove(joint_name)
                 elif (parent_name, child_name) in fixed_links:
                     utils.log(f"DEBUG: Skipped Fixed Joint '{joint_name}' that is duplicative of `{fixed_links[(parent_name, child_name)]}")
+                    missing_joints.remove(joint_name)
+                elif find_rigid_root(parent_name) == find_rigid_root(child_name):
+                    utils.log(f"DEBUG: Skipped Fixed Joint '{joint_name}': {parent_name} and {child_name} are already rigidly connected")
                     missing_joints.remove(joint_name)
         if missing_joints:
             utils.log("\n\t".join(["FATAL ERROR: Lost joints: "] + [f"{self.joints_dict[joint].name} of type {self.joints_dict[joint].type} between {self.joints_dict[joint].parent} and {self.joints_dict[joint].child}" for joint in missing_joints]))

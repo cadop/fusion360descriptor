@@ -1,10 +1,9 @@
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timezone
 import subprocess
 from typing import Dict, List, Optional
 import os
 import os.path
-import zoneinfo
 import yaml
 
 import adsk.core
@@ -171,14 +170,15 @@ class Manager:
             commit_hash = call_git(["rev-parse", "HEAD"])
             commit_timestamp = call_git(["log", "-1", "--format=%ct"])
             commit_author = call_git(["log", "-1", "--format=%an"])
-            commit_datetime = datetime.fromtimestamp(int(commit_timestamp), tz=zoneinfo.ZoneInfo("UTC"))
+            commit_datetime = datetime.fromtimestamp(int(commit_timestamp), tz=timezone.utc)
             commit_date = commit_datetime.astimezone().strftime("%A, %B %d, %Y at %I:%M %p %Z")
             if url:
                 repo_name = url
             else:
                 repo_name = os.path.basename(os.path.dirname(os.path.dirname(my_dir)))
             return f"{repo_name} rev {commit_hash} dated {commit_date} by {commit_author}"
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, OSError):
+            # OSError: git is not installed / not on PATH
             return ""
 
     def run(self):
